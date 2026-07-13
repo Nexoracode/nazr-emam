@@ -1,0 +1,22 @@
+{
+  "name": "nazr-emam",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@11.4.1",
+  "workspaces": [
+    "apps/api",
+    "apps/cms",
+    "apps/web",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start",
+    "lint": "turbo lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.2"
+  }
+}

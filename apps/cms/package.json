@@ -1,0 +1,9 @@
+{
+  "name": "@nazr-emam/cms",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node -e \"const fs=require('fs');fs.mkdirSync('dist',{recursive:true});fs.writeFileSync('dist/.keep','CMS tool is not selected yet.\\n');console.log('CMS tool is not selected yet; skipping build.')\"",
+    "lint": "node -e \"console.log('CMS tool is not selected yet; skipping lint.')\""
+  }
+}

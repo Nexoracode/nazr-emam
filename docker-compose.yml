@@ -1,0 +1,15 @@
+services:
+  nazr-emam:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nazr-emam
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    env_file:
+      - .env.example
+    environment:
+      NODE_ENV: production
+      API_PORT: 3001
+      NEXT_PUBLIC_API_URL: http://localhost:3001

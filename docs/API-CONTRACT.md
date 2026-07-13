@@ -1,0 +1,551 @@
+# قرارداد API — نذر امام
+
+این سند قبل از کدنویسی endpointها تکمیل و تأیید می‌شود. بعد از تأیید، منبع حقیقت بین NestJS و Next.js است: بک‌اند طبق آن می‌سازد و فرانت طبق آن مصرف می‌کند.
+
+> هر تغییر در API اول اینجا ثبت می‌شود، بعد تایپ همان تغییر در `packages/shared` به‌روز می‌شود، بعد کد تغییر می‌کند.
+
+---
+
+## قواعد عمومی
+
+- **Base URL local:** `http://localhost:3001`
+- همه‌ی بدنه‌ها JSON هستند، مگر آپلود فایل/رسید که `multipart/form-data` می‌شود.
+- تاریخ‌ها با ISO string برمی‌گردند.
+- شناسه‌ها از نوع string هستند.
+- endpointهای مدیریتی فقط برای `role: admin` مجازند.
+- endpointهای کاربر با لاگین، در نسخه مرورگر با cookie امن یا header زیر کار می‌کنند:
+  ```text
+  Authorization: Bearer <accessToken>
+  ```
+- خطاها همیشه شکل یکسان دارند:
+  ```json
+  { "statusCode": 400, "code": "VALIDATION_ERROR", "message": "ورودی نامعتبر است", "fields": { "mobile": "شماره موبایل معتبر نیست" } }
+  ```
+- لیست‌های صفحه‌بندی‌شده همیشه این شکل را دارند:
+  ```json
+  { "items": [], "page": 1, "pageSize": 12, "total": 0, "totalPages": 0 }
+  ```
+
+---
+
+## تایپ‌های پایه
+
+```ts
+type ID = string;
+type ISODate = string;
+
+interface ApiError {
+  statusCode: number;
+  code: string;
+  message: string;
+  fields?: Record<string, string>;
+}
+
+interface Paginated<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+interface Money {
+  amount: number;
+  currency: "IRR" | "IRT";
+}
+```
+
+---
+
+## نقشه منابع
+
+| دامنه | منبع | توضیح |
+|---|---|---|
+| health و اطلاعات پروژه | NestJS | وضعیت سرویس و metadata |
+| محتوای صفحه‌ها، بنرها، FAQ و مدیا | CMS | محتوای قابل ویرایش توسط مدیر محتوا |
+| احراز هویت | NestJS | کاربر، مدیر، نشست‌ها |
+| نوع نذر و کمپین | NestJS | داده‌های قابل نمایش در سایت و فرم‌ها |
+| درخواست نذر | NestJS | داده تراکنشی اصلی |
+| پرداخت و رسید | NestJS | ثبت پرداخت، رسید، تأیید مدیر |
+| داشبورد و گزارش | NestJS | آمار و مدیریت |
+| پیام/تیکت | NestJS | ارتباط کاربر با پشتیبانی |
+| اعلان‌ها | NestJS | اطلاع‌رسانی به کاربر |
+
+---
+
+# بخش ۱ — وضعیت سرویس
+
+### `GET /health`
+
+- **پاسخ:** `200 HealthResponse`
+
+```ts
+interface HealthResponse {
+  status: "ok";
+  service: "nazr-emam-api";
+  timestamp: ISODate;
+}
+```
+
+### `GET /project`
+
+- **پاسخ:** `200 ProjectInfo`
+
+```ts
+interface ProjectInfo {
+  name: "Nazr Emam";
+  description: string;
+  workflow: string[];
+}
+```
+
+---
+
+# بخش ۲ — احراز هویت
+
+> فاز اول می‌تواند بدون حساب کاربری کامل شروع شود، اما قرارداد auth از ابتدا مشخص می‌ماند تا بعداً فرانت و بک جدا نشوند.
+
+### `POST /auth/register`
+
+- **بدنه:** `RegisterRequest`
+- **پاسخ:** `201 AuthResponse`
+- **خطاها:** `409 MOBILE_TAKEN`، `400 VALIDATION_ERROR`
+
+### `POST /auth/login`
+
+- **بدنه:** `LoginRequest`
+- **پاسخ:** `200 AuthResponse`
+- **خطاها:** `401 INVALID_CREDENTIALS`، `400 VALIDATION_ERROR`
+
+### `POST /auth/refresh`
+
+- **پاسخ:** `200 AuthResponse`
+- **خطا:** `401 INVALID_REFRESH_TOKEN`
+
+### `DELETE /auth/logout`
+
+- **پاسخ:** `204 No Content`
+
+### `GET /auth/me`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 User`
+
+```ts
+type UserRole = "donor" | "admin";
+
+interface RegisterRequest {
+  fullName: string;
+  mobile: string;
+  password: string;
+}
+
+interface LoginRequest {
+  mobile: string;
+  password: string;
+}
+
+interface User {
+  id: ID;
+  fullName: string;
+  mobile: string;
+  role: UserRole;
+  createdAt: ISODate;
+}
+
+interface AuthResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+```
+
+---
+
+# بخش ۳ — نوع نذر و کمپین‌ها
+
+### `GET /nazr-types`
+
+لیست نوع‌های نذر برای نمایش در صفحه اصلی و فرم ثبت.
+
+- **Query:** `isActive?`
+- **پاسخ:** `200 NazrType[]`
+
+### `GET /nazr-types/:slug`
+
+- **پاسخ:** `200 NazrType`
+- **خطا:** `404 NAZR_TYPE_NOT_FOUND`
+
+### `POST /nazr-types`
+
+- **Auth:** admin
+- **بدنه:** `CreateNazrTypeRequest`
+- **پاسخ:** `201 NazrType`
+
+### `PATCH /nazr-types/:id`
+
+- **Auth:** admin
+- **بدنه:** `UpdateNazrTypeRequest`
+- **پاسخ:** `200 NazrType`
+
+### `DELETE /nazr-types/:id`
+
+- **Auth:** admin
+- **پاسخ:** `204 No Content`
+
+```ts
+interface NazrType {
+  id: ID;
+  slug: string;
+  title: string;
+  description: string;
+  suggestedAmount: Money | null;
+  isActive: boolean;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+interface CreateNazrTypeRequest {
+  slug: string;
+  title: string;
+  description: string;
+  suggestedAmount?: Money | null;
+  isActive?: boolean;
+}
+
+type UpdateNazrTypeRequest = Partial<CreateNazrTypeRequest>;
+```
+
+---
+
+# بخش ۴ — درخواست نذر
+
+### وضعیت‌ها
+
+```ts
+type NazrRequestStatus =
+  | "draft"
+  | "submitted"
+  | "awaiting_payment"
+  | "payment_pending_review"
+  | "confirmed"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "rejected";
+```
+
+### `POST /nazr-requests`
+
+ثبت درخواست نذر توسط مهمان یا کاربر لاگین‌شده.
+
+- **Auth:** اختیاری
+- **بدنه:** `CreateNazrRequest`
+- **پاسخ:** `201 NazrRequest`
+- **خطاها:** `404 NAZR_TYPE_NOT_FOUND`، `400 VALIDATION_ERROR`
+
+### `GET /nazr-requests/mine`
+
+- **Auth:** کاربر لاگین‌شده
+- **Query:** `page, pageSize, status?`
+- **پاسخ:** `200 Paginated<NazrRequest>`
+
+### `GET /nazr-requests/track/:trackingCode`
+
+پیگیری درخواست با کد رهگیری.
+
+- **Auth:** عمومی
+- **پاسخ:** `200 NazrRequestPublicStatus`
+- **خطا:** `404 NAZR_REQUEST_NOT_FOUND`
+
+### `GET /nazr-requests`
+
+- **Auth:** admin
+- **Query:** `page, pageSize, status?, nazrTypeId?, search?, from?, to?`
+- **پاسخ:** `200 Paginated<NazrRequest>`
+
+### `GET /nazr-requests/:id`
+
+- **Auth:** صاحب درخواست یا admin
+- **پاسخ:** `200 NazrRequest`
+
+### `PATCH /nazr-requests/:id/status`
+
+- **Auth:** admin
+- **بدنه:** `UpdateNazrRequestStatus`
+- **پاسخ:** `200 NazrRequest`
+
+```ts
+interface CreateNazrRequest {
+  nazrTypeId: ID;
+  donorFullName: string;
+  donorMobile: string;
+  donorNationalCode?: string | null;
+  amount: Money;
+  note?: string | null;
+  isAnonymous?: boolean;
+}
+
+interface NazrRequest {
+  id: ID;
+  trackingCode: string;
+  userId: ID | null;
+  nazrType: NazrType;
+  donorFullName: string;
+  donorMobile: string;
+  donorNationalCode: string | null;
+  amount: Money;
+  note: string | null;
+  isAnonymous: boolean;
+  status: NazrRequestStatus;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+interface NazrRequestPublicStatus {
+  trackingCode: string;
+  nazrTypeTitle: string;
+  amount: Money;
+  status: NazrRequestStatus;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+interface UpdateNazrRequestStatus {
+  status: NazrRequestStatus;
+  adminNote?: string | null;
+}
+```
+
+---
+
+# بخش ۵ — پرداخت و رسید
+
+```ts
+type PaymentMethod = "online" | "card_to_card" | "cash";
+type PaymentStatus = "pending" | "paid" | "rejected" | "refunded";
+```
+
+### `POST /nazr-requests/:requestId/payments`
+
+ثبت پرداخت یا رسید برای یک درخواست.
+
+- **Auth:** صاحب درخواست یا مهمان با `trackingCode`
+- **بدنه:** `CreatePaymentRequest`
+- **پاسخ:** `201 Payment`
+
+### `POST /nazr-requests/:requestId/payment-receipt`
+
+آپلود رسید کارت‌به‌کارت.
+
+- **Content-Type:** `multipart/form-data`
+- **پاسخ:** `201 PaymentReceipt`
+
+### `GET /payments`
+
+- **Auth:** admin
+- **Query:** `page, pageSize, status?, method?, from?, to?`
+- **پاسخ:** `200 Paginated<Payment>`
+
+### `POST /payments/:id/approve`
+
+- **Auth:** admin
+- **پاسخ:** `200 Payment`
+
+### `POST /payments/:id/reject`
+
+- **Auth:** admin
+- **بدنه:** `{ reason: string }`
+- **پاسخ:** `200 Payment`
+
+```ts
+interface CreatePaymentRequest {
+  method: PaymentMethod;
+  amount: Money;
+  trackingCode?: string;
+  transactionReference?: string | null;
+}
+
+interface Payment {
+  id: ID;
+  nazrRequestId: ID;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amount: Money;
+  transactionReference: string | null;
+  receiptUrl: string | null;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+interface PaymentReceipt {
+  id: ID;
+  paymentId: ID;
+  fileUrl: string;
+  uploadedAt: ISODate;
+}
+```
+
+---
+
+# بخش ۶ — داشبورد و گزارش مدیریتی
+
+### `GET /admin/dashboard`
+
+- **Auth:** admin
+- **پاسخ:** `200 AdminDashboard`
+
+```ts
+interface AdminDashboard {
+  totalRequests: number;
+  submittedRequests: number;
+  confirmedRequests: number;
+  completedRequests: number;
+  pendingPayments: number;
+  totalPaidAmount: Money;
+  recentRequests: NazrRequest[];
+}
+```
+
+### `GET /admin/reports/nazr-requests`
+
+- **Auth:** admin
+- **Query:** `from?, to?, nazrTypeId?, status?`
+- **پاسخ:** `200 NazrRequestsReport`
+
+```ts
+interface NazrRequestsReport {
+  totalCount: number;
+  totalAmount: Money;
+  byStatus: Record<NazrRequestStatus, number>;
+  byNazrType: { nazrTypeId: ID; title: string; count: number; totalAmount: Money }[];
+}
+```
+
+---
+
+# بخش ۷ — تیکت و پیام کاربر
+
+```ts
+type TicketStatus = "open" | "answered" | "closed";
+```
+
+### `POST /tickets`
+
+- **Auth:** کاربر یا مهمان
+- **بدنه:** `CreateTicketRequest`
+- **پاسخ:** `201 Ticket`
+
+### `GET /tickets/mine`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 Paginated<Ticket>`
+
+### `GET /tickets`
+
+- **Auth:** admin
+- **پاسخ:** `200 Paginated<Ticket>`
+
+### `POST /tickets/:id/reply`
+
+- **Auth:** صاحب تیکت یا admin
+- **بدنه:** `{ body: string }`
+- **پاسخ:** `201 TicketMessage`
+
+### `POST /tickets/:id/close`
+
+- **Auth:** صاحب تیکت یا admin
+- **پاسخ:** `204 No Content`
+
+```ts
+interface CreateTicketRequest {
+  subject: string;
+  body: string;
+  guestMobile?: string | null;
+  nazrRequestTrackingCode?: string | null;
+}
+
+interface Ticket {
+  id: ID;
+  userId: ID | null;
+  guestMobile: string | null;
+  subject: string;
+  status: TicketStatus;
+  nazrRequestId: ID | null;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+  messages: TicketMessage[];
+}
+
+interface TicketMessage {
+  id: ID;
+  body: string;
+  authorType: "user" | "support";
+  createdAt: ISODate;
+}
+```
+
+---
+
+# بخش ۸ — اعلان‌ها
+
+### `GET /notifications`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 Paginated<NotificationItem>`
+
+### `POST /notifications`
+
+- **Auth:** admin
+- **بدنه:** `CreateNotificationRequest`
+- **پاسخ:** `201 NotificationItem`
+
+### `POST /notifications/:id/read`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `204 No Content`
+
+```ts
+interface NotificationItem {
+  id: ID;
+  title: string;
+  body: string;
+  link: string | null;
+  isRead: boolean;
+  createdAt: ISODate;
+}
+
+interface CreateNotificationRequest {
+  userId?: ID | null;
+  title: string;
+  body: string;
+  link?: string | null;
+}
+```
+
+---
+
+## نمونه مسیر کامل
+
+1. کاربر `GET /nazr-types` را می‌گیرد.
+2. کاربر فرم را پر می‌کند و `POST /nazr-requests` می‌زند.
+3. API کد رهگیری می‌سازد و `NazrRequest` برمی‌گرداند.
+4. کاربر پرداخت را با `POST /nazr-requests/:requestId/payments` ثبت می‌کند.
+5. اگر رسید دارد، `POST /nazr-requests/:requestId/payment-receipt` را می‌زند.
+6. admin پرداخت را در `GET /payments` می‌بیند و approve/reject می‌کند.
+7. admin وضعیت درخواست را با `PATCH /nazr-requests/:id/status` جلو می‌برد.
+8. کاربر با `GET /nazr-requests/track/:trackingCode` وضعیت را می‌بیند.
+
+---
+
+## فرایند تغییر قرارداد
+
+اگر وسط کار نیاز به تغییر API بود:
+
+1. اول همین فایل را به‌روز کن.
+2. تایپ‌های مشترک را در `packages/shared` به‌روز کن.
+3. API را مطابق قرارداد تغییر بده.
+4. Frontend را مطابق قرارداد تغییر بده.
+5. `npm run build` را اجرا کن.
+
+این چرخه کمک می‌کند فرانت و بک‌اند از هم جدا نشوند.
