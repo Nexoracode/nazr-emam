@@ -281,13 +281,6 @@ function LoginForm() {
           </label>
 
           <div className="flex items-center justify-between text-[11px]">
-            <Link
-              className="transition"
-              href="/auth/forgot-password"
-              style={{ color: '#65b5ff' }}
-            >
-              رمز عبور را فراموش کردید؟
-            </Link>
             <label className="flex cursor-pointer items-center gap-1.5 text-auth-text">
               <input
                 checked={remember}
@@ -297,6 +290,13 @@ function LoginForm() {
               />
               <span>مرا به خاطر بسپار</span>
             </label>
+            <Link
+              className="transition"
+              href="/auth/forgot-password"
+              style={{ color: '#65b5ff' }}
+            >
+              رمز عبور را فراموش کردید؟
+            </Link>
           </div>
 
           {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
