@@ -4,6 +4,14 @@
 @source "../components/**/*.{ts,tsx}";
 @source "../lib/**/*.{ts,tsx}";
 
+@font-face {
+  font-display: swap;
+  font-family: "Vazir";
+  font-style: normal;
+  font-weight: 100 900;
+  src: url("/fonts/Vazir.ttf") format("truetype");
+}
+
 @theme {
   --color-background: #f4f6f8;
   --color-foreground: #20211f;
@@ -35,7 +43,7 @@
   --shadow-auth: 0 18px 50px rgb(24 39 55 / 12%);
   --shadow-auth-dark: 0 34px 80px rgb(0 0 0 / 36%);
   --shadow-auth-action: 0 10px 22px rgb(255 183 3 / 22%);
-  --font-sans: Tahoma, Arial, sans-serif;
+  --font-sans: "Vazir", Tahoma, Arial, sans-serif;
 }
 
 :root {
@@ -65,7 +73,7 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Tahoma, Arial, sans-serif;
+  font-family: "Vazir", Tahoma, Arial, sans-serif;
 }
 
 .page-shell {

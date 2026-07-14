@@ -21,6 +21,9 @@ const registerLightFieldClass =
 const registerDarkFieldClass =
   'h-10 w-full min-w-0 rounded-lg border border-auth-input-border bg-auth-input-dark px-3 text-left text-[12px] text-auth-text outline-none transition placeholder:text-auth-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
 
+const mobilePattern = /^09\d{9}$/;
+const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const isLogin = mode === 'login';
@@ -31,6 +34,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<'success' | 'error' | ''>('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const copy = useMemo(
@@ -61,9 +65,25 @@ export function AuthForm({ mode }: AuthFormProps) {
     event.preventDefault();
     setIsSubmitting(true);
     setMessage('');
+    setMessageTone('');
     setFieldErrors({});
 
     try {
+      const clientErrors = validateAuthForm({
+        acceptedTerms,
+        confirmPassword,
+        isLogin,
+        mobile,
+        password,
+      });
+
+      if (Object.keys(clientErrors).length > 0) {
+        setFieldErrors(clientErrors);
+        setMessage('لطفا خطاهای فرم را اصلاح کنید.');
+        setMessageTone('error');
+        return;
+      }
+
       if (isLogin) {
         await login({ mobile: mobile.trim(), password });
         if (remember) {
@@ -72,22 +92,6 @@ export function AuthForm({ mode }: AuthFormProps) {
           window.localStorage.removeItem('nazr-emam-mobile');
         }
       } else {
-        const clientErrors: FieldErrors = {};
-
-        if (password !== confirmPassword) {
-          clientErrors.confirmPassword = 'تکرار رمز عبور با رمز عبور یکسان نیست.';
-        }
-
-        if (!acceptedTerms) {
-          clientErrors.terms = 'پذیرش قوانین و شرایط استفاده الزامی است.';
-        }
-
-        if (Object.keys(clientErrors).length > 0) {
-          setFieldErrors(clientErrors);
-          setMessage('لطفا موارد مشخص‌شده را اصلاح کنید.');
-          return;
-        }
-
         const normalizedMobile = mobile.trim();
         await register({
           fullName: `کاربر ${normalizedMobile}`,
@@ -97,14 +101,27 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       setMessage(copy.success);
-      router.push('/');
-      router.refresh();
+      setMessageTone('success');
+
+      if (!isLogin) {
+        setMobile('');
+        setPassword('');
+        setConfirmPassword('');
+        setAcceptedTerms(false);
+      } else {
+        window.setTimeout(() => {
+          router.push('/');
+          router.refresh();
+        }, 900);
+      }
     } catch (error) {
       if (error instanceof ApiRequestError) {
         setMessage(error.message || defaultError);
+        setMessageTone('error');
         setFieldErrors(error.fields ?? {});
       } else {
         setMessage(defaultError);
+        setMessageTone('error');
       }
     } finally {
       setIsSubmitting(false);
@@ -113,7 +130,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   if (!isLogin) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_center,var(--color-auth-bg-start)_0%,var(--color-auth-bg)_50%,var(--color-auth-bg-end)_100%)] px-4 py-8 text-auth-text">
+      <main dir="rtl" className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_center,var(--color-auth-bg-start)_0%,var(--color-auth-bg)_50%,var(--color-auth-bg-end)_100%)] px-4 py-8 text-auth-text">
         <section
           className="w-full max-w-[380px] rounded-[14px] border border-auth-card-border bg-auth-card px-[18px] pb-6 pt-7 shadow-auth-dark"
           aria-labelledby="auth-title"
@@ -137,6 +154,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               <input
                 autoComplete="tel"
                 className={registerLightFieldClass}
+                dir="ltr"
                 inputMode="tel"
                 name="mobile"
                 onChange={(event) => setMobile(event.target.value)}
@@ -159,8 +177,9 @@ export function AuthForm({ mode }: AuthFormProps) {
               <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
                 <span>رمز عبور</span>
                 <input
-                  autoComplete="new-password"
-                  className={registerLightFieldClass}
+                autoComplete="new-password"
+                className={registerLightFieldClass}
+                dir="ltr"
                   minLength={8}
                   name="password"
                   onChange={(event) => setPassword(event.target.value)}
@@ -173,8 +192,9 @@ export function AuthForm({ mode }: AuthFormProps) {
               <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
                 <span>تکرار رمز</span>
                 <input
-                  autoComplete="new-password"
-                  className={registerDarkFieldClass}
+                autoComplete="new-password"
+                className={registerDarkFieldClass}
+                dir="ltr"
                   minLength={8}
                   name="confirmPassword"
                   onChange={(event) => setConfirmPassword(event.target.value)}
@@ -221,7 +241,14 @@ export function AuthForm({ mode }: AuthFormProps) {
             ) : null}
 
             {message ? (
-              <p className="m-0 rounded-md border border-auth-card-border bg-auth-input-dark px-3 py-2 text-[11px] leading-5 text-auth-muted">
+              <p
+                aria-live="polite"
+                className={`m-0 rounded-md border px-3 py-2 text-right text-[11px] leading-5 ${
+                  messageTone === 'success'
+                    ? 'border-auth-accent/40 bg-auth-accent/10 text-auth-accent'
+                    : 'border-danger/45 bg-danger/10 text-danger'
+                }`}
+              >
                 {message}
               </p>
             ) : null}
@@ -257,7 +284,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-background px-4 py-8 text-foreground">
+    <main dir="rtl" className="grid min-h-screen place-items-center bg-background px-4 py-8 text-foreground">
       <section
         className="w-full max-w-[420px] rounded-lg border border-border bg-surface px-5 py-7 shadow-auth sm:px-8 sm:pb-6 sm:pt-8"
         aria-labelledby="auth-title"
@@ -285,6 +312,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             <input
               autoComplete="tel"
               className={loginFieldClass}
+              dir="ltr"
               inputMode="tel"
               name="mobile"
               onChange={(event) => setMobile(event.target.value)}
@@ -305,6 +333,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             <input
               autoComplete="current-password"
               className={loginFieldClass}
+              dir="ltr"
               name="password"
               onChange={(event) => setPassword(event.target.value)}
               required
@@ -340,7 +369,14 @@ export function AuthForm({ mode }: AuthFormProps) {
           </div>
 
           {message ? (
-            <p className="m-0 rounded-md bg-primary-soft px-3 py-2.5 text-[13px] leading-7 text-primary-dark">
+            <p
+              aria-live="polite"
+              className={`m-0 rounded-md px-3 py-2.5 text-right text-[13px] leading-7 ${
+                messageTone === 'success'
+                  ? 'bg-primary-soft text-primary-dark'
+                  : 'bg-danger/10 text-danger'
+              }`}
+            >
               {message}
             </p>
           ) : null}
@@ -378,6 +414,49 @@ export function AuthForm({ mode }: AuthFormProps) {
       </section>
     </main>
   );
+}
+
+function validateAuthForm({
+  acceptedTerms,
+  confirmPassword,
+  isLogin,
+  mobile,
+  password,
+}: {
+  acceptedTerms: boolean;
+  confirmPassword: string;
+  isLogin: boolean;
+  mobile: string;
+  password: string;
+}) {
+  const errors: FieldErrors = {};
+  const normalizedMobile = mobile.trim();
+
+  if (!normalizedMobile) {
+    errors.mobile = 'شماره تلفن الزامی است.';
+  } else if (!mobilePattern.test(normalizedMobile)) {
+    errors.mobile = 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.';
+  }
+
+  if (!password) {
+    errors.password = 'رمز عبور الزامی است.';
+  } else if (!isLogin && !passwordPattern.test(password)) {
+    errors.password = 'رمز عبور باید حداقل ۸ کاراکتر و شامل حرف و عدد باشد.';
+  }
+
+  if (!isLogin) {
+    if (!confirmPassword) {
+      errors.confirmPassword = 'تکرار رمز عبور الزامی است.';
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = 'تکرار رمز عبور با رمز عبور یکسان نیست.';
+    }
+
+    if (!acceptedTerms) {
+      errors.terms = 'پذیرش قوانین و شرایط استفاده الزامی است.';
+    }
+  }
+
+  return errors;
 }
 
 function CameraLogo() {
