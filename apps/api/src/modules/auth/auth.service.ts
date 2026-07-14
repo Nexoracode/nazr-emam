@@ -9,9 +9,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import type {
   AuthResponse,
   LoginRequest,
+  OtpRequestResponse,
   RefreshTokenRequest,
+  RequestOtpRequest,
   RegisterRequest,
   User,
+  VerifyOtpRequest,
 } from '@nazr-emam/shared';
 import {
   createHash,
@@ -21,6 +24,7 @@ import {
 } from 'node:crypto';
 import { IsNull, Repository } from 'typeorm';
 import type { AuthenticatedRequest, AuthenticatedResponse } from './auth.types';
+import { OtpCodeEntity } from './entities/otp-code.entity';
 import { RefreshTokenEntity } from './entities/refresh-token.entity';
 import { UserEntity } from './entities/user.entity';
 
@@ -53,6 +57,8 @@ export class AuthService {
     private readonly usersRepository: Repository<UserEntity>,
     @InjectRepository(RefreshTokenEntity)
     private readonly refreshTokensRepository: Repository<RefreshTokenEntity>,
+    @InjectRepository(OtpCodeEntity)
+    private readonly otpCodesRepository: Repository<OtpCodeEntity>,
     private readonly configService: ConfigService,
   ) {}
 
@@ -96,6 +102,82 @@ export class AuthService {
       });
     }
 
+    return this.createAuthResponse(user);
+  }
+
+  async requestOtp(payload: RequestOtpRequest): Promise<OtpRequestResponse> {
+    const body = this.validateRequestOtp(payload);
+    const code = this.createOtpCode();
+    const expiresAt = new Date(Date.now() + this.otpTtlMs);
+
+    await this.otpCodesRepository.update(
+      { mobile: body.mobile, consumedAt: IsNull() },
+      { consumedAt: new Date() },
+    );
+
+    const otp = this.otpCodesRepository.create({
+      mobile: body.mobile,
+      codeHash: this.hashOtpCode(body.mobile, code),
+      attempts: 0,
+      expiresAt,
+      consumedAt: null,
+    });
+    await this.otpCodesRepository.save(otp);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`OTP for ${body.mobile}: ${code}`);
+    }
+
+    return { expiresAt: expiresAt.toISOString() };
+  }
+
+  async verifyOtp(payload: VerifyOtpRequest): Promise<IssuedAuthTokens> {
+    const body = this.validateVerifyOtp(payload);
+    const otp = await this.otpCodesRepository.findOne({
+      where: { mobile: body.mobile, consumedAt: IsNull() },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!otp || otp.expiresAt.getTime() <= Date.now()) {
+      if (otp) {
+        otp.consumedAt = new Date();
+        await this.otpCodesRepository.save(otp);
+      }
+
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'INVALID_OTP',
+        message: 'کد یکبار مصرف معتبر نیست',
+      });
+    }
+
+    if (otp.attempts >= this.otpMaxAttempts) {
+      otp.consumedAt = new Date();
+      await this.otpCodesRepository.save(otp);
+
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'INVALID_OTP',
+        message: 'کد یکبار مصرف معتبر نیست',
+      });
+    }
+
+    const isValidCode = this.verifyOtpCode(body.mobile, body.code, otp.codeHash);
+    if (!isValidCode) {
+      otp.attempts += 1;
+      await this.otpCodesRepository.save(otp);
+
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'INVALID_OTP',
+        message: 'کد یکبار مصرف معتبر نیست',
+      });
+    }
+
+    otp.consumedAt = new Date();
+    await this.otpCodesRepository.save(otp);
+
+    const user = await this.findOrCreateOtpUser(body.mobile);
     return this.createAuthResponse(user);
   }
 
@@ -343,6 +425,35 @@ export class AuthService {
     };
   }
 
+  private validateRequestOtp(payload: RequestOtpRequest): RequestOtpRequest {
+    const fields: Record<string, string> = {};
+    const mobile = payload?.mobile?.trim();
+
+    if (!this.isValidMobile(mobile)) {
+      fields.mobile = 'شماره موبایل معتبر نیست';
+    }
+
+    this.throwValidation(fields);
+    return { mobile };
+  }
+
+  private validateVerifyOtp(payload: VerifyOtpRequest): VerifyOtpRequest {
+    const fields: Record<string, string> = {};
+    const mobile = payload?.mobile?.trim();
+    const code = payload?.code?.trim();
+
+    if (!this.isValidMobile(mobile)) {
+      fields.mobile = 'شماره موبایل معتبر نیست';
+    }
+
+    if (!code || !new RegExp(`^\\d{${this.otpLength}}$`).test(code)) {
+      fields.code = 'کد یکبار مصرف معتبر نیست';
+    }
+
+    this.throwValidation(fields);
+    return { mobile, code };
+  }
+
   private validateRefresh(payload: RefreshTokenRequest): RefreshTokenRequest {
     const refreshToken = payload?.refreshToken?.trim();
 
@@ -391,8 +502,47 @@ export class AuthService {
     return randomBytes(48).toString('base64url');
   }
 
+  private createOtpCode(): string {
+    const max = 10 ** this.otpLength;
+    const value = Number.parseInt(randomBytes(4).toString('hex'), 16) % max;
+    return value.toString().padStart(this.otpLength, '0');
+  }
+
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private hashOtpCode(mobile: string, code: string): string {
+    return this.hashToken(`${mobile}:${code}`);
+  }
+
+  private verifyOtpCode(
+    mobile: string,
+    code: string,
+    storedHash: string,
+  ): boolean {
+    const hash = Buffer.from(this.hashOtpCode(mobile, code), 'hex');
+    const stored = Buffer.from(storedHash, 'hex');
+    return hash.length === stored.length && timingSafeEqual(hash, stored);
+  }
+
+  private async findOrCreateOtpUser(mobile: string): Promise<UserEntity> {
+    const existingUser = await this.usersRepository.findOne({
+      where: { mobile },
+    });
+
+    if (existingUser) {
+      return existingUser;
+    }
+
+    const user = this.usersRepository.create({
+      fullName: `کاربر ${mobile}`,
+      mobile,
+      role: 'donor',
+      passwordHash: this.hashPassword(this.createToken()),
+    });
+
+    return this.usersRepository.save(user);
   }
 
   private getBaseCookieOptions() {
@@ -430,5 +580,17 @@ export class AuthService {
       'auth.refreshTokenTtlMs',
       7 * 24 * 60 * 60 * 1000,
     );
+  }
+
+  private get otpTtlMs() {
+    return this.configService.get<number>('auth.otpTtlMs', 2 * 60 * 1000);
+  }
+
+  private get otpLength() {
+    return this.configService.get<number>('auth.otpLength', 6);
+  }
+
+  private get otpMaxAttempts() {
+    return this.configService.get<number>('auth.otpMaxAttempts', 5);
   }
 }

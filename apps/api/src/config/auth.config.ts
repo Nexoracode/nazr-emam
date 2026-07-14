@@ -12,6 +12,9 @@ export default registerAs('auth', () => ({
     process.env.REFRESH_TOKEN_EXPIRES_IN ?? process.env.JWT_EXPIRES_IN,
     '7d',
   ),
+  otpTtlMs: durationToMilliseconds(process.env.OTP_EXPIRES_IN, '2m'),
+  otpLength: Number(process.env.OTP_LENGTH ?? 6),
+  otpMaxAttempts: Number(process.env.OTP_MAX_ATTEMPTS ?? 5),
   cookieHttpOnly: toBoolean(process.env.AUTH_COOKIE_HTTP_ONLY, true),
   cookieSameSite:
     process.env.AUTH_COOKIE_SAME_SITE === 'strict' ||

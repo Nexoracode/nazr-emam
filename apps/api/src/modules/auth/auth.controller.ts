@@ -35,8 +35,11 @@ import type {
 import {
   AuthResponseDto,
   LoginRequestDto,
+  OtpRequestResponseDto,
   RefreshTokenRequestDto,
+  RequestOtpRequestDto,
   RegisterRequestDto,
+  VerifyOtpRequestDto,
   UserDto,
 } from './dto/auth.dto';
 
@@ -82,6 +85,42 @@ export class AuthController {
     @Res({ passthrough: true }) response: AuthenticatedResponse,
   ) {
     const authResponse = await this.authService.login(body);
+    this.authService.setAuthCookies(response, authResponse);
+    return { user: authResponse.user };
+  }
+
+  @ApiOperation({
+    summary: 'درخواست کد ورود',
+    description:
+      'برای شماره موبایل یک کد یکبار مصرف صادر می کند. در محیط development کد در لاگ سرور چاپ می شود.',
+  })
+  @ApiBody({ type: RequestOtpRequestDto })
+  @ApiOkResponse({ type: OtpRequestResponseDto })
+  @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
+  @Public()
+  @HttpCode(200)
+  @Post('otp/request')
+  requestOtp(@Body() body: RequestOtpRequestDto) {
+    return this.authService.requestOtp(body);
+  }
+
+  @ApiOperation({
+    summary: 'ورود با کد یکبار مصرف',
+    description:
+      'کد OTP را تایید می کند و accessToken و refreshToken را فقط در cookie ذخیره می کند.',
+  })
+  @ApiBody({ type: VerifyOtpRequestDto })
+  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_OTP' })
+  @Public()
+  @HttpCode(200)
+  @Post('otp/verify')
+  async verifyOtp(
+    @Body() body: VerifyOtpRequestDto,
+    @Res({ passthrough: true }) response: AuthenticatedResponse,
+  ) {
+    const authResponse = await this.authService.verifyOtp(body);
     this.authService.setAuthCookies(response, authResponse);
     return { user: authResponse.user };
   }

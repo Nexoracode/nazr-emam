@@ -117,6 +117,18 @@ interface ProjectInfo {
 - **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
 - **خطاها:** `401 INVALID_CREDENTIALS`، `400 VALIDATION_ERROR`
 
+### `POST /auth/otp/request`
+
+- **بدنه:** `RequestOtpRequest`
+- **پاسخ:** `200 OtpRequestResponse`
+- **خطا:** `400 VALIDATION_ERROR`
+
+### `POST /auth/otp/verify`
+
+- **بدنه:** `VerifyOtpRequest`
+- **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
+- **خطاها:** `401 INVALID_OTP`، `400 VALIDATION_ERROR`
+
 ### `POST /auth/refresh`
 
 - **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
@@ -143,6 +155,19 @@ interface RegisterRequest {
 interface LoginRequest {
   mobile: string;
   password: string;
+}
+
+interface RequestOtpRequest {
+  mobile: string;
+}
+
+interface VerifyOtpRequest {
+  mobile: string;
+  code: string;
+}
+
+interface OtpRequestResponse {
+  expiresAt: ISODate;
 }
 
 interface User {

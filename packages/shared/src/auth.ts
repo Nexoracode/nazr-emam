@@ -17,6 +17,19 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
+export interface RequestOtpRequest {
+  mobile: string;
+}
+
+export interface VerifyOtpRequest {
+  mobile: string;
+  code: string;
+}
+
+export interface OtpRequestResponse {
+  expiresAt: ISODate;
+}
+
 export interface User {
   id: ID;
   fullName: string;

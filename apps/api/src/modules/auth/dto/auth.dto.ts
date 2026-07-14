@@ -2,10 +2,13 @@ import { ApiProperty } from '@nestjs/swagger';
 import type {
   AuthResponse,
   LoginRequest,
+  OtpRequestResponse,
   RefreshTokenRequest,
+  RequestOtpRequest,
   RegisterRequest,
   User,
   UserRole,
+  VerifyOtpRequest,
 } from '@nazr-emam/shared';
 
 export class RegisterRequestDto implements RegisterRequest {
@@ -33,6 +36,24 @@ export class RefreshTokenRequestDto implements RefreshTokenRequest {
     description: 'refreshToken دریافت شده از register/login/refresh',
   })
   refreshToken!: string;
+}
+
+export class RequestOtpRequestDto implements RequestOtpRequest {
+  @ApiProperty({ example: '09123456789', description: 'شماره موبایل ایران' })
+  mobile!: string;
+}
+
+export class VerifyOtpRequestDto implements VerifyOtpRequest {
+  @ApiProperty({ example: '09123456789', description: 'شماره موبایل ایران' })
+  mobile!: string;
+
+  @ApiProperty({ example: '123456', description: 'کد یکبار مصرف' })
+  code!: string;
+}
+
+export class OtpRequestResponseDto implements OtpRequestResponse {
+  @ApiProperty({ example: '2026-07-14T08:20:00.000Z' })
+  expiresAt!: string;
 }
 
 export class UserDto implements User {
