@@ -100,24 +100,24 @@ body {
   margin: 0 0 12px;
 }
 
-h1,
-h2,
-p {
+.page-shell h1,
+.page-shell h2,
+.page-shell p {
   margin-top: 0;
 }
 
-h1 {
+.page-shell h1 {
   font-size: clamp(30px, 5vw, 52px);
   line-height: 1.2;
   margin-bottom: 16px;
 }
 
-h2 {
+.page-shell h2 {
   font-size: 22px;
   margin-bottom: 16px;
 }
 
-p {
+.page-shell p {
   color: var(--muted);
   font-size: 18px;
   line-height: 1.9;

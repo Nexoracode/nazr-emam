@@ -39,7 +39,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   const copy = useMemo(
     () => ({
-      title: isLogin ? 'فرم ورود' : 'عضویت در ببینیم',
+      title: isLogin ? 'فرم ورود' : 'عضویت در نذر امام',
       submit: isLogin ? 'ورود' : 'ثبت نام',
       switchLabel: isLogin ? 'ثبت نام' : 'ورود به حساب',
       switchHref: isLogin ? '/auth/register' : '/auth/login',
@@ -132,7 +132,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     return (
       <main dir="rtl" className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_center,var(--color-auth-bg-start)_0%,var(--color-auth-bg)_50%,var(--color-auth-bg-end)_100%)] px-4 py-8 text-auth-text">
         <section
-          className="w-full max-w-[380px] rounded-[14px] border border-auth-card-border bg-auth-card px-[18px] pb-6 pt-7 shadow-auth-dark"
+          className="w-full max-w-[420px] rounded-[14px] border border-auth-card-border bg-auth-card px-[18px] pb-6 pt-7 shadow-auth-dark sm:px-6"
           aria-labelledby="auth-title"
         >
           <div className="mb-6 flex flex-col items-center text-center">
@@ -144,7 +144,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               {copy.title}
             </h1>
             <p className="m-0 text-[11px] leading-5 text-auth-muted">
-              حساب کاربری خود را بسازید و تماشای گروهی را شروع کنید
+              حساب کاربری خود را بسازید و نذرهای ثبت‌شده را پیگیری کنید
             </p>
           </div>
 
@@ -163,7 +163,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 type="tel"
                 value={mobile}
               />
-              <small className="text-left text-[10px] font-normal leading-5 text-auth-muted">
+              <small className="text-right text-[10px] font-normal leading-5 text-auth-muted">
                 شماره تلفن ایرانی معتبر وارد کنید
               </small>
               {fieldErrors.mobile ? (
@@ -215,14 +215,14 @@ export function AuthForm({ mode }: AuthFormProps) {
               ) : null}
             </div>
 
-            <label className="flex min-w-0 cursor-pointer items-center justify-end gap-2 text-[11px] leading-5 text-auth-text">
+            <label className="flex min-w-0 cursor-pointer items-center justify-start gap-2 text-right text-[11px] leading-5 text-auth-text">
               <input
                 checked={acceptedTerms}
-                className="h-3.5 w-3.5 accent-auth-accent"
+                className="h-3.5 w-3.5 shrink-0 accent-auth-accent"
                 onChange={(event) => setAcceptedTerms(event.target.checked)}
                 type="checkbox"
               />
-              <span>
+              <span className="min-w-0">
                 من{' '}
                 <a className="font-bold text-auth-link hover:text-auth-link" href="#">
                   قوانین
