@@ -19,14 +19,26 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { IsNull, Repository } from 'typeorm';
+import type { AuthenticatedResponse } from './auth.types';
 import { RefreshTokenEntity } from './entities/refresh-token.entity';
 import { UserEntity } from './entities/user.entity';
+
+export const ACCESS_TOKEN_COOKIE = 'accessToken';
+export const REFRESH_TOKEN_COOKIE = 'refreshToken';
+
+const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface Session {
   userId: string;
   accessToken: string;
   refreshTokenHash: string;
-  createdAt: string;
+  expiresAt: Date;
+}
+
+interface AuthenticatedSession {
+  user: User;
+  tokens?: AuthResponse;
 }
 
 @Injectable()
@@ -63,7 +75,6 @@ export class AuthService {
     });
 
     const savedUser = await this.usersRepository.save(user);
-
     return this.createAuthResponse(savedUser);
   }
 
@@ -86,52 +97,80 @@ export class AuthService {
 
   async refresh(payload: RefreshTokenRequest): Promise<AuthResponse> {
     const refreshToken = this.validateRefresh(payload).refreshToken;
-    const tokenHash = this.hashToken(refreshToken);
-    const storedToken = await this.refreshTokensRepository.findOne({
-      where: { tokenHash, revokedAt: IsNull() },
-      relations: { user: true },
-    });
-    const user = storedToken?.user;
+    const { storedToken, user } = await this.getValidRefreshToken(refreshToken);
 
-    if (!storedToken || !user) {
-      throw new UnauthorizedException({
-        statusCode: 401,
-        code: 'INVALID_REFRESH_TOKEN',
-        message: 'توکن تازه سازی معتبر نیست',
-      });
-    }
-
-    storedToken.revokedAt = new Date();
-    await this.refreshTokensRepository.save(storedToken);
-
+    await this.revokeRefreshToken(storedToken);
     return this.createAuthResponse(user);
   }
 
-  async logout(accessToken?: string): Promise<void> {
-    if (!accessToken) {
+  async logout(accessToken?: string, refreshToken?: string): Promise<void> {
+    if (!accessToken && !refreshToken) {
       return;
     }
 
-    const session = this.sessionsByAccessToken.get(accessToken);
+    const session = accessToken
+      ? this.sessionsByAccessToken.get(accessToken)
+      : undefined;
+
     if (session) {
       await this.refreshTokensRepository.update(
         { tokenHash: session.refreshTokenHash, revokedAt: IsNull() },
         { revokedAt: new Date() },
       );
       this.sessionsByAccessToken.delete(session.accessToken);
+      return;
+    }
+
+    if (refreshToken) {
+      await this.refreshTokensRepository.update(
+        { tokenHash: this.hashToken(refreshToken), revokedAt: IsNull() },
+        { revokedAt: new Date() },
+      );
     }
   }
 
   async getUserByAccessToken(accessToken?: string): Promise<User | null> {
-    if (!accessToken) {
+    return this.getUserByValidAccessToken(accessToken);
+  }
+
+  async authenticate(
+    accessToken?: string,
+    refreshToken?: string,
+  ): Promise<AuthenticatedSession | null> {
+    const user = await this.getUserByValidAccessToken(accessToken);
+    if (user) {
+      return { user };
+    }
+
+    if (!refreshToken) {
       return null;
     }
 
-    const session = this.sessionsByAccessToken.get(accessToken);
-    const user = session
-      ? await this.usersRepository.findOne({ where: { id: session.userId } })
-      : undefined;
-    return user ? this.toPublicUser(user) : null;
+    const { storedToken, user: refreshedUser } =
+      await this.getValidRefreshToken(refreshToken);
+    await this.revokeRefreshToken(storedToken);
+    const tokens = await this.createAuthResponse(refreshedUser);
+
+    return {
+      user: tokens.user,
+      tokens,
+    };
+  }
+
+  setAuthCookies(response: AuthenticatedResponse, tokens: AuthResponse): void {
+    response.cookie(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
+      ...this.getBaseCookieOptions(),
+      maxAge: ACCESS_TOKEN_TTL_MS,
+    });
+    response.cookie(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
+      ...this.getBaseCookieOptions(),
+      maxAge: REFRESH_TOKEN_TTL_MS,
+    });
+  }
+
+  clearAuthCookies(response: AuthenticatedResponse): void {
+    response.clearCookie(ACCESS_TOKEN_COOKIE, this.getBaseCookieOptions());
+    response.clearCookie(REFRESH_TOKEN_COOKIE, this.getBaseCookieOptions());
   }
 
   private async createAuthResponse(user: UserEntity): Promise<AuthResponse> {
@@ -141,13 +180,13 @@ export class AuthService {
       userId: user.id,
       accessToken: this.createToken(),
       refreshTokenHash,
-      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + ACCESS_TOKEN_TTL_MS),
     };
 
     const storedRefreshToken = this.refreshTokensRepository.create({
       userId: user.id,
       tokenHash: refreshTokenHash,
-      expiresAt: null,
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       revokedAt: null,
     });
     await this.refreshTokensRepository.save(storedRefreshToken);
@@ -159,6 +198,64 @@ export class AuthService {
       accessToken: session.accessToken,
       refreshToken,
     };
+  }
+
+  private async getUserByValidAccessToken(
+    accessToken?: string,
+  ): Promise<User | null> {
+    if (!accessToken) {
+      return null;
+    }
+
+    const session = this.sessionsByAccessToken.get(accessToken);
+    if (!session) {
+      return null;
+    }
+
+    if (session.expiresAt.getTime() <= Date.now()) {
+      this.sessionsByAccessToken.delete(accessToken);
+      return null;
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: session.userId },
+    });
+
+    return user ? this.toPublicUser(user) : null;
+  }
+
+  private async getValidRefreshToken(refreshToken: string) {
+    const tokenHash = this.hashToken(refreshToken);
+    const storedToken = await this.refreshTokensRepository.findOne({
+      where: { tokenHash, revokedAt: IsNull() },
+      relations: { user: true },
+    });
+    const user = storedToken?.user;
+
+    if (
+      !storedToken ||
+      !user ||
+      (storedToken.expiresAt && storedToken.expiresAt.getTime() <= Date.now())
+    ) {
+      if (storedToken) {
+        await this.revokeRefreshToken(storedToken);
+      }
+
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'INVALID_REFRESH_TOKEN',
+        message: 'توکن تازه سازی معتبر نیست',
+      });
+    }
+
+    return { storedToken, user };
+  }
+
+  private async revokeRefreshToken(
+    refreshToken: RefreshTokenEntity,
+  ): Promise<void> {
+    refreshToken.revokedAt = new Date();
+    await this.refreshTokensRepository.save(refreshToken);
   }
 
   private toPublicUser(user: UserEntity): User {
@@ -269,5 +366,14 @@ export class AuthService {
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private getBaseCookieOptions() {
+    return {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    };
   }
 }

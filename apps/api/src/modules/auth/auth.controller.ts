@@ -6,13 +6,14 @@ import {
   HttpCode,
   Post,
   Req,
-  UseGuards,
+  Res,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
+  ApiCookieAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -20,10 +21,17 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Public } from '../../common/decorators/public.decorator';
 import { ApiErrorDto } from '../../common/dto/api-error.dto';
-import { AuthGuard } from './guards/auth.guard';
-import { AuthService } from './auth.service';
-import type { AuthenticatedRequest } from './auth.types';
+import {
+  ACCESS_TOKEN_COOKIE,
+  AuthService,
+  REFRESH_TOKEN_COOKIE,
+} from './auth.service';
+import type {
+  AuthenticatedRequest,
+  AuthenticatedResponse,
+} from './auth.types';
 import {
   AuthResponseDto,
   LoginRequestDto,
@@ -39,77 +47,111 @@ export class AuthController {
 
   @ApiOperation({
     summary: 'ثبت نام کاربر',
-    description: 'کاربر جدید donor می سازد و accessToken و refreshToken برمی گرداند.',
+    description:
+      'کاربر جدید donor می سازد، accessToken و refreshToken را برمی گرداند و هر دو را در cookie ذخیره می کند.',
   })
   @ApiBody({ type: RegisterRequestDto })
   @ApiCreatedResponse({ type: AuthResponseDto })
   @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
   @ApiConflictResponse({ type: ApiErrorDto, description: 'MOBILE_TAKEN' })
+  @Public()
   @Post('register')
-  register(@Body() body: RegisterRequestDto) {
-    return this.authService.register(body);
+  async register(
+    @Body() body: RegisterRequestDto,
+    @Res({ passthrough: true }) response: AuthenticatedResponse,
+  ) {
+    const authResponse = await this.authService.register(body);
+    this.authService.setAuthCookies(response, authResponse);
+    return authResponse;
   }
 
   @ApiOperation({
     summary: 'ورود کاربر',
-    description: 'با موبایل و رمز عبور وارد می شود و accessToken و refreshToken می گیرد.',
+    description:
+      'با موبایل و رمز عبور وارد می شود، accessToken و refreshToken می گیرد و هر دو در cookie ذخیره می شوند.',
   })
   @ApiBody({ type: LoginRequestDto })
   @ApiOkResponse({ type: AuthResponseDto })
   @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
   @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_CREDENTIALS' })
+  @Public()
   @HttpCode(200)
   @Post('login')
-  login(@Body() body: LoginRequestDto) {
-    return this.authService.login(body);
+  async login(
+    @Body() body: LoginRequestDto,
+    @Res({ passthrough: true }) response: AuthenticatedResponse,
+  ) {
+    const authResponse = await this.authService.login(body);
+    this.authService.setAuthCookies(response, authResponse);
+    return authResponse;
   }
 
+  @ApiCookieAuth(REFRESH_TOKEN_COOKIE)
   @ApiOperation({
     summary: 'تازه سازی توکن',
-    description: 'با refreshToken معتبر، accessToken و refreshToken جدید صادر می کند.',
+    description:
+      'با refreshToken معتبر از body یا cookie، accessToken و refreshToken جدید صادر می کند.',
   })
-  @ApiBody({ type: RefreshTokenRequestDto })
+  @ApiBody({ type: RefreshTokenRequestDto, required: false })
   @ApiOkResponse({ type: AuthResponseDto })
   @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
   @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_REFRESH_TOKEN' })
+  @Public()
   @HttpCode(200)
   @Post('refresh')
-  refresh(@Body() body: RefreshTokenRequestDto) {
-    return this.authService.refresh(body);
+  async refresh(
+    @Body() body: Partial<RefreshTokenRequestDto>,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: AuthenticatedResponse,
+  ) {
+    const authResponse = await this.authService.refresh({
+      refreshToken: body?.refreshToken ?? request.cookies?.refreshToken ?? '',
+    });
+    this.authService.setAuthCookies(response, authResponse);
+    return authResponse;
   }
 
   @ApiBearerAuth()
+  @ApiCookieAuth(ACCESS_TOKEN_COOKIE)
   @ApiOperation({
     summary: 'خروج کاربر',
-    description: 'نشست مرتبط با accessToken ارسالی را حذف می کند.',
+    description: 'نشست فعلی را حذف و cookieهای auth را پاک می کند.',
   })
   @ApiNoContentResponse({ description: 'خروج موفق' })
   @HttpCode(204)
   @Delete('logout')
-  logout(@Req() request: AuthenticatedRequest) {
-    this.authService.logout(this.extractBearerToken(request));
+  async logout(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: AuthenticatedResponse,
+  ) {
+    await this.authService.logout(
+      this.extractAccessToken(request),
+      request.cookies?.refreshToken,
+    );
+    this.authService.clearAuthCookies(response);
   }
 
   @ApiBearerAuth()
+  @ApiCookieAuth(ACCESS_TOKEN_COOKIE)
   @ApiOperation({
     summary: 'دریافت کاربر فعلی',
-    description: 'اطلاعات کاربر لاگین شده را از accessToken برمی گرداند.',
+    description:
+      'اطلاعات کاربر لاگین شده را از accessToken برمی گرداند. اگر accessToken منقضی شده باشد و refreshToken معتبر باشد، خودکار refresh می شود.',
   })
   @ApiOkResponse({ type: UserDto })
   @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'UNAUTHORIZED' })
-  @UseGuards(AuthGuard)
   @Get('me')
   me(@Req() request: AuthenticatedRequest) {
     return request.user;
   }
 
-  private extractBearerToken(request: AuthenticatedRequest): string | undefined {
+  private extractAccessToken(request: AuthenticatedRequest): string | undefined {
     const authorization = request.headers?.authorization;
-    if (typeof authorization !== 'string') {
-      return undefined;
+    if (typeof authorization === 'string') {
+      const [scheme, token] = authorization.split(' ');
+      return scheme === 'Bearer' && token ? token : request.cookies?.accessToken;
     }
 
-    const [scheme, token] = authorization.split(' ');
-    return scheme === 'Bearer' && token ? token : undefined;
+    return request.cookies?.accessToken;
   }
 }
