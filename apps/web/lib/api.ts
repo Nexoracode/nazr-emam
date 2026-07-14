@@ -2,8 +2,11 @@ import type {
   ApiError,
   AuthResponse,
   LoginRequest,
+  OtpRequestResponse,
   RegisterRequest,
+  RequestOtpRequest,
   User,
+  VerifyOtpRequest,
 } from '@nazr-emam/shared';
 
 export class ApiRequestError extends Error {
@@ -123,4 +126,12 @@ export function logout() {
 
 export function getMe() {
   return get<User>('/auth/me');
+}
+
+export function requestOtp(payload: RequestOtpRequest) {
+  return post<OtpRequestResponse, RequestOtpRequest>('/auth/otp/request', payload);
+}
+
+export function verifyOtp(payload: VerifyOtpRequest) {
+  return post<AuthResponse, VerifyOtpRequest>('/auth/otp/verify', payload);
 }

@@ -2,477 +2,579 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { isValidIranMobile, normalizeIranMobile } from '@nazr-emam/shared';
-import { ApiRequestError, login, register } from '../../lib/api';
+import { ApiRequestError, login, register, requestOtp, verifyOtp } from '../../lib/api';
 
 type AuthMode = 'login' | 'register';
-
-interface AuthFormProps {
-  mode: AuthMode;
-}
-
+type LoginStep = 'phone' | 'otp' | 'password';
 type FieldErrors = Record<string, string>;
 
-const defaultError = 'درخواست انجام نشد. لطفا کمی بعد دوباره تلاش کنید.';
-const loginFieldClass =
-  'h-[46px] w-full min-w-0 rounded-md border border-field-border bg-surface px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15';
-const registerFieldBaseClass =
-  'h-10 w-full min-w-0 rounded-lg border bg-auth-input-dark px-3 text-[12px] text-auth-text outline-none transition placeholder:text-auth-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
-
+const OTP_DURATION = 5 * 60;
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
-function getRegisterFieldClass(hasError: boolean) {
-  return `${registerFieldBaseClass} ${
-    hasError ? 'border-danger focus:border-danger focus:ring-danger/20' : 'border-auth-input-border'
+const fieldCls = (err: boolean) =>
+  `h-11 w-full min-w-0 rounded-lg border bg-auth-input-dark px-3 text-[13px] text-auth-text outline-none transition placeholder:text-auth-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25 ${
+    err
+      ? 'border-danger focus:border-danger focus:ring-danger/20'
+      : 'border-auth-input-border'
   }`;
+
+function formatTime(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export function AuthForm({ mode }: AuthFormProps) {
+function validateMobile(mobile: string): string | null {
+  const n = normalizeIranMobile(mobile);
+  if (!n) return 'شماره همراه الزامی است.';
+  if (!/^\d+$/.test(n)) return 'شماره همراه فقط باید شامل عدد باشد.';
+  if (!n.startsWith('09')) return 'شماره همراه باید با ۰۹ شروع شود.';
+  if (n.length !== 11) return 'شماره همراه باید ۱۱ رقم باشد.';
+  if (!isValidIranMobile(n)) return 'پیش‌شماره همراه معتبر نیست.';
+  return null;
+}
+
+function handleApiError(
+  e: unknown,
+  setMessage: (m: string) => void,
+  setMessageTone: (t: 'error') => void,
+  setFieldErrors: (f: FieldErrors) => void,
+) {
+  if (e instanceof ApiRequestError) {
+    setMessage(e.message);
+    setMessageTone('error');
+    setFieldErrors(e.fields ?? {});
+  } else {
+    setMessage('درخواست انجام نشد. لطفا دوباره تلاش کنید.');
+    setMessageTone('error');
+  }
+}
+
+export function AuthForm({ mode }: { mode: AuthMode }) {
+  if (mode === 'login') return <LoginForm />;
+  return <RegisterForm />;
+}
+
+// ─── Login (multi-step) ───────────────────────────────────────────────────────
+
+function LoginForm() {
   const router = useRouter();
-  const isLogin = mode === 'login';
+  const [step, setStep] = useState<LoginStep>('phone');
+  const [mobile, setMobile] = useState('');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [remember, setRemember] = useState(false);
+  const [otpSeconds, setOtpSeconds] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<'success' | 'error' | ''>('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  useEffect(() => {
+    const remembered = window.localStorage.getItem('nazr-emam-mobile');
+    if (remembered) setMobile(remembered);
+  }, []);
+
+  useEffect(() => {
+    if (otpSeconds <= 0) return;
+    const id = setInterval(() => setOtpSeconds((s) => s - 1), 1000);
+    return () => clearInterval(id);
+  }, [otpSeconds]);
+
+  function clearMessages() {
+    setMessage('');
+    setMessageTone('');
+    setFieldErrors({});
+  }
+
+  function goBack() {
+    clearMessages();
+    setOtp('');
+    setPassword('');
+    setStep('phone');
+  }
+
+  async function handleSendOtp() {
+    clearMessages();
+    const err = validateMobile(mobile);
+    if (err) { setFieldErrors({ mobile: err }); return; }
+    setIsSubmitting(true);
+    try {
+      await requestOtp({ mobile: normalizeIranMobile(mobile) });
+      setStep('otp');
+      setOtpSeconds(OTP_DURATION);
+    } catch (e) {
+      handleApiError(e, setMessage, setMessageTone, setFieldErrors);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function handleGoToPassword() {
+    clearMessages();
+    const err = validateMobile(mobile);
+    if (err) { setFieldErrors({ mobile: err }); return; }
+    setStep('password');
+  }
+
+  async function handleOtpSubmit(e: FormEvent) {
+    e.preventDefault();
+    clearMessages();
+    if (!otp || otp.length < 4) { setFieldErrors({ otp: 'کد تایید الزامی است.' }); return; }
+    setIsSubmitting(true);
+    try {
+      await verifyOtp({ mobile: normalizeIranMobile(mobile), code: otp });
+      setMessage('ورود با موفقیت انجام شد.');
+      setMessageTone('success');
+      window.setTimeout(() => { router.push('/'); router.refresh(); }, 900);
+    } catch (e) {
+      handleApiError(e, setMessage, setMessageTone, setFieldErrors);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handlePasswordSubmit(e: FormEvent) {
+    e.preventDefault();
+    clearMessages();
+    if (!password) { setFieldErrors({ password: 'رمز عبور الزامی است.' }); return; }
+    setIsSubmitting(true);
+    try {
+      await login({ mobile: normalizeIranMobile(mobile), password });
+      if (remember) window.localStorage.setItem('nazr-emam-mobile', normalizeIranMobile(mobile));
+      else window.localStorage.removeItem('nazr-emam-mobile');
+      setMessage('ورود با موفقیت انجام شد.');
+      setMessageTone('success');
+      window.setTimeout(() => { router.push('/'); router.refresh(); }, 900);
+    } catch (e) {
+      handleApiError(e, setMessage, setMessageTone, setFieldErrors);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <AuthShell>
+      <div className="mb-6 flex flex-col items-center text-center">
+        <RobotLogo />
+        <h1 className="mb-1 mt-4 text-[18px] font-extrabold text-auth-text">خوش آمدید!</h1>
+        <p className="m-0 text-[11px] leading-5 text-auth-muted">
+          برای ورود به حساب خود، اطلاعات را وارد کنید
+        </p>
+      </div>
+
+      {step === 'phone' && (
+        <div className="grid gap-4">
+          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <span>شماره همراه</span>
+            <input
+              autoComplete="tel"
+              className={fieldCls(Boolean(fieldErrors.mobile))}
+              dir="ltr"
+              inputMode="tel"
+              maxLength={11}
+              onChange={(e) => setMobile(e.target.value)}
+              placeholder="09123456789"
+              type="tel"
+              value={mobile}
+            />
+            {fieldErrors.mobile && (
+              <small className="text-[10px] text-danger">{fieldErrors.mobile}</small>
+            )}
+          </label>
+
+          {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              className="h-10 cursor-pointer rounded-lg border border-auth-input-border bg-transparent text-[12px] font-bold text-auth-text transition hover:border-auth-accent hover:text-auth-accent disabled:opacity-60"
+              disabled={isSubmitting}
+              onClick={handleSendOtp}
+              type="button"
+            >
+              {isSubmitting ? '...' : 'ورود با کد یکبار مصرف'}
+            </button>
+            <button
+              className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[12px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-60"
+              disabled={isSubmitting}
+              onClick={handleGoToPassword}
+              type="button"
+            >
+              ورود با رمز عبور
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 'otp' && (
+        <form className="grid gap-4" onSubmit={handleOtpSubmit} noValidate>
+          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <span>کد تایید پیامکی</span>
+            <input
+              autoComplete="one-time-code"
+              className={fieldCls(Boolean(fieldErrors.otp))}
+              dir="ltr"
+              inputMode="numeric"
+              maxLength={6}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+              placeholder="------"
+              type="text"
+              value={otp}
+            />
+            {fieldErrors.otp && (
+              <small className="text-[10px] text-danger">{fieldErrors.otp}</small>
+            )}
+          </label>
+
+          <div className="flex items-center justify-between text-[11px]">
+            {otpSeconds > 0 ? (
+              <span className="text-auth-muted">اعتبار کد: {formatTime(otpSeconds)}</span>
+            ) : (
+              <button
+                className="cursor-pointer text-auth-accent hover:text-auth-accent-dark"
+                disabled={isSubmitting}
+                onClick={handleSendOtp}
+                type="button"
+              >
+                ارسال مجدد
+              </button>
+            )}
+            <button
+              className="cursor-pointer text-auth-link"
+              onClick={goBack}
+              style={{ color: '#65b5ff' }}
+              type="button"
+            >
+              بازگشت
+            </button>
+          </div>
+
+          {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
+
+          <button
+            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {isSubmitting ? 'در حال بررسی...' : 'ورود'}
+          </button>
+        </form>
+      )}
+
+      {step === 'password' && (
+        <form className="grid gap-4" onSubmit={handlePasswordSubmit} noValidate>
+          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <span>رمز عبور</span>
+            <input
+              autoComplete="current-password"
+              className={fieldCls(Boolean(fieldErrors.password))}
+              dir="ltr"
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              value={password}
+            />
+            {fieldErrors.password && (
+              <small className="text-[10px] text-danger">{fieldErrors.password}</small>
+            )}
+          </label>
+
+          <div className="flex items-center justify-between text-[11px]">
+            <Link
+              className="transition"
+              href="/auth/forgot-password"
+              style={{ color: '#65b5ff' }}
+            >
+              رمز عبور را فراموش کردید؟
+            </Link>
+            <label className="flex cursor-pointer items-center gap-1.5 text-auth-text">
+              <input
+                checked={remember}
+                className="h-3.5 w-3.5 accent-auth-accent"
+                onChange={(e) => setRemember(e.target.checked)}
+                type="checkbox"
+              />
+              <span>مرا به خاطر بسپار</span>
+            </label>
+          </div>
+
+          {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
+
+          <button
+            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {isSubmitting ? 'در حال ورود...' : 'ورود به حساب'}
+          </button>
+
+          <button
+            className="text-center text-[11px] transition"
+            onClick={goBack}
+            style={{ color: '#65b5ff' }}
+            type="button"
+          >
+            بازگشت
+          </button>
+        </form>
+      )}
+
+      <div className="mt-5 border-t border-auth-card-border pt-4 text-center">
+        <p className="m-0 text-[11px] leading-5 text-auth-muted">هنوز حساب کاربری ندارید؟</p>
+        <Link
+          className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold transition"
+          href="/auth/register"
+          style={{ color: '#c8d8e8' }}
+        >
+          ساخت حساب جدید
+        </Link>
+      </div>
+
+      <Link
+        className="mt-4 block text-center text-[11px] text-auth-muted transition hover:text-auth-text"
+        href="/"
+      >
+        خانه
+      </Link>
+    </AuthShell>
+  );
+}
+
+// ─── Register ─────────────────────────────────────────────────────────────────
+
+function RegisterForm() {
+  const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [remember, setRemember] = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState<'success' | 'error' | ''>('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  const copy = useMemo(
-    () => ({
-      title: isLogin ? 'فرم ورود' : 'عضویت در نذر امام',
-      submit: isLogin ? 'ورود' : 'ثبت نام',
-      switchLabel: isLogin ? 'ثبت نام' : 'ورود به حساب',
-      switchHref: isLogin ? '/auth/register' : '/auth/login',
-      success: isLogin
-        ? 'ورود با موفقیت انجام شد.'
-        : 'حساب کاربری شما ساخته شد. به صفحه ورود منتقل می‌شوید...',
-    }),
-    [isLogin],
-  );
-
-  useEffect(() => {
-    if (!isLogin) {
-      return;
-    }
-
-    const rememberedMobile = window.localStorage.getItem('nazr-emam-mobile');
-    if (rememberedMobile) {
-      setMobile(rememberedMobile);
-    }
-  }, [isLogin]);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSubmitting(true);
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
     setMessage('');
     setMessageTone('');
     setFieldErrors({});
 
+    const errors: FieldErrors = {};
+    if (!fullName.trim() || fullName.trim().length < 2)
+      errors.fullName = 'نام و نام خانوادگی باید حداقل ۲ کاراکتر باشد.';
+    const mobileErr = validateMobile(mobile);
+    if (mobileErr) errors.mobile = mobileErr;
+    if (!password) errors.password = 'رمز عبور الزامی است.';
+    else if (!passwordPattern.test(password))
+      errors.password = 'رمز عبور باید حداقل ۸ کاراکتر و شامل حرف و عدد باشد.';
+    if (!confirmPassword) errors.confirmPassword = 'تکرار رمز عبور الزامی است.';
+    else if (password !== confirmPassword)
+      errors.confirmPassword = 'رمز عبور و تکرار آن یکسان نیستند.';
+    if (!acceptedTerms) errors.terms = 'پذیرش قوانین الزامی است.';
+
+    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
+
+    setIsSubmitting(true);
     try {
-      const clientErrors = validateAuthForm({
-        acceptedTerms,
-        confirmPassword,
-        fullName,
-        isLogin,
-        mobile,
+      await register({
+        fullName: fullName.trim(),
+        mobile: normalizeIranMobile(mobile),
         password,
       });
-
-      if (Object.keys(clientErrors).length > 0) {
-        setFieldErrors(clientErrors);
-        return;
-      }
-
-      const normalizedMobile = normalizeIranMobile(mobile);
-
-      if (isLogin) {
-        await login({ mobile: normalizedMobile, password });
-        if (remember) {
-          window.localStorage.setItem('nazr-emam-mobile', normalizedMobile);
-        } else {
-          window.localStorage.removeItem('nazr-emam-mobile');
-        }
-        setMessage(copy.success);
-        setMessageTone('success');
-        window.setTimeout(() => {
-          router.push('/');
-          router.refresh();
-        }, 900);
-      } else {
-        await register({
-          fullName: fullName.trim(),
-          mobile: normalizedMobile,
-          password,
-        });
-        setMessage(copy.success);
-        setMessageTone('success');
-        window.setTimeout(() => {
-          router.push('/auth/login');
-        }, 1500);
-      }
-    } catch (error) {
-      if (error instanceof ApiRequestError) {
-        setMessage(error.message || defaultError);
-        setMessageTone('error');
-        setFieldErrors(error.fields ?? {});
-      } else {
-        setMessage(defaultError);
-        setMessageTone('error');
-      }
+      setMessage('حساب کاربری شما ساخته شد. به صفحه ورود منتقل می‌شوید...');
+      setMessageTone('success');
+      window.setTimeout(() => router.push('/auth/login'), 1500);
+    } catch (e) {
+      handleApiError(e, setMessage, setMessageTone, setFieldErrors);
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  if (!isLogin) {
-    return (
-      <main dir="rtl" className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_center,var(--color-auth-bg-start)_0%,var(--color-auth-bg)_50%,var(--color-auth-bg-end)_100%)] px-4 py-8 text-auth-text">
-        <section
-          className="w-full max-w-[420px] rounded-[14px] border border-auth-card-border bg-auth-card px-[18px] pb-6 pt-7 shadow-auth-dark sm:px-6"
-          aria-labelledby="auth-title"
-        >
-          <div className="mb-6 flex flex-col items-center text-center">
-            <NazrLogo />
-            <h1
-              id="auth-title"
-              className="mb-1.5 mt-4 text-[16px] font-extrabold leading-7 text-auth-text"
-            >
-              {copy.title}
-            </h1>
-            <p className="m-0 text-[11px] leading-5 text-auth-muted">
-              حساب کاربری خود را بسازید و نذرهای ثبت‌شده را پیگیری کنید
-            </p>
-          </div>
-
-          <form className="grid min-w-0 gap-4" onSubmit={handleSubmit} noValidate>
-            <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
-              <span>نام و نام خانوادگی</span>
-              <input
-                autoComplete="name"
-                className={getRegisterFieldClass(Boolean(fieldErrors.fullName))}
-                dir="rtl"
-                maxLength={60}
-                name="fullName"
-                onChange={(event) => setFullName(event.target.value)}
-                placeholder="مثلاً: علی رضایی"
-                required
-                type="text"
-                value={fullName}
-              />
-              {fieldErrors.fullName ? (
-                <small className="text-right text-[10px] font-normal leading-5 text-danger">
-                  {fieldErrors.fullName}
-                </small>
-              ) : null}
-            </label>
-
-            <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
-              <span>شماره همراه</span>
-              <input
-                autoComplete="tel"
-                className={getRegisterFieldClass(Boolean(fieldErrors.mobile))}
-                dir="ltr"
-                inputMode="tel"
-                maxLength={11}
-                name="mobile"
-                onChange={(event) => setMobile(event.target.value)}
-                placeholder="09150000000"
-                required
-                type="tel"
-                value={mobile}
-              />
-              {fieldErrors.mobile ? (
-                <small className="text-right text-[10px] font-normal leading-5 text-danger">
-                  {fieldErrors.mobile}
-                </small>
-              ) : null}
-            </label>
-
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-3">
-              <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
-                <span>رمز عبور</span>
-                <input
-                  autoComplete="new-password"
-                  className={getRegisterFieldClass(Boolean(fieldErrors.password))}
-                  dir="ltr"
-                  minLength={8}
-                  name="password"
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  type="password"
-                  value={password}
-                />
-                {fieldErrors.password ? (
-                  <small className="text-right text-[10px] font-normal leading-5 text-danger">
-                    {fieldErrors.password}
-                  </small>
-                ) : null}
-              </label>
-
-              <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
-                <span>تکرار رمز</span>
-                <input
-                  autoComplete="new-password"
-                  className={getRegisterFieldClass(Boolean(fieldErrors.confirmPassword))}
-                  dir="ltr"
-                  minLength={8}
-                  name="confirmPassword"
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  required
-                  type="password"
-                  value={confirmPassword}
-                />
-                {fieldErrors.confirmPassword ? (
-                  <small className="text-right text-[10px] font-normal leading-5 text-danger">
-                    {fieldErrors.confirmPassword}
-                  </small>
-                ) : null}
-              </label>
-            </div>
-
-            <label className="flex min-w-0 cursor-pointer items-center justify-start gap-2 text-right text-[11px] leading-5 text-auth-text">
-              <input
-                checked={acceptedTerms}
-                className="h-3.5 w-3.5 shrink-0 accent-auth-accent"
-                onChange={(event) => setAcceptedTerms(event.target.checked)}
-                type="checkbox"
-              />
-              <span className="min-w-0">
-                قوانین و شرایط استفاده را می‌پذیرم
-              </span>
-            </label>
-            {fieldErrors.terms ? (
-              <small className="-mt-3 text-[10px] leading-5 text-danger">
-                {fieldErrors.terms}
-              </small>
-            ) : null}
-
-            {message ? (
-              <p
-                aria-live="polite"
-                className={`m-0 rounded-md border px-3 py-2 text-right text-[11px] leading-5 ${
-                  messageTone === 'success'
-                    ? 'border-auth-accent/40 bg-auth-accent/10 text-auth-accent'
-                    : 'border-danger/45 bg-danger/10 text-danger'
-                }`}
-              >
-                {message}
-              </p>
-            ) : null}
-
-            <button
-              className="h-10 w-full min-w-0 cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:cursor-wait disabled:opacity-70"
-              disabled={isSubmitting}
-              type="submit"
-            >
-              {isSubmitting ? 'در حال ارسال...' : copy.submit}
-            </button>
-          </form>
-
-          <div className="mt-4 border-t border-auth-card-border pt-3 text-center">
-            <p className="m-0 text-[11px] leading-5 text-auth-muted">قبلا ثبت نام کرده‌اید؟</p>
-            <Link
-              className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold transition"
-              href={copy.switchHref}
-              style={{ color: '#c8d8e8' }}
-            >
-              {copy.switchLabel}
-            </Link>
-          </div>
-
-          <Link
-            className="mt-4 block text-center text-[11px] text-auth-muted transition hover:text-auth-text"
-            href="/"
-          >
-            خانه
-          </Link>
-        </section>
-      </main>
-    );
-  }
-
   return (
-    <main dir="rtl" className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_center,var(--color-auth-bg-start)_0%,var(--color-auth-bg)_50%,var(--color-auth-bg-end)_100%)] px-4 py-8 text-auth-text">
-      <section
-        className="w-full max-w-[420px] rounded-[14px] border border-auth-card-border bg-auth-card px-[18px] pb-6 pt-7 shadow-auth-dark sm:px-6"
-        aria-labelledby="auth-title"
-      >
-        <div className="mb-6 flex flex-col items-center text-center">
-          <NazrLogo />
-          <h1
-            id="auth-title"
-            className="mb-1.5 mt-4 text-[16px] font-extrabold leading-7 text-auth-text"
-          >
-            {copy.title}
-          </h1>
-          <p className="m-0 text-[11px] leading-5 text-auth-muted">
-            با شماره همراه و رمز عبور وارد شوید
-          </p>
-        </div>
+    <AuthShell>
+      <div className="mb-5 flex flex-col items-center text-center">
+        <RobotLogo />
+        <h1 className="mb-1 mt-4 text-[16px] font-extrabold text-auth-text">
+          عضویت در نذر امام
+        </h1>
+        <p className="m-0 text-[11px] leading-5 text-auth-muted">
+          حساب کاربری خود را بسازید و نذرهای ثبت‌شده را پیگیری کنید
+        </p>
+      </div>
 
-        <form className="grid min-w-0 gap-4" onSubmit={handleSubmit} noValidate>
-          <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
-            <span>شماره همراه</span>
-            <input
-              autoComplete="tel"
-              className={getRegisterFieldClass(Boolean(fieldErrors.mobile))}
-              dir="ltr"
-              inputMode="tel"
-              maxLength={11}
-              name="mobile"
-              onChange={(event) => setMobile(event.target.value)}
-              placeholder="09123456789"
-              required
-              type="tel"
-              value={mobile}
-            />
-            {fieldErrors.mobile ? (
-              <small className="text-right text-[10px] font-normal leading-5 text-danger">
-                {fieldErrors.mobile}
-              </small>
-            ) : null}
-          </label>
+      <form className="grid gap-3.5" onSubmit={handleSubmit} noValidate>
+        <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+          <span>نام و نام خانوادگی</span>
+          <input
+            autoComplete="name"
+            className={fieldCls(Boolean(fieldErrors.fullName))}
+            dir="rtl"
+            maxLength={60}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="مثلاً: علی رضایی"
+            type="text"
+            value={fullName}
+          />
+          {fieldErrors.fullName && (
+            <small className="text-[10px] text-danger">{fieldErrors.fullName}</small>
+          )}
+        </label>
 
-          <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
+        <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+          <span>شماره همراه</span>
+          <input
+            autoComplete="tel"
+            className={fieldCls(Boolean(fieldErrors.mobile))}
+            dir="ltr"
+            inputMode="tel"
+            maxLength={11}
+            onChange={(e) => setMobile(e.target.value)}
+            placeholder="09123456789"
+            type="tel"
+            value={mobile}
+          />
+          {fieldErrors.mobile && (
+            <small className="text-[10px] text-danger">{fieldErrors.mobile}</small>
+          )}
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
             <span>رمز عبور</span>
             <input
-              autoComplete="current-password"
-              className={getRegisterFieldClass(Boolean(fieldErrors.password))}
+              autoComplete="new-password"
+              className={fieldCls(Boolean(fieldErrors.password))}
               dir="ltr"
-              name="password"
-              onChange={(event) => setPassword(event.target.value)}
-              required
+              minLength={8}
+              onChange={(e) => setPassword(e.target.value)}
               type="password"
               value={password}
             />
-            {fieldErrors.password ? (
-              <small className="text-right text-[10px] font-normal leading-5 text-danger">
-                {fieldErrors.password}
-              </small>
-            ) : null}
+            {fieldErrors.password && (
+              <small className="text-[10px] text-danger">{fieldErrors.password}</small>
+            )}
           </label>
-
-          <label className="flex min-w-0 cursor-pointer items-center justify-start gap-2 text-right text-[11px] leading-5 text-auth-text">
+          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <span>تکرار رمز</span>
             <input
-              checked={remember}
-              className="h-3.5 w-3.5 shrink-0 accent-auth-accent"
-              onChange={(event) => setRemember(event.target.checked)}
-              type="checkbox"
+              autoComplete="new-password"
+              className={fieldCls(Boolean(fieldErrors.confirmPassword))}
+              dir="ltr"
+              minLength={8}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              type="password"
+              value={confirmPassword}
             />
-            <span>مرا به خاطر بسپار</span>
+            {fieldErrors.confirmPassword && (
+              <small className="text-[10px] text-danger">{fieldErrors.confirmPassword}</small>
+            )}
           </label>
-
-          {message ? (
-            <p
-              aria-live="polite"
-              className={`m-0 rounded-md border px-3 py-2 text-right text-[11px] leading-5 ${
-                messageTone === 'success'
-                  ? 'border-auth-accent/40 bg-auth-accent/10 text-auth-accent'
-                  : 'border-danger/45 bg-danger/10 text-danger'
-              }`}
-            >
-              {message}
-            </p>
-          ) : null}
-
-          <button
-            className="h-10 w-full min-w-0 cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:cursor-wait disabled:opacity-70"
-            disabled={isSubmitting}
-            type="submit"
-          >
-            {isSubmitting ? 'در حال ارسال...' : copy.submit}
-          </button>
-        </form>
-
-        <div className="mt-4 border-t border-auth-card-border pt-3 text-center">
-          <p className="m-0 text-[11px] leading-5 text-auth-muted">حساب کاربری ندارید؟</p>
-          <Link
-            className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold transition"
-            href={copy.switchHref}
-            style={{ color: '#c8d8e8' }}
-          >
-            {copy.switchLabel}
-          </Link>
         </div>
 
-        <Link
-          className="mt-4 block text-center text-[11px] text-auth-muted transition hover:text-auth-text"
-          href="/"
+        <label className="flex cursor-pointer items-center gap-2 text-[11px] text-auth-text">
+          <input
+            checked={acceptedTerms}
+            className="h-3.5 w-3.5 accent-auth-accent"
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            type="checkbox"
+          />
+          <span>قوانین و شرایط استفاده را می‌پذیرم</span>
+        </label>
+        {fieldErrors.terms && (
+          <small className="-mt-2 text-[10px] text-danger">{fieldErrors.terms}</small>
+        )}
+
+        {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
+
+        <button
+          className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+          disabled={isSubmitting}
+          type="submit"
         >
-          خانه
+          {isSubmitting ? 'در حال ارسال...' : 'ثبت نام'}
+        </button>
+      </form>
+
+      <div className="mt-4 border-t border-auth-card-border pt-3 text-center">
+        <p className="m-0 text-[11px] leading-5 text-auth-muted">قبلاً ثبت نام کرده‌اید؟</p>
+        <Link
+          className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold transition"
+          href="/auth/login"
+          style={{ color: '#c8d8e8' }}
+        >
+          ورود به حساب
         </Link>
+      </div>
+
+      <Link
+        className="mt-4 block text-center text-[11px] text-auth-muted transition hover:text-auth-text"
+        href="/"
+      >
+        خانه
+      </Link>
+    </AuthShell>
+  );
+}
+
+// ─── Shared components ────────────────────────────────────────────────────────
+
+function AuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <main
+      dir="rtl"
+      className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_center,var(--color-auth-bg-start)_0%,var(--color-auth-bg)_50%,var(--color-auth-bg-end)_100%)] px-4 py-8 text-auth-text"
+    >
+      <section className="w-full max-w-[420px] rounded-[14px] border border-auth-card-border bg-auth-card px-[18px] pb-6 pt-7 shadow-auth-dark sm:px-6">
+        {children}
       </section>
     </main>
   );
 }
 
-function validateAuthForm({
-  acceptedTerms,
-  confirmPassword,
-  fullName,
-  isLogin,
-  mobile,
-  password,
+function MessageBox({
+  tone,
+  children,
 }: {
-  acceptedTerms: boolean;
-  confirmPassword: string;
-  fullName: string;
-  isLogin: boolean;
-  mobile: string;
-  password: string;
+  tone: 'success' | 'error' | '';
+  children: React.ReactNode;
 }) {
-  const errors: FieldErrors = {};
-  const normalizedMobile = normalizeIranMobile(mobile);
-
-  if (!isLogin) {
-    const trimmedName = fullName.trim();
-    if (!trimmedName || trimmedName.length < 2) {
-      errors.fullName = 'نام و نام خانوادگی باید حداقل ۲ کاراکتر باشد.';
-    }
-  }
-
-  if (!normalizedMobile) {
-    errors.mobile = 'شماره همراه الزامی است.';
-  } else if (!/^\d+$/.test(normalizedMobile)) {
-    errors.mobile = 'شماره همراه فقط باید شامل عدد باشد.';
-  } else if (!normalizedMobile.startsWith('09')) {
-    errors.mobile = 'شماره همراه باید با 09 شروع شود.';
-  } else if (normalizedMobile.length !== 11) {
-    errors.mobile = 'شماره همراه باید ۱۱ رقم باشد.';
-  } else if (!isValidIranMobile(normalizedMobile)) {
-    errors.mobile = 'پیش‌شماره همراه معتبر نیست.';
-  }
-
-  if (!password) {
-    errors.password = 'رمز عبور الزامی است.';
-  } else if (!isLogin && !passwordPattern.test(password)) {
-    errors.password = 'رمز عبور باید حداقل ۸ کاراکتر و شامل حرف و عدد باشد.';
-  }
-
-  if (!isLogin) {
-    if (!confirmPassword) {
-      errors.confirmPassword = 'تکرار رمز عبور الزامی است.';
-    } else if (password !== confirmPassword) {
-      errors.confirmPassword = 'تکرار رمز عبور با رمز عبور یکسان نیست.';
-    }
-
-    if (!acceptedTerms) {
-      errors.terms = 'پذیرش قوانین و شرایط استفاده الزامی است.';
-    }
-  }
-
-  return errors;
+  return (
+    <p
+      aria-live="polite"
+      className={`m-0 rounded-md border px-3 py-2 text-right text-[11px] leading-5 ${
+        tone === 'success'
+          ? 'border-auth-accent/40 bg-auth-accent/10 text-auth-accent'
+          : 'border-danger/45 bg-danger/10 text-danger'
+      }`}
+    >
+      {children}
+    </p>
+  );
 }
 
-function NazrLogo() {
+function RobotLogo() {
   return (
-    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-auth-accent text-[18px] font-extrabold leading-none text-foreground">
-      ن
-    </span>
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="44"
+      viewBox="0 0 44 44"
+      width="44"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect x="9" y="11" width="26" height="20" rx="3" fill="#ffb703" />
+      <rect x="14" y="16" width="5" height="5" rx="1" fill="#141b21" />
+      <rect x="25" y="16" width="5" height="5" rx="1" fill="#141b21" />
+      <rect x="16" y="24" width="12" height="3" rx="1.5" fill="#141b21" />
+      <rect x="19" y="5" width="6" height="6" rx="3" fill="#ffb703" />
+      <rect x="21" y="8" width="2" height="3" fill="#ffb703" />
+      <rect x="3" y="16" width="6" height="9" rx="3" fill="#ffb703" />
+      <rect x="35" y="16" width="6" height="9" rx="3" fill="#ffb703" />
+      <rect x="13" y="31" width="6" height="8" rx="3" fill="#ffb703" />
+      <rect x="25" y="31" width="6" height="8" rx="3" fill="#ffb703" />
+    </svg>
   );
 }
