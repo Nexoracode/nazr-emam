@@ -6,13 +6,14 @@ import { RefreshTokenEntity } from './entities/refresh-token.entity';
 import { UserEntity } from './entities/user.entity';
 import { AuthGuard } from './guards/auth.guard';
 import { AuthService } from './auth.service';
+import { SmsService } from './sms.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([OtpCodeEntity, RefreshTokenEntity, UserEntity]),
   ],
   controllers: [AuthController],
-  providers: [AuthGuard, AuthService],
+  providers: [AuthGuard, AuthService, SmsService],
   exports: [AuthService],
 })
 export class AuthModule {}

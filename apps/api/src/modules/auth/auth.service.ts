@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +26,7 @@ import {
 } from 'node:crypto';
 import { IsNull, Repository } from 'typeorm';
 import type { AuthenticatedRequest, AuthenticatedResponse } from './auth.types';
+import { SmsService } from './sms.service';
 import { OtpCodeEntity } from './entities/otp-code.entity';
 import { RefreshTokenEntity } from './entities/refresh-token.entity';
 import { UserEntity } from './entities/user.entity';
@@ -53,6 +55,8 @@ interface IssuedAuthTokens extends AuthResponse {
 export class AuthService {
   private readonly sessionsByAccessToken = new Map<string, Session>();
 
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity>,
@@ -61,6 +65,7 @@ export class AuthService {
     @InjectRepository(OtpCodeEntity)
     private readonly otpCodesRepository: Repository<OtpCodeEntity>,
     private readonly configService: ConfigService,
+    private readonly smsService: SmsService,
   ) {}
 
   async register(payload: RegisterRequest): Promise<IssuedAuthTokens> {
@@ -125,8 +130,12 @@ export class AuthService {
     });
     await this.otpCodesRepository.save(otp);
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`OTP for ${body.mobile}: ${code}`);
+    if (process.env.NODE_ENV === 'production') {
+      this.smsService.sendOtp(body.mobile, code).catch((err: unknown) => {
+        this.logger.error(`❌ SMS send failed for ${body.mobile}: ${err instanceof Error ? err.message : err}`);
+      });
+    } else {
+      this.logger.log(`[DEV] OTP for ${body.mobile}: ${code}`);
     }
 
     return { expiresAt: expiresAt.toISOString() };
