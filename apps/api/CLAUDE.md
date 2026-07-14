@@ -17,23 +17,28 @@
 
 ## ساختار پیشنهادی
 
-هر دامنه یک ماژول مستقل داشته باشد:
+تمام routeها و دامنه‌های API باید زیر `src/modules/[route]` تفکیک شوند. هر route یک ماژول مستقل است و فایل‌های همان دامنه را داخل خودش نگه می‌دارد.
 
 ```text
 src/
-  auth/
-    dto/
-    guards/
-    strategies/
-    auth.controller.ts
-    auth.service.ts
-    auth.module.ts
-  nazr-types/
-  nazr-requests/
-  payments/
-  admin/
-  tickets/
-  notifications/
+  modules/
+    auth/
+      dto/
+      guards/
+      strategies/
+      auth.controller.ts
+      auth.service.ts
+      auth.module.ts
+    nazr-types/
+      dto/
+      nazr-types.controller.ts
+      nazr-types.service.ts
+      nazr-types.module.ts
+    nazr-requests/
+    payments/
+    admin/
+    tickets/
+    notifications/
   common/
     filters/
     interceptors/
@@ -44,10 +49,12 @@ src/
     env.ts
 ```
 
+- ساختار هر route باید الگوی `src/modules/[route]` را رعایت کند.
 - منطق اصلی در `service` باشد، نه در `controller`.
 - `controller` فقط ورودی را بگیرد، guard/validation را اعمال کند و service را صدا بزند.
 - DTOها در پوشه `dto/` همان ماژول باشند.
 - cross-cutting concernها مثل exception filter، response interceptor، language resolver و decoratorهای عمومی باید داخل `src/common/` باشند.
+- فایل‌های یک route را در ریشه `src/` پخش نکن.
 
 ## قرارداد و تایپ مشترک
 
