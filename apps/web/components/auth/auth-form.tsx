@@ -189,7 +189,7 @@ function LoginForm() {
 
           <div className="grid grid-cols-2 gap-3">
             <button
-              className="h-10 cursor-pointer rounded-lg border border-auth-input-border bg-transparent text-[12px] font-bold text-auth-text transition hover:border-auth-accent hover:text-auth-accent disabled:opacity-60"
+              className="h-10 cursor-pointer rounded-lg border border-auth-input-border bg-transparent text-[11px] font-semibold text-auth-text transition hover:border-auth-accent hover:text-auth-accent disabled:opacity-60"
               disabled={isSubmitting}
               onClick={handleSendOtp}
               type="button"
@@ -197,7 +197,7 @@ function LoginForm() {
               {isSubmitting ? '...' : 'ورود با کد یکبار مصرف'}
             </button>
             <button
-              className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[12px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-60"
+              className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[11px] font-semibold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-60"
               disabled={isSubmitting}
               onClick={handleGoToPassword}
               type="button"
@@ -254,7 +254,7 @@ function LoginForm() {
           {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
           <button
-            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
             disabled={isSubmitting}
             type="submit"
           >
@@ -302,7 +302,7 @@ function LoginForm() {
           {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
           <button
-            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
             disabled={isSubmitting}
             type="submit"
           >
@@ -490,7 +490,7 @@ function RegisterForm() {
         {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
         <button
-          className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+          className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
           disabled={isSubmitting}
           type="submit"
         >
