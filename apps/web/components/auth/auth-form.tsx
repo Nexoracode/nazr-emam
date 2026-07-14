@@ -85,8 +85,6 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       if (Object.keys(clientErrors).length > 0) {
         setFieldErrors(clientErrors);
-        setMessage('لطفا خطاهای فرم را اصلاح کنید.');
-        setMessageTone('error');
         return;
       }
 
@@ -188,9 +186,6 @@ export function AuthForm({ mode }: AuthFormProps) {
                 type="tel"
                 value={mobile}
               />
-              <small className="text-right text-[10px] font-normal leading-5 text-auth-muted">
-                شماره همراه ایرانی معتبر وارد کنید
-              </small>
               {fieldErrors.mobile ? (
                 <small className="text-right text-[10px] font-normal leading-5 text-danger">
                   {fieldErrors.mobile}
@@ -282,8 +277,9 @@ export function AuthForm({ mode }: AuthFormProps) {
           <div className="mt-4 border-t border-auth-card-border pt-3 text-center">
             <p className="m-0 text-[11px] leading-5 text-auth-muted">قبلا ثبت نام کرده‌اید؟</p>
             <Link
-              className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold text-auth-link transition hover:text-auth-link"
+              className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold transition"
               href={copy.switchHref}
+              style={{ color: '#c8d8e8' }}
             >
               {copy.switchLabel}
             </Link>
