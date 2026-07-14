@@ -161,6 +161,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 className={getRegisterFieldClass(Boolean(fieldErrors.mobile))}
                 dir="ltr"
                 inputMode="tel"
+                maxLength={11}
                 name="mobile"
                 onChange={(event) => setMobile(event.target.value)}
                 placeholder="09150553208"
@@ -319,6 +320,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               className={loginFieldClass}
               dir="ltr"
               inputMode="tel"
+              maxLength={11}
               name="mobile"
               onChange={(event) => setMobile(event.target.value)}
               placeholder="09123456789"
