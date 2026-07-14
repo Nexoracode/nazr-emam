@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '../components/layout/theme-provider';
-import { Header } from '../components/layout/header';
 
 export const metadata: Metadata = {
   title: 'نذر امام',
@@ -17,7 +16,6 @@ export default function RootLayout({
     <html lang="fa" dir="rtl">
       <body>
         <ThemeProvider>
-          <Header />
           {children}
         </ThemeProvider>
       </body>

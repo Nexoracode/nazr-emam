@@ -3,23 +3,21 @@
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { useTheme } from './theme-provider';
+import { useAuth } from '../../lib/use-auth';
+import { logout } from '../../lib/api';
+import { useRouter } from 'next/navigation';
 
 const navLinks = [
   { href: '/nazr/new', label: 'ثبت نذر' },
   { href: '/track', label: 'پیگیری وضعیت' },
 ];
 
-const profileLinks = [
-  { href: '/profile', label: 'پروفایل من' },
-  { href: '/dashboard', label: 'نذرهای من' },
-  { href: '/auth/login', label: 'ورود به حساب' },
-  { href: '/auth/register', label: 'ثبت نام' },
-];
-
 export function Header() {
   const { resolved, theme, setTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const auth = useAuth();
+  const router = useRouter();
 
   function handleProfileEnter() {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -35,6 +33,24 @@ export function Header() {
     else if (theme === 'light') setTheme('dark');
     else setTheme('light');
   }
+
+  async function handleLogout() {
+    setProfileOpen(false);
+    try { await logout(); } catch { /* ignore */ }
+    router.push('/auth/login');
+    router.refresh();
+  }
+
+  const profileLinks = auth.user
+    ? [
+        { href: '/profile', label: 'پروفایل من', action: undefined },
+        { href: '/dashboard', label: 'نذرهای من', action: undefined },
+        { href: '#', label: 'خروج از حساب', action: handleLogout },
+      ]
+    : [
+        { href: '/auth/login', label: 'ورود به حساب', action: undefined },
+        { href: '/auth/register', label: 'ثبت نام', action: undefined },
+      ];
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-[var(--border)] bg-[var(--surface)] backdrop-blur-sm transition-colors">
@@ -89,16 +105,30 @@ export function Header() {
 
             {profileOpen && (
               <div className="absolute left-0 top-10 z-50 min-w-[160px] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow)]">
-                {profileLinks.map((l) => (
-                  <Link
-                    key={l.href}
-                    href={l.href}
-                    onClick={() => setProfileOpen(false)}
-                    className="block px-4 py-2 text-right text-[13px] text-[var(--foreground)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] transition-colors"
-                  >
-                    {l.label}
-                  </Link>
-                ))}
+                {auth.loading ? (
+                  <span className="block px-4 py-2 text-right text-[13px] text-[var(--muted)]">...</span>
+                ) : (
+                  profileLinks.map((l) =>
+                    l.action ? (
+                      <button
+                        key={l.label}
+                        onClick={l.action}
+                        className="block w-full px-4 py-2 text-right text-[13px] text-[var(--danger)] hover:bg-[var(--primary-soft)] transition-colors"
+                      >
+                        {l.label}
+                      </button>
+                    ) : (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        onClick={() => setProfileOpen(false)}
+                        className="block px-4 py-2 text-right text-[13px] text-[var(--foreground)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] transition-colors"
+                      >
+                        {l.label}
+                      </Link>
+                    )
+                  )
+                )}
               </div>
             )}
           </div>
