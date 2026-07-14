@@ -16,13 +16,16 @@ type FieldErrors = Record<string, string>;
 const defaultError = 'درخواست انجام نشد. لطفا کمی بعد دوباره تلاش کنید.';
 const loginFieldClass =
   'h-[46px] w-full min-w-0 rounded-md border border-field-border bg-surface px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15';
-const registerLightFieldClass =
-  'h-10 w-full min-w-0 rounded-lg border border-transparent bg-auth-input px-3 text-left text-[12px] text-foreground outline-none transition placeholder:text-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
-const registerDarkFieldClass =
-  'h-10 w-full min-w-0 rounded-lg border border-auth-input-border bg-auth-input-dark px-3 text-left text-[12px] text-auth-text outline-none transition placeholder:text-auth-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
+const registerFieldBaseClass =
+  'h-10 w-full min-w-0 rounded-lg border bg-auth-input-dark px-3 text-left text-[12px] text-auth-text outline-none transition placeholder:text-auth-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
 
-const mobilePattern = /^09\d{9}$/;
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+
+function getRegisterFieldClass(hasError: boolean) {
+  return `${registerFieldBaseClass} ${
+    hasError ? 'border-danger focus:border-danger focus:ring-danger/20' : 'border-auth-input-border'
+  }`;
+}
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
@@ -150,10 +153,10 @@ export function AuthForm({ mode }: AuthFormProps) {
 
           <form className="grid min-w-0 gap-4" onSubmit={handleSubmit} noValidate>
             <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
-              <span>شماره تلفن</span>
+              <span>شماره همراه</span>
               <input
                 autoComplete="tel"
-                className={registerLightFieldClass}
+                className={getRegisterFieldClass(Boolean(fieldErrors.mobile))}
                 dir="ltr"
                 inputMode="tel"
                 name="mobile"
@@ -164,10 +167,10 @@ export function AuthForm({ mode }: AuthFormProps) {
                 value={mobile}
               />
               <small className="text-right text-[10px] font-normal leading-5 text-auth-muted">
-                شماره تلفن ایرانی معتبر وارد کنید
+                شماره همراه ایرانی معتبر وارد کنید
               </small>
               {fieldErrors.mobile ? (
-                <small className="text-[10px] font-normal leading-5 text-danger">
+                <small className="text-right text-[10px] font-normal leading-5 text-danger">
                   {fieldErrors.mobile}
                 </small>
               ) : null}
@@ -177,9 +180,9 @@ export function AuthForm({ mode }: AuthFormProps) {
               <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
                 <span>رمز عبور</span>
                 <input
-                autoComplete="new-password"
-                className={registerLightFieldClass}
-                dir="ltr"
+                  autoComplete="new-password"
+                  className={getRegisterFieldClass(Boolean(fieldErrors.password))}
+                  dir="ltr"
                   minLength={8}
                   name="password"
                   onChange={(event) => setPassword(event.target.value)}
@@ -187,14 +190,19 @@ export function AuthForm({ mode }: AuthFormProps) {
                   type="password"
                   value={password}
                 />
+                {fieldErrors.password ? (
+                  <small className="text-right text-[10px] font-normal leading-5 text-danger">
+                    {fieldErrors.password}
+                  </small>
+                ) : null}
               </label>
 
               <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
                 <span>تکرار رمز</span>
                 <input
-                autoComplete="new-password"
-                className={registerDarkFieldClass}
-                dir="ltr"
+                  autoComplete="new-password"
+                  className={getRegisterFieldClass(Boolean(fieldErrors.confirmPassword))}
+                  dir="ltr"
                   minLength={8}
                   name="confirmPassword"
                   onChange={(event) => setConfirmPassword(event.target.value)}
@@ -202,17 +210,12 @@ export function AuthForm({ mode }: AuthFormProps) {
                   type="password"
                   value={confirmPassword}
                 />
+                {fieldErrors.confirmPassword ? (
+                  <small className="text-right text-[10px] font-normal leading-5 text-danger">
+                    {fieldErrors.confirmPassword}
+                  </small>
+                ) : null}
               </label>
-            </div>
-
-            <div className="-mt-1 text-left text-[10px] leading-5 text-auth-muted">
-              رمز عبور به حروف بزرگ و کوچک حساس است. دقت کنید Caps Lock خاموش باشد.
-              {fieldErrors.password ? (
-                <p className="m-0 text-danger">{fieldErrors.password}</p>
-              ) : null}
-              {fieldErrors.confirmPassword ? (
-                <p className="m-0 text-danger">{fieldErrors.confirmPassword}</p>
-              ) : null}
             </div>
 
             <label className="flex min-w-0 cursor-pointer items-center justify-start gap-2 text-right text-[11px] leading-5 text-auth-text">
@@ -340,9 +343,6 @@ export function AuthForm({ mode }: AuthFormProps) {
               type="password"
               value={password}
             />
-            <small className="text-xs font-normal leading-7 text-muted">
-              توجه: رمز عبور به حروف بزرگ و کوچک حساس است
-            </small>
             {fieldErrors.password ? (
               <small className="text-xs font-normal leading-7 text-danger">
                 {fieldErrors.password}
@@ -433,9 +433,13 @@ function validateAuthForm({
   const normalizedMobile = mobile.trim();
 
   if (!normalizedMobile) {
-    errors.mobile = 'شماره تلفن الزامی است.';
-  } else if (!mobilePattern.test(normalizedMobile)) {
-    errors.mobile = 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.';
+    errors.mobile = 'شماره همراه الزامی است.';
+  } else if (!/^\d+$/.test(normalizedMobile)) {
+    errors.mobile = 'شماره همراه فقط باید شامل عدد باشد.';
+  } else if (normalizedMobile.length !== 11) {
+    errors.mobile = 'شماره همراه باید ۱۱ رقم باشد.';
+  } else if (!normalizedMobile.startsWith('09')) {
+    errors.mobile = 'شماره همراه باید با 09 شروع شود.';
   }
 
   if (!password) {
