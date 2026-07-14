@@ -15,11 +15,11 @@ type FieldErrors = Record<string, string>;
 
 const defaultError = 'درخواست انجام نشد. لطفا کمی بعد دوباره تلاش کنید.';
 const loginFieldClass =
-  'h-[46px] rounded-md border border-field-border bg-surface px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15';
+  'h-[46px] w-full min-w-0 rounded-md border border-field-border bg-surface px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15';
 const registerLightFieldClass =
-  'h-10 rounded-lg border border-transparent bg-auth-input px-3 text-left text-[12px] text-foreground outline-none transition placeholder:text-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
+  'h-10 w-full min-w-0 rounded-lg border border-transparent bg-auth-input px-3 text-left text-[12px] text-foreground outline-none transition placeholder:text-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
 const registerDarkFieldClass =
-  'h-10 rounded-lg border border-auth-input-border bg-auth-input-dark px-3 text-left text-[12px] text-auth-text outline-none transition placeholder:text-auth-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
+  'h-10 w-full min-w-0 rounded-lg border border-auth-input-border bg-auth-input-dark px-3 text-left text-[12px] text-auth-text outline-none transition placeholder:text-auth-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
@@ -131,8 +131,8 @@ export function AuthForm({ mode }: AuthFormProps) {
             </p>
           </div>
 
-          <form className="grid gap-4" onSubmit={handleSubmit} noValidate>
-            <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+          <form className="grid min-w-0 gap-4" onSubmit={handleSubmit} noValidate>
+            <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
               <span>شماره تلفن</span>
               <input
                 autoComplete="tel"
@@ -155,8 +155,8 @@ export function AuthForm({ mode }: AuthFormProps) {
               ) : null}
             </label>
 
-            <div className="grid grid-cols-[1fr_1.1fr] gap-3">
-              <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-3">
+              <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
                 <span>رمز عبور</span>
                 <input
                   autoComplete="new-password"
@@ -170,7 +170,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 />
               </label>
 
-              <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+              <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
                 <span>تکرار رمز</span>
                 <input
                   autoComplete="new-password"
@@ -195,7 +195,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               ) : null}
             </div>
 
-            <label className="flex cursor-pointer items-center justify-end gap-2 text-[11px] leading-5 text-auth-text">
+            <label className="flex min-w-0 cursor-pointer items-center justify-end gap-2 text-[11px] leading-5 text-auth-text">
               <input
                 checked={acceptedTerms}
                 className="h-3.5 w-3.5 accent-auth-accent"
@@ -227,7 +227,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             ) : null}
 
             <button
-              className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:cursor-wait disabled:opacity-70"
+              className="h-10 w-full min-w-0 cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:cursor-wait disabled:opacity-70"
               disabled={isSubmitting}
               type="submit"
             >
