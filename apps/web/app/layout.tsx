@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Nazr Emam',
-  description: 'Nazr Emam project frontend',
+  title: 'نذر امام',
+  description: 'سامانه ثبت، پرداخت و پیگیری نذر',
 };
 
 export default function RootLayout({
