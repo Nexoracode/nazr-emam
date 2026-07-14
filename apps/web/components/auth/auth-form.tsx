@@ -197,7 +197,7 @@ function LoginForm() {
               {isSubmitting ? '...' : 'ورود با کد یکبار مصرف'}
             </button>
             <button
-              className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[11px] font-semibold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-60"
+              className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[11px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-60"
               disabled={isSubmitting}
               onClick={handleGoToPassword}
               type="button"
@@ -254,7 +254,7 @@ function LoginForm() {
           {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
           <button
-            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
             disabled={isSubmitting}
             type="submit"
           >
@@ -302,7 +302,7 @@ function LoginForm() {
           {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
           <button
-            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
             disabled={isSubmitting}
             type="submit"
           >
@@ -490,7 +490,7 @@ function RegisterForm() {
         {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
         <button
-          className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+          className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
           disabled={isSubmitting}
           type="submit"
         >

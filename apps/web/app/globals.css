@@ -12,6 +12,7 @@
   src: url("/fonts/Vazir.ttf") format("truetype");
 }
 
+/* ── Tailwind design tokens (light defaults) ── */
 @theme {
   --color-background: #f4f6f8;
   --color-foreground: #20211f;
@@ -25,31 +26,34 @@
   --color-field-border: #cfd6df;
   --color-heading: #252a31;
   --color-label: #30343a;
-  --color-auth-bg: #111820;
-  --color-auth-bg-start: #1a1d1e;
-  --color-auth-bg-end: #0c1520;
-  --color-auth-card: #141b21;
-  --color-auth-card-border: #28323a;
-  --color-auth-text: #e8edf2;
-  --color-auth-muted: #99a3ad;
-  --color-auth-input: #e7eefb;
-  --color-auth-input-dark: #0d1217;
-  --color-auth-input-border: #222c34;
+
+  /* Auth tokens — light defaults */
+  --color-auth-bg: #edf2f8;
+  --color-auth-bg-start: #e4ecf7;
+  --color-auth-bg-end: #d8e8f2;
+  --color-auth-card: #ffffff;
+  --color-auth-card-border: #c8d8e8;
+  --color-auth-text: #1a2a3a;
+  --color-auth-muted: #5a7080;
+  --color-auth-input: #f0f5fa;
+  --color-auth-input-dark: #f0f5fa;
+  --color-auth-input-border: #b8ccd8;
   --color-auth-accent: #ffb703;
   --color-auth-accent-dark: #eca400;
-  --color-auth-link: #65b5ff;
-  --color-auth-link-surface: #152b3d;
-  --color-auth-link-border: #3b719c;
+  --color-auth-btn-text: #1a1a0a;
+  --color-auth-link: #1a6a9a;
+  --color-auth-link-surface: #e4f0f8;
+  --color-auth-link-border: #8ab4cc;
+
   --shadow-auth: 0 18px 50px rgb(24 39 55 / 12%);
-  --shadow-auth-dark: 0 34px 80px rgb(0 0 0 / 36%);
-  --shadow-auth-action: 0 10px 22px rgb(255 183 3 / 22%);
+  --shadow-auth-dark: 0 20px 60px rgb(60 100 140 / 16%);
+  --shadow-auth-action: 0 10px 22px rgb(255 183 3 / 28%);
   --font-sans: "Vazir", Tahoma, Arial, sans-serif;
 }
 
+/* ── Light mode (default) ── */
 :root {
   color-scheme: light dark;
-
-  /* ── Light ── */
   --background: #f4f6f8;
   --foreground: #20211f;
   --muted: #686b65;
@@ -68,8 +72,56 @@
   --label: #30343a;
 }
 
+/* ── Dark mode values (shared) ── */
+.dark-vars {
+  --background: #0f1620;
+  --foreground: #e2eaf2;
+  --muted: #7a8a9a;
+  --surface: #141d27;
+  --border: #243040;
+  --primary: #5bb8d4;
+  --primary-dark: #4aa8c4;
+  --primary-soft: #152030;
+  --danger: #d96b6b;
+  --shadow: 0 18px 50px rgb(0 0 0 / 36%);
+  --status-ok-bg: #0e2820;
+  --status-ok-color: #5bb8d4;
+  --status-error-bg: #2a1010;
+  --status-error-color: #d96b6b;
+  --heading: #d0dce8;
+  --label: #b0bec8;
+  --color-background: #0f1620;
+  --color-foreground: #e2eaf2;
+  --color-muted: #7a8a9a;
+  --color-surface: #141d27;
+  --color-border: #243040;
+  --color-primary: #5bb8d4;
+  --color-primary-dark: #4aa8c4;
+  --color-primary-soft: #152030;
+  --color-danger: #d96b6b;
+  --color-field-border: #2a3a4a;
+  --color-heading: #d0dce8;
+  --color-label: #b0bec8;
+  /* Auth dark tokens */
+  --color-auth-bg: #111820;
+  --color-auth-bg-start: #1a1d1e;
+  --color-auth-bg-end: #0c1520;
+  --color-auth-card: #141b21;
+  --color-auth-card-border: #28323a;
+  --color-auth-text: #e8edf2;
+  --color-auth-muted: #99a3ad;
+  --color-auth-input: #e7eefb;
+  --color-auth-input-dark: #0d1217;
+  --color-auth-input-border: #222c34;
+  --color-auth-link: #65b5ff;
+  --color-auth-link-surface: #152b3d;
+  --color-auth-link-border: #3b719c;
+  --shadow-auth-dark: 0 34px 80px rgb(0 0 0 / 36%);
+}
+
+/* system dark */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #0f1620;
     --foreground: #e2eaf2;
     --muted: #7a8a9a;
@@ -86,8 +138,6 @@
     --status-error-color: #d96b6b;
     --heading: #d0dce8;
     --label: #b0bec8;
-
-    /* Tailwind v4 token overrides for dark mode */
     --color-background: #0f1620;
     --color-foreground: #e2eaf2;
     --color-muted: #7a8a9a;
@@ -100,7 +150,67 @@
     --color-field-border: #2a3a4a;
     --color-heading: #d0dce8;
     --color-label: #b0bec8;
+    --color-auth-bg: #111820;
+    --color-auth-bg-start: #1a1d1e;
+    --color-auth-bg-end: #0c1520;
+    --color-auth-card: #141b21;
+    --color-auth-card-border: #28323a;
+    --color-auth-text: #e8edf2;
+    --color-auth-muted: #99a3ad;
+    --color-auth-input: #e7eefb;
+    --color-auth-input-dark: #0d1217;
+    --color-auth-input-border: #222c34;
+    --color-auth-link: #65b5ff;
+    --color-auth-link-surface: #152b3d;
+    --color-auth-link-border: #3b719c;
+    --shadow-auth-dark: 0 34px 80px rgb(0 0 0 / 36%);
   }
+}
+
+/* explicit dark via data-theme */
+:root[data-theme="dark"] {
+  --background: #0f1620;
+  --foreground: #e2eaf2;
+  --muted: #7a8a9a;
+  --surface: #141d27;
+  --border: #243040;
+  --primary: #5bb8d4;
+  --primary-dark: #4aa8c4;
+  --primary-soft: #152030;
+  --danger: #d96b6b;
+  --shadow: 0 18px 50px rgb(0 0 0 / 36%);
+  --status-ok-bg: #0e2820;
+  --status-ok-color: #5bb8d4;
+  --status-error-bg: #2a1010;
+  --status-error-color: #d96b6b;
+  --heading: #d0dce8;
+  --label: #b0bec8;
+  --color-background: #0f1620;
+  --color-foreground: #e2eaf2;
+  --color-muted: #7a8a9a;
+  --color-surface: #141d27;
+  --color-border: #243040;
+  --color-primary: #5bb8d4;
+  --color-primary-dark: #4aa8c4;
+  --color-primary-soft: #152030;
+  --color-danger: #d96b6b;
+  --color-field-border: #2a3a4a;
+  --color-heading: #d0dce8;
+  --color-label: #b0bec8;
+  --color-auth-bg: #111820;
+  --color-auth-bg-start: #1a1d1e;
+  --color-auth-bg-end: #0c1520;
+  --color-auth-card: #141b21;
+  --color-auth-card-border: #28323a;
+  --color-auth-text: #e8edf2;
+  --color-auth-muted: #99a3ad;
+  --color-auth-input: #e7eefb;
+  --color-auth-input-dark: #0d1217;
+  --color-auth-input-border: #222c34;
+  --color-auth-link: #65b5ff;
+  --color-auth-link-surface: #152b3d;
+  --color-auth-link-border: #3b719c;
+  --shadow-auth-dark: 0 34px 80px rgb(0 0 0 / 36%);
 }
 
 * {
@@ -125,7 +235,7 @@ body {
   gap: 24px;
   margin: 0 auto;
   max-width: 960px;
-  padding: 48px 20px;
+  padding: 32px 20px;
 }
 
 .intro,
@@ -153,20 +263,20 @@ body {
 
 .page-shell h1 {
   color: var(--heading, var(--foreground));
-  font-size: clamp(24px, 5vw, 52px);
+  font-size: clamp(24px, 5vw, 46px);
   line-height: 1.2;
   margin-bottom: 16px;
 }
 
 .page-shell h2 {
   color: var(--heading, var(--foreground));
-  font-size: 22px;
+  font-size: 20px;
   margin-bottom: 16px;
 }
 
 .page-shell p {
   color: var(--muted);
-  font-size: clamp(15px, 2vw, 18px);
+  font-size: clamp(14px, 2vw, 17px);
   line-height: 1.9;
   margin-bottom: 0;
 }
