@@ -1,13 +1,38 @@
+@import "tailwindcss";
+
+@source "../app/**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+@source "../lib/**/*.{ts,tsx}";
+
+@theme {
+  --color-background: #f4f6f8;
+  --color-foreground: #20211f;
+  --color-muted: #686b65;
+  --color-surface: #ffffff;
+  --color-border: #d8dde4;
+  --color-primary: #305f72;
+  --color-primary-dark: #1d4658;
+  --color-primary-soft: #e9f1f4;
+  --color-danger: #a43b3b;
+  --color-field-border: #cfd6df;
+  --color-heading: #252a31;
+  --color-label: #30343a;
+  --shadow-auth: 0 18px 50px rgb(24 39 55 / 12%);
+  --font-sans: Tahoma, Arial, sans-serif;
+}
+
 :root {
   color-scheme: light;
-  --background: #f7f5ef;
+  --background: #f4f6f8;
   --foreground: #20211f;
   --muted: #686b65;
   --surface: #ffffff;
-  --border: #dad5c8;
-  --primary: #1b6f5c;
-  --primary-dark: #125143;
+  --border: #d8dde4;
+  --primary: #305f72;
+  --primary-dark: #1d4658;
+  --primary-soft: #e9f1f4;
   --danger: #a43b3b;
+  --shadow: 0 18px 50px rgb(24 39 55 / 12%);
 }
 
 * {
@@ -23,7 +48,7 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Tahoma, sans-serif;
+  font-family: Tahoma, Arial, sans-serif;
 }
 
 .page-shell {
@@ -98,4 +123,18 @@ p {
   line-height: 2;
   margin: 0;
   padding-right: 22px;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+button,
+input {
+  font: inherit;
 }
