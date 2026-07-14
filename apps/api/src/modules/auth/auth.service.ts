@@ -130,7 +130,7 @@ export class AuthService {
     });
     await this.otpCodesRepository.save(otp);
 
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.FARAZ_SMS_API_KEY) {
       this.smsService.sendOtp(body.mobile, code).catch((err: unknown) => {
         this.logger.error(`❌ SMS send failed for ${body.mobile}: ${err instanceof Error ? err.message : err}`);
       });
