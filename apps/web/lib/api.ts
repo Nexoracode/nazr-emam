@@ -3,7 +3,9 @@ import type {
   AuthResponse,
   ChangePasswordRequest,
   LoginRequest,
+  NazrRequest,
   OtpRequestResponse,
+  Paginated,
   RegisterRequest,
   RequestOtpRequest,
   UpdateProfileRequest,
@@ -175,4 +177,8 @@ export function updateProfile(payload: UpdateProfileRequest) {
 
 export function changePassword(payload: ChangePasswordRequest) {
   return patch<void, ChangePasswordRequest>('/auth/me/password', payload);
+}
+
+export function getMyNazrRequests(page = 1, pageSize = 12) {
+  return get<Paginated<NazrRequest>>(`/nazr-requests/mine?page=${page}&pageSize=${pageSize}`);
 }

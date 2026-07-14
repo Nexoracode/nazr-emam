@@ -460,3 +460,22 @@ input {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ── Status badges ── */
+.badge-neutral,
+.badge-info,
+.badge-warning,
+.badge-success,
+.badge-danger {
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.badge-neutral { background: var(--border); color: var(--muted); }
+.badge-info    { background: var(--primary-soft); color: var(--primary); }
+.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-success { background: var(--status-ok-bg); color: var(--status-ok-color); }
+.badge-danger  { background: var(--status-error-bg); color: var(--status-error-color); }
