@@ -97,3 +97,9 @@ npm run dev -w @nazr-emam/web
 npm run build -w @nazr-emam/web
 npm run lint -w @nazr-emam/web
 ```
+
+## قرارداد Tailwind و طراحی
+
+- تمام ظاهر فرانت باید با Tailwind CSS پیاده‌سازی شود. CSS سفارشی فقط برای پایه‌های ضروری مثل importهای Tailwind، reset محدود، font-face و تعریف tokenهای طراحی مجاز است.
+- رنگ‌ها، سایه‌ها، radiusها و stateها باید از قرارداد طراحی پروژه و tokenهای مرکزی Tailwind/CSS variables استفاده کنند؛ رنگ خام و پراکنده داخل JSX یا CSS ننویس.
+- رنگ‌های پایه در `docs/API-CONTRACT.md` بخش «قرارداد فرانت‌اند و طراحی» تعریف شده‌اند و Tailwind theme باید از همان مقادیر پیروی کند.
