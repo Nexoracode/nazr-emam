@@ -1,9 +1,23 @@
 services:
+  mysql:
+    image: mysql:8.4
+    container_name: nazr-emam-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: nazr
+      MYSQL_ROOT_PASSWORD: tehran1500@$@
+    volumes:
+      - mysql-data:/var/lib/mysql
+
   nazr-emam:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: nazr-emam
+    depends_on:
+      - mysql
     ports:
       - "3000:3000"
       - "3001:3001"
@@ -13,3 +27,13 @@ services:
       NODE_ENV: production
       API_PORT: 3001
       NEXT_PUBLIC_API_URL: http://localhost:3001
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: nazr
+      DB_USERNAME: root
+      DB_PASSWORD: tehran1500@$@
+      DB_SYNCHRONIZE: true
+      DB_LOGGING: false
+
+volumes:
+  mysql-data:
