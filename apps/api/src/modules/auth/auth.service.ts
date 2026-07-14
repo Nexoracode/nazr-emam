@@ -16,6 +16,7 @@ import type {
   User,
   VerifyOtpRequest,
 } from '@nazr-emam/shared';
+import { isValidIranMobile } from '@nazr-emam/shared';
 import {
   createHash,
   randomBytes,
@@ -478,7 +479,7 @@ export class AuthService {
   }
 
   private isValidMobile(mobile?: string): mobile is string {
-    return /^09\d{9}$/.test(mobile ?? '');
+    return isValidIranMobile(mobile);
   }
 
   private hashPassword(password: string): string {

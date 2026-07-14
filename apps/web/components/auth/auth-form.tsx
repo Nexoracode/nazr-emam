@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { isValidIranMobile, normalizeIranMobile } from '@nazr-emam/shared';
 import { ApiRequestError, login, register } from '../../lib/api';
 
 type AuthMode = 'login' | 'register';
@@ -87,15 +88,16 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
+      const normalizedMobile = normalizeIranMobile(mobile);
+
       if (isLogin) {
-        await login({ mobile: mobile.trim(), password });
+        await login({ mobile: normalizedMobile, password });
         if (remember) {
-          window.localStorage.setItem('nazr-emam-mobile', mobile.trim());
+          window.localStorage.setItem('nazr-emam-mobile', normalizedMobile);
         } else {
           window.localStorage.removeItem('nazr-emam-mobile');
         }
       } else {
-        const normalizedMobile = mobile.trim();
         await register({
           fullName: `کاربر ${normalizedMobile}`,
           mobile: normalizedMobile,
@@ -430,7 +432,7 @@ function validateAuthForm({
   password: string;
 }) {
   const errors: FieldErrors = {};
-  const normalizedMobile = mobile.trim();
+  const normalizedMobile = normalizeIranMobile(mobile);
 
   if (!normalizedMobile) {
     errors.mobile = 'شماره همراه الزامی است.';
@@ -440,6 +442,8 @@ function validateAuthForm({
     errors.mobile = 'شماره همراه باید ۱۱ رقم باشد.';
   } else if (!normalizedMobile.startsWith('09')) {
     errors.mobile = 'شماره همراه باید با 09 شروع شود.';
+  } else if (!isValidIranMobile(normalizedMobile)) {
+    errors.mobile = 'پیش‌شماره همراه معتبر نیست.';
   }
 
   if (!password) {
