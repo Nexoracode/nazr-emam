@@ -149,6 +149,20 @@ interface ProjectInfo {
 - **Auth:** کاربر لاگین‌شده
 - **پاسخ:** `200 User`
 
+### `PATCH /auth/me`
+
+- **Auth:** کاربر لاگین‌شده
+- **بدنه:** `UpdateProfileRequest`
+- **پاسخ:** `200 User`
+- **خطا:** `400 VALIDATION_ERROR`
+
+### `PATCH /auth/me/password`
+
+- **Auth:** کاربر لاگین‌شده
+- **بدنه:** `ChangePasswordRequest`
+- **پاسخ:** `204 No Content`
+- **خطاها:** `401 INVALID_CREDENTIALS`، `400 VALIDATION_ERROR`
+
 ```ts
 type UserRole = "donor" | "admin";
 
@@ -186,6 +200,15 @@ interface User {
 
 interface AuthResponse {
   user: User;
+}
+
+interface UpdateProfileRequest {
+  fullName: string;
+}
+
+interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 ```
 

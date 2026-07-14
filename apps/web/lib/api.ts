@@ -1,10 +1,12 @@
 import type {
   ApiError,
   AuthResponse,
+  ChangePasswordRequest,
   LoginRequest,
   OtpRequestResponse,
   RegisterRequest,
   RequestOtpRequest,
+  UpdateProfileRequest,
   User,
   VerifyOtpRequest,
 } from '@nazr-emam/shared';
@@ -92,6 +94,37 @@ async function get<TResponse>(path: string): Promise<TResponse> {
   return data as TResponse;
 }
 
+async function patch<TResponse, TBody>(
+  path: string,
+  body: TBody,
+): Promise<TResponse> {
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | TResponse
+    | ApiError
+    | null;
+
+  if (!response.ok && response.status !== 204) {
+    throw new ApiRequestError(
+      isApiError(data)
+        ? data
+        : {
+            statusCode: response.status,
+            code: 'REQUEST_FAILED',
+            message: 'ارتباط با سرویس برقرار نشد. دوباره تلاش کنید.',
+          },
+    );
+  }
+
+  return data as TResponse;
+}
+
 async function del(path: string): Promise<void> {
   const response = await fetch(`${apiUrl}${path}`, {
     method: 'DELETE',
@@ -134,4 +167,12 @@ export function requestOtp(payload: RequestOtpRequest) {
 
 export function verifyOtp(payload: VerifyOtpRequest) {
   return post<AuthResponse, VerifyOtpRequest>('/auth/otp/verify', payload);
+}
+
+export function updateProfile(payload: UpdateProfileRequest) {
+  return patch<User, UpdateProfileRequest>('/auth/me', payload);
+}
+
+export function changePassword(payload: ChangePasswordRequest) {
+  return patch<void, ChangePasswordRequest>('/auth/me/password', payload);
 }

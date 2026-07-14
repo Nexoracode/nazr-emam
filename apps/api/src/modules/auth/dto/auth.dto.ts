@@ -1,11 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type {
   AuthResponse,
+  ChangePasswordRequest,
   LoginRequest,
   OtpRequestResponse,
   RefreshTokenRequest,
   RequestOtpRequest,
   RegisterRequest,
+  UpdateProfileRequest,
   User,
   UserRole,
   VerifyOtpRequest,
@@ -76,4 +78,17 @@ export class UserDto implements User {
 export class AuthResponseDto implements AuthResponse {
   @ApiProperty({ type: UserDto })
   user!: UserDto;
+}
+
+export class UpdateProfileRequestDto implements UpdateProfileRequest {
+  @ApiProperty({ example: 'علی رضایی', description: 'نام کامل جدید' })
+  fullName!: string;
+}
+
+export class ChangePasswordRequestDto implements ChangePasswordRequest {
+  @ApiProperty({ example: 'OldPass123', description: 'رمز عبور فعلی' })
+  currentPassword!: string;
+
+  @ApiProperty({ example: 'NewPass456', minLength: 8, description: 'رمز عبور جدید' })
+  newPassword!: string;
 }

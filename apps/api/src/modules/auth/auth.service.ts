@@ -9,11 +9,13 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import type {
   AuthResponse,
+  ChangePasswordRequest,
   LoginRequest,
   OtpRequestResponse,
   RefreshTokenRequest,
   RequestOtpRequest,
   RegisterRequest,
+  UpdateProfileRequest,
   User,
   VerifyOtpRequest,
 } from '@nazr-emam/shared';
@@ -227,6 +229,38 @@ export class AuthService {
 
   async getUserByAccessToken(accessToken?: string): Promise<User | null> {
     return this.getUserByValidAccessToken(accessToken);
+  }
+
+  async updateProfile(userId: string, payload: UpdateProfileRequest): Promise<User> {
+    const fullName = payload?.fullName?.trim();
+    if (!fullName || fullName.length < 2) {
+      this.throwValidation({ fullName: 'نام کامل معتبر نیست' });
+    }
+
+    await this.usersRepository.update({ id: userId }, { fullName });
+    const user = await this.usersRepository.findOneOrFail({ where: { id: userId } });
+    return this.toPublicUser(user);
+  }
+
+  async changePassword(userId: string, payload: ChangePasswordRequest): Promise<void> {
+    const currentPassword = payload?.currentPassword;
+    const newPassword = payload?.newPassword;
+
+    const fields: Record<string, string> = {};
+    if (!currentPassword) fields.currentPassword = 'رمز عبور فعلی الزامی است';
+    if (!newPassword || newPassword.length < 8) fields.newPassword = 'رمز عبور جدید باید حداقل ۸ کاراکتر باشد';
+    this.throwValidation(fields);
+
+    const user = await this.usersRepository.findOneOrFail({ where: { id: userId } });
+    if (!this.verifyPassword(currentPassword, user.passwordHash)) {
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'INVALID_CREDENTIALS',
+        message: 'رمز عبور فعلی اشتباه است',
+      });
+    }
+
+    await this.usersRepository.update({ id: userId }, { passwordHash: this.hashPassword(newPassword) });
   }
 
   async authenticate(

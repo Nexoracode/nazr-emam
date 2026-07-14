@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Patch,
   Post,
   Req,
   Res,
@@ -34,11 +35,13 @@ import type {
 } from './auth.types';
 import {
   AuthResponseDto,
+  ChangePasswordRequestDto,
   LoginRequestDto,
   OtpRequestResponseDto,
   RefreshTokenRequestDto,
   RequestOtpRequestDto,
   RegisterRequestDto,
+  UpdateProfileRequestDto,
   VerifyOtpRequestDto,
   UserDto,
 } from './dto/auth.dto';
@@ -185,6 +188,37 @@ export class AuthController {
   @Get('me')
   me(@Req() request: AuthenticatedRequest) {
     return request.user;
+  }
+
+  @ApiBearerAuth()
+  @ApiCookieAuth(ACCESS_TOKEN_COOKIE)
+  @ApiOperation({ summary: 'ویرایش پروفایل', description: 'نام کامل کاربر را به‌روز می‌کند.' })
+  @ApiBody({ type: UpdateProfileRequestDto })
+  @ApiOkResponse({ type: UserDto })
+  @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'UNAUTHORIZED' })
+  @Patch('me')
+  updateProfile(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: UpdateProfileRequestDto,
+  ) {
+    return this.authService.updateProfile(request.user!.id, body);
+  }
+
+  @ApiBearerAuth()
+  @ApiCookieAuth(ACCESS_TOKEN_COOKIE)
+  @ApiOperation({ summary: 'تغییر رمز عبور', description: 'رمز عبور کاربر را با تأیید رمز فعلی تغییر می‌دهد.' })
+  @ApiBody({ type: ChangePasswordRequestDto })
+  @ApiNoContentResponse({ description: 'تغییر رمز موفق' })
+  @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_CREDENTIALS' })
+  @HttpCode(204)
+  @Patch('me/password')
+  changePassword(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: ChangePasswordRequestDto,
+  ) {
+    return this.authService.changePassword(request.user!.id, body);
   }
 
 }

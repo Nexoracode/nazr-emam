@@ -321,3 +321,142 @@ button,
 input {
   font: inherit;
 }
+
+/* ── Profile / shared form primitives ── */
+.surface-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.card-title {
+  color: var(--heading, var(--foreground));
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 20px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.info-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-label {
+  color: var(--muted);
+  font-size: 13px;
+  min-width: 110px;
+}
+
+.info-value {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.field-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.field-group {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  color: var(--label, var(--muted));
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field-input {
+  background: var(--surface);
+  border: 1.5px solid var(--field-border, var(--border));
+  border-radius: 8px;
+  color: var(--foreground);
+  font-size: 14px;
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.field-input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.field-error {
+  background: var(--status-error-bg);
+  border-radius: 8px;
+  color: var(--status-error-color);
+  font-size: 13px;
+  margin: 0;
+  padding: 10px 14px;
+}
+
+.field-success {
+  background: var(--status-ok-bg);
+  border-radius: 8px;
+  color: var(--status-ok-color);
+  font-size: 13px;
+  margin: 0;
+  padding: 10px 14px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 20px;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 20px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

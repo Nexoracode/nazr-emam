@@ -99,3 +99,12 @@ export interface User {
 export interface AuthResponse {
   user: User;
 }
+
+export interface UpdateProfileRequest {
+  fullName: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
