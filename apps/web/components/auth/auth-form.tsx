@@ -297,34 +297,30 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <main dir="rtl" className="grid min-h-screen place-items-center bg-background px-4 py-8 text-foreground">
+    <main dir="rtl" className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_center,var(--color-auth-bg-start)_0%,var(--color-auth-bg)_50%,var(--color-auth-bg-end)_100%)] px-4 py-8 text-auth-text">
       <section
-        className="w-full max-w-[420px] rounded-lg border border-border bg-surface px-5 py-7 shadow-auth sm:px-8 sm:pb-6 sm:pt-8"
+        className="w-full max-w-[420px] rounded-[14px] border border-auth-card-border bg-auth-card px-[18px] pb-6 pt-7 shadow-auth-dark sm:px-6"
         aria-labelledby="auth-title"
       >
-        <div
-          className="mb-6 flex flex-col items-center gap-2.5 text-[15px] font-bold text-primary-dark"
-          aria-label="لوگو"
-        >
-          <span className="flex h-[58px] w-[58px] items-center justify-center rounded-full bg-primary text-2xl leading-none text-surface">
-            ن
-          </span>
-          <span>نذر امام</span>
+        <div className="mb-6 flex flex-col items-center text-center">
+          <NazrLogo />
+          <h1
+            id="auth-title"
+            className="mb-1.5 mt-4 text-[16px] font-extrabold leading-7 text-auth-text"
+          >
+            {copy.title}
+          </h1>
+          <p className="m-0 text-[11px] leading-5 text-auth-muted">
+            با شماره همراه و رمز عبور وارد شوید
+          </p>
         </div>
 
-        <h1
-          id="auth-title"
-          className="mb-6 text-center text-[22px] font-bold leading-normal text-heading"
-        >
-          {copy.title}
-        </h1>
-
-        <form className="grid gap-4" onSubmit={handleSubmit} noValidate>
-          <label className="grid gap-2 text-sm font-bold text-label">
-            <span>شماره موبایل</span>
+        <form className="grid min-w-0 gap-4" onSubmit={handleSubmit} noValidate>
+          <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <span>شماره همراه</span>
             <input
               autoComplete="tel"
-              className={loginFieldClass}
+              className={getRegisterFieldClass(Boolean(fieldErrors.mobile))}
               dir="ltr"
               inputMode="tel"
               maxLength={11}
@@ -336,17 +332,17 @@ export function AuthForm({ mode }: AuthFormProps) {
               value={mobile}
             />
             {fieldErrors.mobile ? (
-              <small className="text-xs font-normal leading-7 text-danger">
+              <small className="text-right text-[10px] font-normal leading-5 text-danger">
                 {fieldErrors.mobile}
               </small>
             ) : null}
           </label>
 
-          <label className="grid gap-2 text-sm font-bold text-label">
-            <span>رمز</span>
+          <label className="grid min-w-0 gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <span>رمز عبور</span>
             <input
               autoComplete="current-password"
-              className={loginFieldClass}
+              className={getRegisterFieldClass(Boolean(fieldErrors.password))}
               dir="ltr"
               name="password"
               onChange={(event) => setPassword(event.target.value)}
@@ -355,16 +351,16 @@ export function AuthForm({ mode }: AuthFormProps) {
               value={password}
             />
             {fieldErrors.password ? (
-              <small className="text-xs font-normal leading-7 text-danger">
+              <small className="text-right text-[10px] font-normal leading-5 text-danger">
                 {fieldErrors.password}
               </small>
             ) : null}
           </label>
 
-          <label className="inline-flex cursor-pointer items-center gap-2 text-[13px] text-label">
+          <label className="flex min-w-0 cursor-pointer items-center justify-start gap-2 text-right text-[11px] leading-5 text-auth-text">
             <input
               checked={remember}
-              className="m-0 h-4 w-4 accent-primary"
+              className="h-3.5 w-3.5 shrink-0 accent-auth-accent"
               onChange={(event) => setRemember(event.target.checked)}
               type="checkbox"
             />
@@ -374,10 +370,10 @@ export function AuthForm({ mode }: AuthFormProps) {
           {message ? (
             <p
               aria-live="polite"
-              className={`m-0 rounded-md px-3 py-2.5 text-right text-[13px] leading-7 ${
+              className={`m-0 rounded-md border px-3 py-2 text-right text-[11px] leading-5 ${
                 messageTone === 'success'
-                  ? 'bg-primary-soft text-primary-dark'
-                  : 'bg-danger/10 text-danger'
+                  ? 'border-auth-accent/40 bg-auth-accent/10 text-auth-accent'
+                  : 'border-danger/45 bg-danger/10 text-danger'
               }`}
             >
               {message}
@@ -385,7 +381,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           ) : null}
 
           <button
-            className="mt-1 h-[46px] cursor-pointer rounded-md bg-primary font-bold text-surface transition hover:-translate-y-px hover:bg-primary-dark disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0"
+            className="h-10 w-full min-w-0 cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:cursor-wait disabled:opacity-70"
             disabled={isSubmitting}
             type="submit"
           >
@@ -393,20 +389,23 @@ export function AuthForm({ mode }: AuthFormProps) {
           </button>
         </form>
 
-        <nav
-          className="mt-6 flex justify-center gap-5 border-t border-border pt-4 text-sm"
-          aria-label="لینک‌های حساب کاربری"
-        >
-          <Link className="text-primary transition hover:text-primary-dark" href="/">
-            خانه
-          </Link>
+        <div className="mt-4 border-t border-auth-card-border pt-3 text-center">
+          <p className="m-0 text-[11px] leading-5 text-auth-muted">حساب کاربری ندارید؟</p>
           <Link
-            className="text-primary transition hover:text-primary-dark"
+            className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold transition"
             href={copy.switchHref}
+            style={{ color: '#c8d8e8' }}
           >
             {copy.switchLabel}
           </Link>
-        </nav>
+        </div>
+
+        <Link
+          className="mt-4 block text-center text-[11px] text-auth-muted transition hover:text-auth-text"
+          href="/"
+        >
+          خانه
+        </Link>
       </section>
     </main>
   );
