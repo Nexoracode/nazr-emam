@@ -38,7 +38,12 @@ interface Session {
 
 interface AuthenticatedSession {
   user: User;
-  tokens?: AuthResponse;
+  tokens?: IssuedAuthTokens;
+}
+
+interface IssuedAuthTokens extends AuthResponse {
+  accessToken: string;
+  refreshToken: string;
 }
 
 @Injectable()
@@ -52,7 +57,7 @@ export class AuthService {
     private readonly refreshTokensRepository: Repository<RefreshTokenEntity>,
   ) {}
 
-  async register(payload: RegisterRequest): Promise<AuthResponse> {
+  async register(payload: RegisterRequest): Promise<IssuedAuthTokens> {
     const body = this.validateRegister(payload);
 
     const existingUser = await this.usersRepository.findOne({
@@ -78,7 +83,7 @@ export class AuthService {
     return this.createAuthResponse(savedUser);
   }
 
-  async login(payload: LoginRequest): Promise<AuthResponse> {
+  async login(payload: LoginRequest): Promise<IssuedAuthTokens> {
     const body = this.validateLogin(payload);
     const user = await this.usersRepository.findOne({
       where: { mobile: body.mobile },
@@ -95,7 +100,7 @@ export class AuthService {
     return this.createAuthResponse(user);
   }
 
-  async refresh(payload: RefreshTokenRequest): Promise<AuthResponse> {
+  async refresh(payload: RefreshTokenRequest): Promise<IssuedAuthTokens> {
     const refreshToken = this.validateRefresh(payload).refreshToken;
     const { storedToken, user } = await this.getValidRefreshToken(refreshToken);
 
@@ -157,7 +162,7 @@ export class AuthService {
     };
   }
 
-  setAuthCookies(response: AuthenticatedResponse, tokens: AuthResponse): void {
+  setAuthCookies(response: AuthenticatedResponse, tokens: IssuedAuthTokens): void {
     response.cookie(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
       ...this.getBaseCookieOptions(),
       maxAge: ACCESS_TOKEN_TTL_MS,
@@ -173,7 +178,7 @@ export class AuthService {
     response.clearCookie(REFRESH_TOKEN_COOKIE, this.getBaseCookieOptions());
   }
 
-  private async createAuthResponse(user: UserEntity): Promise<AuthResponse> {
+  private async createAuthResponse(user: UserEntity): Promise<IssuedAuthTokens> {
     const refreshToken = this.createToken();
     const refreshTokenHash = this.hashToken(refreshToken);
     const session: Session = {

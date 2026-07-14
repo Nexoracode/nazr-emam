@@ -13,7 +13,7 @@
 - تاریخ‌ها با ISO string برمی‌گردند.
 - شناسه‌ها از نوع string هستند.
 - endpointهای مدیریتی فقط برای `role: admin` مجازند.
-- endpointهای کاربر با لاگین، در نسخه مرورگر با cookie امن یا header زیر کار می‌کنند:
+- endpointهای کاربر با لاگین، در نسخه مرورگر با cookie امن کار می‌کنند. برای کلاینت‌های غیرمرورگری، header زیر هم پشتیبانی می‌شود:
   ```text
   Authorization: Bearer <accessToken>
   ```
@@ -108,18 +108,18 @@ interface ProjectInfo {
 ### `POST /auth/register`
 
 - **بدنه:** `RegisterRequest`
-- **پاسخ:** `201 AuthResponse`
+- **پاسخ:** `201 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
 - **خطاها:** `409 MOBILE_TAKEN`، `400 VALIDATION_ERROR`
 
 ### `POST /auth/login`
 
 - **بدنه:** `LoginRequest`
-- **پاسخ:** `200 AuthResponse`
+- **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
 - **خطاها:** `401 INVALID_CREDENTIALS`، `400 VALIDATION_ERROR`
 
 ### `POST /auth/refresh`
 
-- **پاسخ:** `200 AuthResponse`
+- **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
 - **خطا:** `401 INVALID_REFRESH_TOKEN`
 
 ### `DELETE /auth/logout`
@@ -155,8 +155,6 @@ interface User {
 
 interface AuthResponse {
   user: User;
-  accessToken: string;
-  refreshToken: string;
 }
 ```
 

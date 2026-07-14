@@ -48,7 +48,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'ثبت نام کاربر',
     description:
-      'کاربر جدید donor می سازد، accessToken و refreshToken را برمی گرداند و هر دو را در cookie ذخیره می کند.',
+      'کاربر جدید donor می سازد و accessToken و refreshToken را فقط در cookie ذخیره می کند.',
   })
   @ApiBody({ type: RegisterRequestDto })
   @ApiCreatedResponse({ type: AuthResponseDto })
@@ -62,13 +62,13 @@ export class AuthController {
   ) {
     const authResponse = await this.authService.register(body);
     this.authService.setAuthCookies(response, authResponse);
-    return authResponse;
+    return { user: authResponse.user };
   }
 
   @ApiOperation({
     summary: 'ورود کاربر',
     description:
-      'با موبایل و رمز عبور وارد می شود، accessToken و refreshToken می گیرد و هر دو در cookie ذخیره می شوند.',
+      'با موبایل و رمز عبور وارد می شود و accessToken و refreshToken فقط در cookie ذخیره می شوند.',
   })
   @ApiBody({ type: LoginRequestDto })
   @ApiOkResponse({ type: AuthResponseDto })
@@ -83,14 +83,14 @@ export class AuthController {
   ) {
     const authResponse = await this.authService.login(body);
     this.authService.setAuthCookies(response, authResponse);
-    return authResponse;
+    return { user: authResponse.user };
   }
 
   @ApiCookieAuth(REFRESH_TOKEN_COOKIE)
   @ApiOperation({
     summary: 'تازه سازی توکن',
     description:
-      'با refreshToken معتبر از body یا cookie، accessToken و refreshToken جدید صادر می کند.',
+      'با refreshToken معتبر از body یا cookie، accessToken و refreshToken جدید را فقط در cookie ذخیره می کند.',
   })
   @ApiBody({ type: RefreshTokenRequestDto, required: false })
   @ApiOkResponse({ type: AuthResponseDto })
@@ -108,7 +108,7 @@ export class AuthController {
       refreshToken: body?.refreshToken ?? request.cookies?.refreshToken ?? '',
     });
     this.authService.setAuthCookies(response, authResponse);
-    return authResponse;
+    return { user: authResponse.user };
   }
 
   @ApiBearerAuth()

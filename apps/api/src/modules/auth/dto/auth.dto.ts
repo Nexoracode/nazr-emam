@@ -55,16 +55,4 @@ export class UserDto implements User {
 export class AuthResponseDto implements AuthResponse {
   @ApiProperty({ type: UserDto })
   user!: UserDto;
-
-  @ApiProperty({
-    example: 'QWNjZXNzLXRva2VuLXNhbXBsZQ',
-    description: 'توکن دسترسی برای Authorization: Bearer <accessToken>',
-  })
-  accessToken!: string;
-
-  @ApiProperty({
-    example: 'UmVmcmVzaC10b2tlbi1zYW1wbGU',
-    description: 'توکن تازه سازی برای POST /auth/refresh',
-  })
-  refreshToken!: string;
 }
