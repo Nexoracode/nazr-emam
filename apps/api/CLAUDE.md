@@ -44,7 +44,6 @@ src/
     interceptors/
     decorators/
     guards/
-    i18n/
   config/
     env.ts
 ```
@@ -97,7 +96,6 @@ src/
 - همه پاسخ‌های موفق و خطا باید با `@ApiResponse` یا decoratorهای دقیق‌تر مثل `@ApiOkResponse`، `@ApiCreatedResponse`، `@ApiBadRequestResponse` و `@ApiUnauthorizedResponse` ثبت شوند.
 - DTOها باید برای فیلدهای عمومی `@ApiProperty` یا `@ApiPropertyOptional` با `description` و `example` واقعی داشته باشند.
 - routeهای محافظت‌شده باید `@ApiBearerAuth()` داشته باشند.
-- اگر endpoint زبان را از header می‌خواند، باید `@ApiHeader({ name: 'Accept-Language', ... })` داشته باشد.
 - اگر endpoint فایل می‌گیرد، باید `@ApiConsumes('multipart/form-data')` و schema مناسب داشته باشد.
 
 ## Interceptor و Filter
@@ -110,18 +108,17 @@ API باید cross-cutting behavior متمرکز داشته باشد:
 - اگر request id یا correlation id اضافه شد، باید از interceptor/decorator مشترک مدیریت شود.
 - controllerها نباید منطق format کردن خطا یا response را تکرار کنند.
 
-## چندزبانه و پیام‌ها
+## زبان و پیام‌ها
 
-زیرساخت چندزبانه باید از ابتدا در API قابل پیش‌بینی باشد، حتی اگر UI فعلاً فارسی باشد.
+API فقط زبان فارسی را پشتیبانی می‌کند.
 
-- زبان درخواست از `Accept-Language` خوانده شود.
-- زبان پیش‌فرض فعلاً `fa` است.
-- ساختار باید امکان اضافه کردن زبان‌های بعدی مثل `ar` و `en` را داشته باشد.
-- `message` و `fields` در `ApiError` باید از سیستم پیام چندزبانه بیایند، نه متن hard-code پراکنده داخل service/controller.
-- `code` خطا همیشه ثابت و ماشینی باشد و ترجمه نشود.
-- کلیدهای پیام باید متمرکز باشند، مثلاً در `src/common/i18n/`.
-- validation errorهای `class-validator` باید به پیام قابل ترجمه تبدیل شوند.
-- اگر داده‌ای خودش محتوای چندزبانه بود، شکل آن باید اول در `packages/shared` و `docs/API-CONTRACT.md` تعریف شود.
+- زبان response و پیام‌های خطا فارسی است.
+- از `Accept-Language` برای تغییر زبان استفاده نکن.
+- i18n یا چندزبانه‌سازی اضافه نکن مگر کاربر صریحاً دوباره تصمیم پروژه را تغییر بدهد.
+- `message` و `fields` در `ApiError` باید از کلیدها/پیام‌های متمرکز فارسی بیایند، نه متن hard-code پراکنده داخل service/controller.
+- `code` خطا همیشه ثابت و ماشینی باشد.
+- کلیدهای پیام باید متمرکز باشند، مثلاً در `src/common/messages/`.
+- validation errorهای `class-validator` باید به پیام فارسی قابل فهم تبدیل شوند.
 
 ## احراز هویت
 - توکن JWT در هدر `Authorization: Bearer <accessToken>`.
