@@ -13,26 +13,31 @@ interface AuthFormProps {
 
 type FieldErrors = Record<string, string>;
 
-const defaultError = 'درخواست انجام نشد. لطفاً کمی بعد دوباره تلاش کنید.';
-const fieldClass =
+const defaultError = 'درخواست انجام نشد. لطفا کمی بعد دوباره تلاش کنید.';
+const loginFieldClass =
   'h-[46px] rounded-md border border-field-border bg-surface px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15';
+const registerLightFieldClass =
+  'h-10 rounded-lg border border-transparent bg-auth-input px-3 text-left text-[12px] text-foreground outline-none transition placeholder:text-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
+const registerDarkFieldClass =
+  'h-10 rounded-lg border border-auth-input-border bg-auth-input-dark px-3 text-left text-[12px] text-auth-text outline-none transition placeholder:text-auth-muted focus:border-auth-accent focus:ring-2 focus:ring-auth-accent/25';
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const isLogin = mode === 'login';
-  const [fullName, setFullName] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [remember, setRemember] = useState(true);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const copy = useMemo(
     () => ({
-      title: isLogin ? 'فرم ورود' : 'فرم ثبت نام',
+      title: isLogin ? 'فرم ورود' : 'عضویت در ببینیم',
       submit: isLogin ? 'ورود' : 'ثبت نام',
-      switchLabel: isLogin ? 'ثبت نام' : 'ورود',
+      switchLabel: isLogin ? 'ثبت نام' : 'ورود به حساب',
       switchHref: isLogin ? '/auth/register' : '/auth/login',
       success: isLogin
         ? 'ورود با موفقیت انجام شد.'
@@ -67,9 +72,26 @@ export function AuthForm({ mode }: AuthFormProps) {
           window.localStorage.removeItem('nazr-emam-mobile');
         }
       } else {
+        const clientErrors: FieldErrors = {};
+
+        if (password !== confirmPassword) {
+          clientErrors.confirmPassword = 'تکرار رمز عبور با رمز عبور یکسان نیست.';
+        }
+
+        if (!acceptedTerms) {
+          clientErrors.terms = 'پذیرش قوانین و شرایط استفاده الزامی است.';
+        }
+
+        if (Object.keys(clientErrors).length > 0) {
+          setFieldErrors(clientErrors);
+          setMessage('لطفا موارد مشخص‌شده را اصلاح کنید.');
+          return;
+        }
+
+        const normalizedMobile = mobile.trim();
         await register({
-          fullName: fullName.trim(),
-          mobile: mobile.trim(),
+          fullName: `کاربر ${normalizedMobile}`,
+          mobile: normalizedMobile,
           password,
         });
       }
@@ -87,6 +109,151 @@ export function AuthForm({ mode }: AuthFormProps) {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (!isLogin) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_center,var(--color-auth-bg-start)_0%,var(--color-auth-bg)_50%,var(--color-auth-bg-end)_100%)] px-4 py-8 text-auth-text">
+        <section
+          className="w-full max-w-[380px] rounded-[14px] border border-auth-card-border bg-auth-card px-[18px] pb-6 pt-7 shadow-auth-dark"
+          aria-labelledby="auth-title"
+        >
+          <div className="mb-6 flex flex-col items-center text-center">
+            <CameraLogo />
+            <h1
+              id="auth-title"
+              className="mb-1.5 mt-4 text-[16px] font-extrabold leading-7 text-auth-text"
+            >
+              {copy.title}
+            </h1>
+            <p className="m-0 text-[11px] leading-5 text-auth-muted">
+              حساب کاربری خود را بسازید و تماشای گروهی را شروع کنید
+            </p>
+          </div>
+
+          <form className="grid gap-4" onSubmit={handleSubmit} noValidate>
+            <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+              <span>شماره تلفن</span>
+              <input
+                autoComplete="tel"
+                className={registerLightFieldClass}
+                inputMode="tel"
+                name="mobile"
+                onChange={(event) => setMobile(event.target.value)}
+                placeholder="09150553208"
+                required
+                type="tel"
+                value={mobile}
+              />
+              <small className="text-left text-[10px] font-normal leading-5 text-auth-muted">
+                شماره تلفن ایرانی معتبر وارد کنید
+              </small>
+              {fieldErrors.mobile ? (
+                <small className="text-[10px] font-normal leading-5 text-danger">
+                  {fieldErrors.mobile}
+                </small>
+              ) : null}
+            </label>
+
+            <div className="grid grid-cols-[1fr_1.1fr] gap-3">
+              <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+                <span>رمز عبور</span>
+                <input
+                  autoComplete="new-password"
+                  className={registerLightFieldClass}
+                  minLength={8}
+                  name="password"
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  type="password"
+                  value={password}
+                />
+              </label>
+
+              <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+                <span>تکرار رمز</span>
+                <input
+                  autoComplete="new-password"
+                  className={registerDarkFieldClass}
+                  minLength={8}
+                  name="confirmPassword"
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                  type="password"
+                  value={confirmPassword}
+                />
+              </label>
+            </div>
+
+            <div className="-mt-1 text-left text-[10px] leading-5 text-auth-muted">
+              رمز عبور به حروف بزرگ و کوچک حساس است. دقت کنید Caps Lock خاموش باشد.
+              {fieldErrors.password ? (
+                <p className="m-0 text-danger">{fieldErrors.password}</p>
+              ) : null}
+              {fieldErrors.confirmPassword ? (
+                <p className="m-0 text-danger">{fieldErrors.confirmPassword}</p>
+              ) : null}
+            </div>
+
+            <label className="flex cursor-pointer items-center justify-end gap-2 text-[11px] leading-5 text-auth-text">
+              <input
+                checked={acceptedTerms}
+                className="h-3.5 w-3.5 accent-auth-accent"
+                onChange={(event) => setAcceptedTerms(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                من{' '}
+                <a className="font-bold text-auth-link hover:text-auth-link" href="#">
+                  قوانین
+                </a>{' '}
+                و{' '}
+                <a className="font-bold text-auth-link hover:text-auth-link" href="#">
+                  شرایط استفاده
+                </a>{' '}
+                را قبول دارم
+              </span>
+            </label>
+            {fieldErrors.terms ? (
+              <small className="-mt-3 text-[10px] leading-5 text-danger">
+                {fieldErrors.terms}
+              </small>
+            ) : null}
+
+            {message ? (
+              <p className="m-0 rounded-md border border-auth-card-border bg-auth-input-dark px-3 py-2 text-[11px] leading-5 text-auth-muted">
+                {message}
+              </p>
+            ) : null}
+
+            <button
+              className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[13px] font-extrabold text-foreground shadow-auth-action transition hover:bg-auth-accent-dark disabled:cursor-wait disabled:opacity-70"
+              disabled={isSubmitting}
+              type="submit"
+            >
+              {isSubmitting ? 'در حال ارسال...' : copy.submit}
+            </button>
+          </form>
+
+          <div className="mt-4 border-t border-auth-card-border pt-3 text-center">
+            <p className="m-0 text-[11px] leading-5 text-auth-muted">قبلا ثبت نام کرده‌اید؟</p>
+            <Link
+              className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold text-auth-link transition hover:text-auth-link"
+              href={copy.switchHref}
+            >
+              {copy.switchLabel}
+            </Link>
+          </div>
+
+          <Link
+            className="mt-4 block text-center text-[11px] text-auth-muted transition hover:text-auth-text"
+            href="/"
+          >
+            خانه
+          </Link>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -113,32 +280,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         </h1>
 
         <form className="grid gap-4" onSubmit={handleSubmit} noValidate>
-          {!isLogin ? (
-            <label className="grid gap-2 text-sm font-bold text-label">
-              <span>نام کامل</span>
-              <input
-                autoComplete="name"
-                className={fieldClass}
-                inputMode="text"
-                name="fullName"
-                onChange={(event) => setFullName(event.target.value)}
-                required
-                type="text"
-                value={fullName}
-              />
-              {fieldErrors.fullName ? (
-                <small className="text-xs font-normal leading-7 text-danger">
-                  {fieldErrors.fullName}
-                </small>
-              ) : null}
-            </label>
-          ) : null}
-
           <label className="grid gap-2 text-sm font-bold text-label">
             <span>شماره موبایل</span>
             <input
               autoComplete="tel"
-              className={fieldClass}
+              className={loginFieldClass}
               inputMode="tel"
               name="mobile"
               onChange={(event) => setMobile(event.target.value)}
@@ -157,9 +303,8 @@ export function AuthForm({ mode }: AuthFormProps) {
           <label className="grid gap-2 text-sm font-bold text-label">
             <span>رمز</span>
             <input
-              autoComplete={isLogin ? 'current-password' : 'new-password'}
-              className={fieldClass}
-              minLength={8}
+              autoComplete="current-password"
+              className={loginFieldClass}
               name="password"
               onChange={(event) => setPassword(event.target.value)}
               required
@@ -176,25 +321,23 @@ export function AuthForm({ mode }: AuthFormProps) {
             ) : null}
           </label>
 
-          {isLogin ? (
-            <div className="flex flex-col gap-3 text-[13px] sm:flex-row sm:items-center sm:justify-between">
-              <label className="inline-flex cursor-pointer items-center gap-2 whitespace-nowrap text-label">
-                <input
-                  checked={remember}
-                  className="m-0 h-4 w-4 accent-primary"
-                  onChange={(event) => setRemember(event.target.checked)}
-                  type="checkbox"
-                />
-                <span>مرا به خاطر بسپار</span>
-              </label>
-              <Link
-                className="text-primary transition hover:text-primary-dark"
-                href="/auth/forgot-password"
-              >
-                رمز عبور خود را فراموش کرده‌اید؟
-              </Link>
-            </div>
-          ) : null}
+          <div className="flex flex-col gap-3 text-[13px] sm:flex-row sm:items-center sm:justify-between">
+            <label className="inline-flex cursor-pointer items-center gap-2 whitespace-nowrap text-label">
+              <input
+                checked={remember}
+                className="m-0 h-4 w-4 accent-primary"
+                onChange={(event) => setRemember(event.target.checked)}
+                type="checkbox"
+              />
+              <span>مرا به خاطر بسپار</span>
+            </label>
+            <Link
+              className="text-primary transition hover:text-primary-dark"
+              href="/auth/forgot-password"
+            >
+              رمز عبور خود را فراموش کرده‌اید؟
+            </Link>
+          </div>
 
           {message ? (
             <p className="m-0 rounded-md bg-primary-soft px-3 py-2.5 text-[13px] leading-7 text-primary-dark">
@@ -234,5 +377,29 @@ export function AuthForm({ mode }: AuthFormProps) {
         </a>
       </section>
     </main>
+  );
+}
+
+function CameraLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-8 w-8 text-auth-accent"
+      fill="none"
+      viewBox="0 0 32 32"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M10.5 9.5h9.2l2.2 3.2H26v9.8H6v-9.8h2.3l2.2-3.2Z"
+        fill="currentColor"
+      />
+      <path d="M24.8 13.8 29 11.7v11.1l-4.2-2.1v-6.9Z" fill="currentColor" />
+      <path d="M9.2 6h2.6v2.6H9.2V6Zm5.5-1.6h2.6v3.4h-2.6V4.4Zm5.5 1.6h2.6v2.6h-2.6V6Z" fill="currentColor" />
+      <path
+        d="M11 15.5h3.2v3.2H11v-3.2Zm6.8 0H21v3.2h-3.2v-3.2Z"
+        fill="var(--color-auth-card)"
+      />
+      <path d="M12 24.8h8v2.8h-8v-2.8Z" fill="currentColor" />
+    </svg>
   );
 }

@@ -17,7 +17,24 @@
   --color-field-border: #cfd6df;
   --color-heading: #252a31;
   --color-label: #30343a;
+  --color-auth-bg: #111820;
+  --color-auth-bg-start: #1a1d1e;
+  --color-auth-bg-end: #0c1520;
+  --color-auth-card: #141b21;
+  --color-auth-card-border: #28323a;
+  --color-auth-text: #e8edf2;
+  --color-auth-muted: #99a3ad;
+  --color-auth-input: #e7eefb;
+  --color-auth-input-dark: #0d1217;
+  --color-auth-input-border: #222c34;
+  --color-auth-accent: #ffb703;
+  --color-auth-accent-dark: #eca400;
+  --color-auth-link: #65b5ff;
+  --color-auth-link-surface: #152b3d;
+  --color-auth-link-border: #3b719c;
   --shadow-auth: 0 18px 50px rgb(24 39 55 / 12%);
+  --shadow-auth-dark: 0 34px 80px rgb(0 0 0 / 36%);
+  --shadow-auth-action: 0 10px 22px rgb(255 183 3 / 22%);
   --font-sans: Tahoma, Arial, sans-serif;
 }
 
