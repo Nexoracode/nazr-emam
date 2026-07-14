@@ -4,10 +4,7 @@ export interface AuthenticatedRequest {
   headers?: {
     authorization?: string | string[];
   };
-  cookies?: {
-    accessToken?: string;
-    refreshToken?: string;
-  };
+  cookies?: Record<string, string | undefined>;
   user?: User;
   accessToken?: string;
 }

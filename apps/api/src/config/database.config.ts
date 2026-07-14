@@ -1,18 +1,6 @@
 import { registerAs } from '@nestjs/config';
 import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
-
-const toBoolean = (value: string | undefined, fallback: boolean) => {
-  if (value === undefined) {
-    return fallback;
-  }
-
-  return ['1', 'true', 'yes'].includes(value.toLowerCase());
-};
-
-const toNumber = (value: string | undefined, fallback: number) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
+import { toBoolean, toNumber } from './env-utils';
 
 export default registerAs(
   'database',
@@ -25,7 +13,7 @@ export default registerAs(
     database: process.env.DB_DATABASE ?? 'nazr',
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     autoLoadEntities: true,
-    synchronize: toBoolean(process.env.DB_SYNCHRONIZE, true),
+    synchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
     logging: toBoolean(process.env.DB_LOGGING, false),
   }),
 );

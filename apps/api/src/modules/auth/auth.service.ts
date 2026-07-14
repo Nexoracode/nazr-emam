@@ -4,6 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import type {
   AuthResponse,
@@ -19,15 +20,12 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { IsNull, Repository } from 'typeorm';
-import type { AuthenticatedResponse } from './auth.types';
+import type { AuthenticatedRequest, AuthenticatedResponse } from './auth.types';
 import { RefreshTokenEntity } from './entities/refresh-token.entity';
 import { UserEntity } from './entities/user.entity';
 
 export const ACCESS_TOKEN_COOKIE = 'accessToken';
 export const REFRESH_TOKEN_COOKIE = 'refreshToken';
-
-const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
-const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface Session {
   userId: string;
@@ -55,6 +53,7 @@ export class AuthService {
     private readonly usersRepository: Repository<UserEntity>,
     @InjectRepository(RefreshTokenEntity)
     private readonly refreshTokensRepository: Repository<RefreshTokenEntity>,
+    private readonly configService: ConfigService,
   ) {}
 
   async register(payload: RegisterRequest): Promise<IssuedAuthTokens> {
@@ -163,19 +162,42 @@ export class AuthService {
   }
 
   setAuthCookies(response: AuthenticatedResponse, tokens: IssuedAuthTokens): void {
-    response.cookie(ACCESS_TOKEN_COOKIE, tokens.accessToken, {
+    response.cookie(this.accessTokenCookieName, tokens.accessToken, {
       ...this.getBaseCookieOptions(),
-      maxAge: ACCESS_TOKEN_TTL_MS,
+      maxAge: this.accessTokenTtlMs,
     });
-    response.cookie(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
+    response.cookie(this.refreshTokenCookieName, tokens.refreshToken, {
       ...this.getBaseCookieOptions(),
-      maxAge: REFRESH_TOKEN_TTL_MS,
+      maxAge: this.refreshTokenTtlMs,
     });
   }
 
   clearAuthCookies(response: AuthenticatedResponse): void {
-    response.clearCookie(ACCESS_TOKEN_COOKIE, this.getBaseCookieOptions());
-    response.clearCookie(REFRESH_TOKEN_COOKIE, this.getBaseCookieOptions());
+    response.clearCookie(this.accessTokenCookieName, this.getBaseCookieOptions());
+    response.clearCookie(
+      this.refreshTokenCookieName,
+      this.getBaseCookieOptions(),
+    );
+  }
+
+  getAccessTokenFromRequest(
+    request: AuthenticatedRequest,
+  ): string | undefined {
+    const authorization = request.headers?.authorization;
+    if (typeof authorization === 'string') {
+      const [scheme, token] = authorization.split(' ');
+      if (scheme === 'Bearer' && token) {
+        return token;
+      }
+    }
+
+    return request.cookies?.[this.accessTokenCookieName];
+  }
+
+  getRefreshTokenFromRequest(
+    request: AuthenticatedRequest,
+  ): string | undefined {
+    return request.cookies?.[this.refreshTokenCookieName];
   }
 
   private async createAuthResponse(user: UserEntity): Promise<IssuedAuthTokens> {
@@ -185,13 +207,13 @@ export class AuthService {
       userId: user.id,
       accessToken: this.createToken(),
       refreshTokenHash,
-      expiresAt: new Date(Date.now() + ACCESS_TOKEN_TTL_MS),
+      expiresAt: new Date(Date.now() + this.accessTokenTtlMs),
     };
 
     const storedRefreshToken = this.refreshTokensRepository.create({
       userId: user.id,
       tokenHash: refreshTokenHash,
-      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+      expiresAt: new Date(Date.now() + this.refreshTokenTtlMs),
       revokedAt: null,
     });
     await this.refreshTokensRepository.save(storedRefreshToken);
@@ -375,10 +397,38 @@ export class AuthService {
 
   private getBaseCookieOptions() {
     return {
-      httpOnly: true,
-      sameSite: 'lax' as const,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
+      httpOnly: this.configService.get<boolean>('auth.cookieHttpOnly', true),
+      sameSite: this.configService.get<'lax' | 'strict' | 'none'>(
+        'auth.cookieSameSite',
+        'lax',
+      ),
+      secure: this.configService.get<boolean>('auth.cookieSecure', false),
+      path: this.configService.get<string>('auth.cookiePath', '/'),
     };
+  }
+
+  private get accessTokenCookieName() {
+    return this.configService.get<string>(
+      'auth.accessTokenCookieName',
+      ACCESS_TOKEN_COOKIE,
+    );
+  }
+
+  private get refreshTokenCookieName() {
+    return this.configService.get<string>(
+      'auth.refreshTokenCookieName',
+      REFRESH_TOKEN_COOKIE,
+    );
+  }
+
+  private get accessTokenTtlMs() {
+    return this.configService.get<number>('auth.accessTokenTtlMs', 60 * 60 * 1000);
+  }
+
+  private get refreshTokenTtlMs() {
+    return this.configService.get<number>(
+      'auth.refreshTokenTtlMs',
+      7 * 24 * 60 * 60 * 1000,
+    );
   }
 }

@@ -105,7 +105,10 @@ export class AuthController {
     @Res({ passthrough: true }) response: AuthenticatedResponse,
   ) {
     const authResponse = await this.authService.refresh({
-      refreshToken: body?.refreshToken ?? request.cookies?.refreshToken ?? '',
+      refreshToken:
+        body?.refreshToken ??
+        this.authService.getRefreshTokenFromRequest(request) ??
+        '',
     });
     this.authService.setAuthCookies(response, authResponse);
     return { user: authResponse.user };
@@ -125,8 +128,8 @@ export class AuthController {
     @Res({ passthrough: true }) response: AuthenticatedResponse,
   ) {
     await this.authService.logout(
-      this.extractAccessToken(request),
-      request.cookies?.refreshToken,
+      this.authService.getAccessTokenFromRequest(request),
+      this.authService.getRefreshTokenFromRequest(request),
     );
     this.authService.clearAuthCookies(response);
   }
@@ -145,13 +148,4 @@ export class AuthController {
     return request.user;
   }
 
-  private extractAccessToken(request: AuthenticatedRequest): string | undefined {
-    const authorization = request.headers?.authorization;
-    if (typeof authorization === 'string') {
-      const [scheme, token] = authorization.split(' ');
-      return scheme === 'Bearer' && token ? token : request.cookies?.accessToken;
-    }
-
-    return request.cookies?.accessToken;
-  }
 }

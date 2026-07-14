@@ -31,8 +31,8 @@ export class AuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const response = context.switchToHttp().getResponse<AuthenticatedResponse>();
-    const accessToken = this.extractAccessToken(request);
-    const refreshToken = request.cookies?.refreshToken;
+    const accessToken = this.authService.getAccessTokenFromRequest(request);
+    const refreshToken = this.authService.getRefreshTokenFromRequest(request);
     const authenticated = await this.authService.authenticate(
       accessToken,
       refreshToken,
@@ -55,15 +55,5 @@ export class AuthGuard implements CanActivate {
 
     request.user = authenticated.user;
     return true;
-  }
-
-  private extractAccessToken(request: AuthenticatedRequest): string | undefined {
-    const authorization = request.headers?.authorization;
-    if (typeof authorization === 'string') {
-      const [scheme, token] = authorization.split(' ');
-      return scheme === 'Bearer' && token ? token : request.cookies?.accessToken;
-    }
-
-    return request.cookies?.accessToken;
   }
 }
