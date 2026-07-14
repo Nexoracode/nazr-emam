@@ -47,7 +47,9 @@
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
+
+  /* ── Light ── */
   --background: #f4f6f8;
   --foreground: #20211f;
   --muted: #686b65;
@@ -58,6 +60,47 @@
   --primary-soft: #e9f1f4;
   --danger: #a43b3b;
   --shadow: 0 18px 50px rgb(24 39 55 / 12%);
+  --status-ok-bg: #e8f4ef;
+  --status-ok-color: #1d4658;
+  --status-error-bg: #faeaea;
+  --status-error-color: #a43b3b;
+  --heading: #252a31;
+  --label: #30343a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f1620;
+    --foreground: #e2eaf2;
+    --muted: #7a8a9a;
+    --surface: #141d27;
+    --border: #243040;
+    --primary: #5bb8d4;
+    --primary-dark: #4aa8c4;
+    --primary-soft: #152030;
+    --danger: #d96b6b;
+    --shadow: 0 18px 50px rgb(0 0 0 / 36%);
+    --status-ok-bg: #0e2820;
+    --status-ok-color: #5bb8d4;
+    --status-error-bg: #2a1010;
+    --status-error-color: #d96b6b;
+    --heading: #d0dce8;
+    --label: #b0bec8;
+
+    /* Tailwind v4 token overrides for dark mode */
+    --color-background: #0f1620;
+    --color-foreground: #e2eaf2;
+    --color-muted: #7a8a9a;
+    --color-surface: #141d27;
+    --color-border: #243040;
+    --color-primary: #5bb8d4;
+    --color-primary-dark: #4aa8c4;
+    --color-primary-soft: #152030;
+    --color-danger: #d96b6b;
+    --color-field-border: #2a3a4a;
+    --color-heading: #d0dce8;
+    --color-label: #b0bec8;
+  }
 }
 
 * {
@@ -74,6 +117,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: "Vazir", Tahoma, Arial, sans-serif;
+  transition: background 0.2s, color 0.2s;
 }
 
 .page-shell {
@@ -91,6 +135,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 24px;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .eyebrow {
@@ -107,19 +152,21 @@ body {
 }
 
 .page-shell h1 {
-  font-size: clamp(30px, 5vw, 52px);
+  color: var(--heading, var(--foreground));
+  font-size: clamp(24px, 5vw, 52px);
   line-height: 1.2;
   margin-bottom: 16px;
 }
 
 .page-shell h2 {
+  color: var(--heading, var(--foreground));
   font-size: 22px;
   margin-bottom: 16px;
 }
 
 .page-shell p {
   color: var(--muted);
-  font-size: 18px;
+  font-size: clamp(15px, 2vw, 18px);
   line-height: 1.9;
   margin-bottom: 0;
 }
@@ -134,13 +181,13 @@ body {
 }
 
 .status-ok {
-  background: #e8f4ef;
-  color: var(--primary-dark);
+  background: var(--status-ok-bg);
+  color: var(--status-ok-color);
 }
 
 .status-error {
-  background: #faeaea;
-  color: var(--danger);
+  background: var(--status-error-bg);
+  color: var(--status-error-color);
 }
 
 .workflow ol {
@@ -153,6 +200,7 @@ body {
 a {
   color: var(--primary);
   text-decoration: none;
+  transition: color 0.15s;
 }
 
 a:hover {
