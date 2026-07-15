@@ -29,8 +29,99 @@ const textAreaCls = (err: boolean) =>
 const selectCls = (err: boolean) =>
   `${fieldCls(err)} appearance-none pl-9`;
 
+const smallNumbers = [
+  '',
+  'یک',
+  'دو',
+  'سه',
+  'چهار',
+  'پنج',
+  'شش',
+  'هفت',
+  'هشت',
+  'نه',
+  'ده',
+  'یازده',
+  'دوازده',
+  'سیزده',
+  'چهارده',
+  'پانزده',
+  'شانزده',
+  'هفده',
+  'هجده',
+  'نوزده',
+];
+const tens = ['', '', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'];
+const hundreds = [
+  '',
+  'صد',
+  'دویست',
+  'سیصد',
+  'چهارصد',
+  'پانصد',
+  'ششصد',
+  'هفتصد',
+  'هشتصد',
+  'نهصد',
+];
+const scaleWords = ['', 'هزار', 'میلیون', 'میلیارد', 'هزار میلیارد'];
+
+function normalizeDigits(value: string) {
+  return value
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+}
+
+function formatAmountInput(value: string) {
+  const digits = normalizeDigits(value).replace(/\D/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('en-US');
+}
+
 function normalizeAmount(value: string) {
-  return Number(value.replace(/[,\s]/g, ''));
+  return Number(normalizeDigits(value).replace(/[,\s]/g, ''));
+}
+
+function threeDigitsToWords(value: number) {
+  const parts: string[] = [];
+  const hundred = Math.floor(value / 100);
+  const rest = value % 100;
+
+  if (hundred) parts.push(hundreds[hundred]);
+  if (rest) {
+    if (rest < 20) {
+      parts.push(smallNumbers[rest]);
+    } else {
+      const ten = Math.floor(rest / 10);
+      const one = rest % 10;
+      parts.push(tens[ten]);
+      if (one) parts.push(smallNumbers[one]);
+    }
+  }
+
+  return parts.join(' و ');
+}
+
+function amountToPersianWords(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return '';
+
+  const groups: number[] = [];
+  let remaining = Math.floor(value);
+  while (remaining > 0) {
+    groups.push(remaining % 1000);
+    remaining = Math.floor(remaining / 1000);
+  }
+
+  const words = groups
+    .map((group, index) => {
+      if (!group) return '';
+      return [threeDigitsToWords(group), scaleWords[index]].filter(Boolean).join(' ');
+    })
+    .filter(Boolean)
+    .reverse()
+    .join(' و ');
+
+  return `${words} تومان`;
 }
 
 export function NazrRequestForm() {
@@ -106,11 +197,7 @@ export function NazrRequestForm() {
     : currentUser
       ? 'text-[var(--status-ok-color)]'
       : 'text-auth-text';
-
-  useEffect(() => {
-    if (!selectedType?.suggestedAmount || amount) return;
-    setAmount(String(selectedType.suggestedAmount.amount));
-  }, [amount, selectedType]);
+  const amountInWords = useMemo(() => amountToPersianWords(normalizeAmount(amount)), [amount]);
 
   function resetMessages() {
     setMessage('');
@@ -258,11 +345,16 @@ export function NazrRequestForm() {
                 className={fieldCls(Boolean(fieldErrors.amount))}
                 dir="ltr"
                 inputMode="numeric"
-                onChange={(e) => setAmount(e.target.value.replace(/[^\d,\s]/g, ''))}
-                placeholder="500000"
+                onChange={(e) => setAmount(formatAmountInput(e.target.value))}
+                placeholder="مثلا 300,000"
                 type="text"
                 value={amount}
               />
+              {amountInWords && (
+                <small className="text-[10px] font-medium leading-5 text-auth-muted">
+                  {amountInWords}
+                </small>
+              )}
               {fieldErrors.amount && (
                 <small className="text-[10px] text-danger">{fieldErrors.amount}</small>
               )}
