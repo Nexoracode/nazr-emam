@@ -330,8 +330,9 @@ type NazrRequestStatus =
 ```ts
 interface CreateNazrRequest {
   nazrTypeId: ID;
-  donorFullName: string;
-  donorMobile: string;
+  isForSelf?: boolean;
+  donorFullName?: string;
+  donorMobile?: string;
   donorNationalCode?: string | null;
   amount: Money;
   note?: string | null;

@@ -15,6 +15,7 @@ import { ACCESS_TOKEN_COOKIE } from '../auth/auth.service';
 import { AuthService } from '../auth/auth.service';
 import { ApiErrorDto } from '../../common/dto/api-error.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import type { User } from '@nazr-emam/shared';
 import type {
   AuthenticatedRequest,
   AuthenticatedResponse,
@@ -50,8 +51,8 @@ export class NazrRequestsController {
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: AuthenticatedResponse,
   ) {
-    const userId = await this.getOptionalUserId(request, response);
-    return this.service.create(body, userId);
+    const user = await this.getOptionalUser(request, response);
+    return this.service.create(body, user);
   }
 
   @ApiBearerAuth()
@@ -74,10 +75,10 @@ export class NazrRequestsController {
     );
   }
 
-  private async getOptionalUserId(
+  private async getOptionalUser(
     request: AuthenticatedRequest,
     response: AuthenticatedResponse,
-  ): Promise<string | null> {
+  ): Promise<User | null> {
     const accessToken = this.authService.getAccessTokenFromRequest(request);
     const refreshToken = this.authService.getRefreshTokenFromRequest(request);
 
@@ -99,7 +100,7 @@ export class NazrRequestsController {
         this.authService.setAuthCookies(response, authenticated.tokens);
       }
 
-      return authenticated.user.id;
+      return authenticated.user;
     } catch {
       return null;
     }

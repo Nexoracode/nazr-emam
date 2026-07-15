@@ -42,11 +42,14 @@ export class CreateNazrRequestDto implements CreateNazrRequest {
   @ApiProperty()
   nazrTypeId!: string;
 
-  @ApiProperty()
-  donorFullName!: string;
+  @ApiPropertyOptional({ default: true })
+  isForSelf?: boolean;
 
-  @ApiProperty()
-  donorMobile!: string;
+  @ApiPropertyOptional()
+  donorFullName?: string;
+
+  @ApiPropertyOptional()
+  donorMobile?: string;
 
   @ApiPropertyOptional({ nullable: true })
   donorNationalCode?: string | null;

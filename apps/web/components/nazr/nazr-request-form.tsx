@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import type { CreateNazrRequest, NazrRequest, NazrType } from '@nazr-emam/shared';
+import type { CreateNazrRequest, NazrType, User } from '@nazr-emam/shared';
 import { isValidIranMobile, normalizeIranMobile } from '@nazr-emam/shared';
 import {
   ApiRequestError,
   createNazrRequest,
+  getMe,
   getNazrTypes,
 } from '../../lib/api';
 
@@ -48,13 +49,15 @@ export function NazrRequestForm() {
   const [donorNationalCode, setDonorNationalCode] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isForSelf, setIsForSelf] = useState(true);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loadingTypes, setLoadingTypes] = useState(true);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState<'success' | 'error' | ''>('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [createdRequest, setCreatedRequest] = useState<NazrRequest | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -72,6 +75,29 @@ export function NazrRequestForm() {
       })
       .finally(() => {
         if (!ignore) setLoadingTypes(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    setLoadingUser(true);
+    getMe()
+      .then((user) => {
+        if (ignore) return;
+        setCurrentUser(user);
+        setIsForSelf(true);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setCurrentUser(null);
+        setIsForSelf(false);
+      })
+      .finally(() => {
+        if (!ignore) setLoadingUser(false);
       });
 
     return () => {
@@ -98,14 +124,16 @@ export function NazrRequestForm() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     resetMessages();
-    setCreatedRequest(null);
 
     const errors: FieldErrors = {};
-    const mobileError = validateMobile(donorMobile);
+    const mobileError = isForSelf ? null : validateMobile(donorMobile);
     const normalizedAmount = normalizeAmount(amount);
 
     if (!selectedTypeId) errors.nazrTypeId = 'انتخاب نوع نذر الزامی است.';
-    if (!donorFullName.trim() || donorFullName.trim().length < 2) {
+    if (isForSelf && !currentUser) {
+      errors.isForSelf = 'برای ثبت نذر از طرف خودتان باید وارد حساب کاربری شوید.';
+    }
+    if (!isForSelf && (!donorFullName.trim() || donorFullName.trim().length < 2)) {
       errors.donorFullName = 'نام و نام خانوادگی معتبر نیست.';
     }
     if (mobileError) errors.donorMobile = mobileError;
@@ -126,8 +154,9 @@ export function NazrRequestForm() {
 
     const payload: CreateNazrRequest = {
       nazrTypeId: selectedTypeId,
-      donorFullName: donorFullName.trim(),
-      donorMobile: normalizeIranMobile(donorMobile),
+      isForSelf,
+      donorFullName: isForSelf ? undefined : donorFullName.trim(),
+      donorMobile: isForSelf ? undefined : normalizeIranMobile(donorMobile),
       donorNationalCode: donorNationalCode.trim() || null,
       amount: { amount: normalizedAmount, currency: 'IRT' },
       note: note.trim() || null,
@@ -136,9 +165,8 @@ export function NazrRequestForm() {
 
     setIsSubmitting(true);
     try {
-      const result = await createNazrRequest(payload);
-      setCreatedRequest(result);
-      setMessage('نذر شما ثبت شد. کد رهگیری را برای پیگیری‌های بعدی نگه دارید.');
+      await createNazrRequest(payload);
+      setMessage('درخواست نذر ثبت شد. بعد از تکمیل پرداخت، کد رهگیری نمایش داده می‌شود.');
       setMessageTone('success');
     } catch (err) {
       if (err instanceof ApiRequestError) {
@@ -168,7 +196,7 @@ export function NazrRequestForm() {
             ثبت نذر
           </h1>
           <p className="m-0 text-[11px] leading-5 text-auth-muted">
-            نوع نذر، مبلغ و اطلاعات تماس را وارد کنید تا کد رهگیری دریافت کنید.
+            نوع نذر و مبلغ را وارد کنید. کد رهگیری بعد از تکمیل پرداخت نمایش داده می‌شود.
           </p>
         </div>
 
@@ -202,41 +230,66 @@ export function NazrRequestForm() {
             </p>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-              <span>نام و نام خانوادگی</span>
+          <div className="rounded-lg border border-auth-card-border bg-auth-link-surface px-3 py-3">
+            <label className="flex cursor-pointer items-center justify-between gap-3 text-[12px] font-bold text-auth-text">
+              <span>نذر از طرف خودم</span>
               <input
-                autoComplete="name"
-                className={fieldCls(Boolean(fieldErrors.donorFullName))}
-                maxLength={80}
-                onChange={(e) => setDonorFullName(e.target.value)}
-                placeholder="مثلاً: علی رضایی"
-                type="text"
-                value={donorFullName}
+                checked={isForSelf}
+                className="h-4 w-4 accent-auth-accent"
+                disabled={loadingUser || !currentUser}
+                onChange={(e) => setIsForSelf(e.target.checked)}
+                type="checkbox"
               />
-              {fieldErrors.donorFullName && (
-                <small className="text-[10px] text-danger">{fieldErrors.donorFullName}</small>
-              )}
             </label>
-
-            <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-              <span>شماره همراه</span>
-              <input
-                autoComplete="tel"
-                className={fieldCls(Boolean(fieldErrors.donorMobile))}
-                dir="ltr"
-                inputMode="tel"
-                maxLength={11}
-                onChange={(e) => setDonorMobile(e.target.value)}
-                placeholder="09123456789"
-                type="tel"
-                value={donorMobile}
-              />
-              {fieldErrors.donorMobile && (
-                <small className="text-[10px] text-danger">{fieldErrors.donorMobile}</small>
-              )}
-            </label>
+            <p className="mb-0 mt-2 text-[11px] leading-6 text-auth-muted">
+              {loadingUser
+                ? 'در حال بررسی حساب کاربری...'
+                : currentUser && isForSelf
+                  ? `اطلاعات از حساب ${currentUser.fullName} استفاده می‌شود.`
+                  : 'اگر نذر از طرف شخص دیگری است، نام و شماره همراه او را وارد کنید.'}
+            </p>
+            {fieldErrors.isForSelf && (
+              <small className="mt-2 block text-[10px] text-danger">{fieldErrors.isForSelf}</small>
+            )}
           </div>
+
+          {!isForSelf && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+                <span>نام و نام خانوادگی شخص</span>
+                <input
+                  autoComplete="name"
+                  className={fieldCls(Boolean(fieldErrors.donorFullName))}
+                  maxLength={80}
+                  onChange={(e) => setDonorFullName(e.target.value)}
+                  placeholder="مثلاً: علی رضایی"
+                  type="text"
+                  value={donorFullName}
+                />
+                {fieldErrors.donorFullName && (
+                  <small className="text-[10px] text-danger">{fieldErrors.donorFullName}</small>
+                )}
+              </label>
+
+              <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+                <span>شماره همراه شخص</span>
+                <input
+                  autoComplete="tel"
+                  className={fieldCls(Boolean(fieldErrors.donorMobile))}
+                  dir="ltr"
+                  inputMode="tel"
+                  maxLength={11}
+                  onChange={(e) => setDonorMobile(e.target.value)}
+                  placeholder="09123456789"
+                  type="tel"
+                  value={donorMobile}
+                />
+                {fieldErrors.donorMobile && (
+                  <small className="text-[10px] text-danger">{fieldErrors.donorMobile}</small>
+                )}
+              </label>
+            </div>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
@@ -299,21 +352,12 @@ export function NazrRequestForm() {
 
           {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
-          {createdRequest && (
-            <div className="rounded-lg border border-auth-accent/40 bg-auth-accent/10 px-3 py-3 text-center">
-              <p className="m-0 text-[11px] text-auth-muted">کد رهگیری</p>
-              <p dir="ltr" className="mb-0 mt-1 text-[16px] font-extrabold tracking-wide text-auth-accent">
-                {createdRequest.trackingCode}
-              </p>
-            </div>
-          )}
-
           <button
             className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
-            disabled={isSubmitting || loadingTypes || nazrTypes.length === 0}
+            disabled={isSubmitting || loadingTypes || loadingUser || nazrTypes.length === 0}
             type="submit"
           >
-            {isSubmitting ? 'در حال ثبت...' : 'ثبت نذر و دریافت کد رهگیری'}
+            {isSubmitting ? 'در حال ثبت...' : 'ثبت نذر و ادامه پرداخت'}
           </button>
         </form>
 

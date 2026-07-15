@@ -12,6 +12,7 @@ import type {
   NazrRequest,
   NazrType,
   Paginated,
+  User,
 } from '@nazr-emam/shared';
 import { isValidIranMobile, normalizeIranMobile } from '@nazr-emam/shared';
 import { NazrRequestEntity } from './entities/nazr-request.entity';
@@ -28,9 +29,9 @@ export class NazrRequestsService {
 
   async create(
     payload: CreateNazrRequest,
-    userId: string | null,
+    user: User | null,
   ): Promise<NazrRequest> {
-    const body = this.validateCreate(payload);
+    const body = this.validateCreate(payload, user);
     const nazrType = await this.nazrTypesRepo.findOne({
       where: { id: body.nazrTypeId, isActive: true },
     });
@@ -45,7 +46,7 @@ export class NazrRequestsService {
 
     const request = this.repo.create({
       trackingCode: await this.createTrackingCode(),
-      userId,
+      userId: user?.id ?? null,
       nazrTypeId: nazrType.id,
       nazrType,
       donorFullName: body.donorFullName,
@@ -114,17 +115,28 @@ export class NazrRequestsService {
     };
   }
 
-  private validateCreate(payload: CreateNazrRequest): CreateNazrRequest {
+  private validateCreate(
+    payload: CreateNazrRequest,
+    user: User | null,
+  ): Required<Pick<CreateNazrRequest, 'nazrTypeId' | 'donorFullName' | 'donorMobile' | 'amount'>> &
+    Pick<CreateNazrRequest, 'donorNationalCode' | 'note' | 'isAnonymous' | 'isForSelf'> {
     const fields: Record<string, string> = {};
     const nazrTypeId = payload?.nazrTypeId?.trim();
-    const donorFullName = payload?.donorFullName?.trim();
-    const donorMobile = normalizeIranMobile(payload?.donorMobile ?? '');
+    const isForSelf = payload?.isForSelf !== false;
+    const donorFullName = isForSelf ? user?.fullName : payload?.donorFullName?.trim();
+    const donorMobile = isForSelf
+      ? user?.mobile
+      : normalizeIranMobile(payload?.donorMobile ?? '');
     const donorNationalCode = payload?.donorNationalCode?.trim() || null;
     const note = payload?.note?.trim() || null;
     const amount = payload?.amount;
 
     if (!nazrTypeId) {
       fields.nazrTypeId = 'انتخاب نوع نذر الزامی است';
+    }
+
+    if (isForSelf && !user) {
+      fields.isForSelf = 'برای ثبت نذر از طرف خودتان باید وارد حساب کاربری شوید';
     }
 
     if (!donorFullName || donorFullName.length < 2) {
@@ -149,13 +161,17 @@ export class NazrRequestsService {
 
     this.throwValidation(fields);
 
+    const validatedFullName = donorFullName ?? '';
+    const validatedMobile = donorMobile ?? '';
+
     return {
       nazrTypeId,
-      donorFullName,
-      donorMobile,
+      donorFullName: validatedFullName,
+      donorMobile: validatedMobile,
       donorNationalCode,
       amount,
       note,
+      isForSelf,
       isAnonymous: Boolean(payload?.isAnonymous),
     };
   }
