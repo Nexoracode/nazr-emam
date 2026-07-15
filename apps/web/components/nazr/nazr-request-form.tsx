@@ -27,6 +27,9 @@ const textAreaCls = (err: boolean) =>
       : 'border-auth-input-border'
   }`;
 
+const selectCls = (err: boolean) =>
+  `${fieldCls(err)} appearance-none pl-9`;
+
 function validateMobile(mobile: string): string | null {
   const normalized = normalizeIranMobile(mobile);
   if (!normalized) return 'شماره همراه الزامی است.';
@@ -203,22 +206,30 @@ export function NazrRequestForm() {
         <form className="grid gap-3.5" onSubmit={handleSubmit} noValidate>
           <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
             <span>نوع نذر</span>
-            <select
-              className={fieldCls(Boolean(fieldErrors.nazrTypeId))}
-              disabled={loadingTypes || nazrTypes.length === 0}
-              onChange={(e) => setSelectedTypeId(e.target.value)}
-              value={selectedTypeId}
-            >
-              {loadingTypes && <option value="">در حال دریافت...</option>}
-              {!loadingTypes && nazrTypes.length === 0 && (
-                <option value="">فعلاً نوع نذر فعالی ثبت نشده است</option>
-              )}
-              {nazrTypes.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
+            <span className="relative block">
+              <select
+                className={selectCls(Boolean(fieldErrors.nazrTypeId))}
+                disabled={loadingTypes || nazrTypes.length === 0}
+                onChange={(e) => setSelectedTypeId(e.target.value)}
+                value={selectedTypeId}
+              >
+                {loadingTypes && <option value="">در حال دریافت...</option>}
+                {!loadingTypes && nazrTypes.length === 0 && (
+                  <option value="">فعلاً نوع نذر فعالی ثبت نشده است</option>
+                )}
+                {nazrTypes.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+              </select>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-auth-muted"
+              >
+                ▾
+              </span>
+            </span>
             {fieldErrors.nazrTypeId && (
               <small className="text-[10px] text-danger">{fieldErrors.nazrTypeId}</small>
             )}
