@@ -1,7 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { randomBytes } from 'node:crypto';
 import { Repository } from 'typeorm';
-import type { NazrRequest, NazrType, Paginated } from '@nazr-emam/shared';
+import type {
+  CreateNazrRequest,
+  Money,
+  NazrRequest,
+  NazrType,
+  Paginated,
+} from '@nazr-emam/shared';
+import { isValidIranMobile, normalizeIranMobile } from '@nazr-emam/shared';
 import { NazrRequestEntity } from './entities/nazr-request.entity';
 import { NazrTypeEntity } from '../nazr-types/entities/nazr-type.entity';
 
@@ -10,7 +22,44 @@ export class NazrRequestsService {
   constructor(
     @InjectRepository(NazrRequestEntity)
     private readonly repo: Repository<NazrRequestEntity>,
+    @InjectRepository(NazrTypeEntity)
+    private readonly nazrTypesRepo: Repository<NazrTypeEntity>,
   ) {}
+
+  async create(
+    payload: CreateNazrRequest,
+    userId: string | null,
+  ): Promise<NazrRequest> {
+    const body = this.validateCreate(payload);
+    const nazrType = await this.nazrTypesRepo.findOne({
+      where: { id: body.nazrTypeId, isActive: true },
+    });
+
+    if (!nazrType) {
+      throw new NotFoundException({
+        statusCode: 404,
+        code: 'NAZR_TYPE_NOT_FOUND',
+        message: 'نوع نذر انتخاب‌شده پیدا نشد',
+      });
+    }
+
+    const request = this.repo.create({
+      trackingCode: await this.createTrackingCode(),
+      userId,
+      nazrTypeId: nazrType.id,
+      nazrType,
+      donorFullName: body.donorFullName,
+      donorMobile: body.donorMobile,
+      donorNationalCode: body.donorNationalCode,
+      amount: body.amount,
+      note: body.note,
+      isAnonymous: body.isAnonymous ?? false,
+      status: 'awaiting_payment',
+      adminNote: null,
+    });
+
+    return this.toDto(await this.repo.save(request));
+  }
 
   async getMine(
     userId: string,
@@ -63,5 +112,89 @@ export class NazrRequestsService {
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
     };
+  }
+
+  private validateCreate(payload: CreateNazrRequest): CreateNazrRequest {
+    const fields: Record<string, string> = {};
+    const nazrTypeId = payload?.nazrTypeId?.trim();
+    const donorFullName = payload?.donorFullName?.trim();
+    const donorMobile = normalizeIranMobile(payload?.donorMobile ?? '');
+    const donorNationalCode = payload?.donorNationalCode?.trim() || null;
+    const note = payload?.note?.trim() || null;
+    const amount = payload?.amount;
+
+    if (!nazrTypeId) {
+      fields.nazrTypeId = 'انتخاب نوع نذر الزامی است';
+    }
+
+    if (!donorFullName || donorFullName.length < 2) {
+      fields.donorFullName = 'نام و نام خانوادگی معتبر نیست';
+    }
+
+    if (!isValidIranMobile(donorMobile)) {
+      fields.donorMobile = 'شماره موبایل معتبر نیست';
+    }
+
+    if (donorNationalCode && !/^\d{10}$/.test(donorNationalCode)) {
+      fields.donorNationalCode = 'کد ملی باید ۱۰ رقم باشد';
+    }
+
+    if (!this.isValidAmount(amount)) {
+      fields.amount = 'مبلغ نذر معتبر نیست';
+    }
+
+    if (note && note.length > 1000) {
+      fields.note = 'یادداشت نباید بیشتر از ۱۰۰۰ کاراکتر باشد';
+    }
+
+    this.throwValidation(fields);
+
+    return {
+      nazrTypeId,
+      donorFullName,
+      donorMobile,
+      donorNationalCode,
+      amount,
+      note,
+      isAnonymous: Boolean(payload?.isAnonymous),
+    };
+  }
+
+  private isValidAmount(amount?: Money): amount is Money {
+    return (
+      Boolean(amount) &&
+      Number.isFinite(amount!.amount) &&
+      amount!.amount > 0 &&
+      ['IRR', 'IRT'].includes(amount!.currency)
+    );
+  }
+
+  private throwValidation(fields: Record<string, string>): void {
+    if (Object.keys(fields).length === 0) {
+      return;
+    }
+
+    throw new BadRequestException({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+      message: 'ورودی نامعتبر است',
+      fields,
+    });
+  }
+
+  private async createTrackingCode(): Promise<string> {
+    for (let i = 0; i < 5; i += 1) {
+      const code = `NE-${Date.now().toString(36).toUpperCase()}-${randomBytes(3)
+        .toString('hex')
+        .toUpperCase()}`;
+      const exists = await this.repo.exists({ where: { trackingCode: code } });
+      if (!exists) {
+        return code;
+      }
+    }
+
+    return `NE-${Date.now().toString(36).toUpperCase()}-${randomBytes(6)
+      .toString('hex')
+      .toUpperCase()}`;
   }
 }

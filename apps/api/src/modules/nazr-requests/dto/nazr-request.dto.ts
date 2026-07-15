@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type {
+  CreateNazrRequest,
   Money,
   NazrRequest,
   NazrRequestStatus,
@@ -35,6 +36,29 @@ export class NazrRequestDto implements NazrRequest {
   @ApiProperty() status!: NazrRequestStatus;
   @ApiProperty() createdAt!: string;
   @ApiProperty() updatedAt!: string;
+}
+
+export class CreateNazrRequestDto implements CreateNazrRequest {
+  @ApiProperty()
+  nazrTypeId!: string;
+
+  @ApiProperty()
+  donorFullName!: string;
+
+  @ApiProperty()
+  donorMobile!: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  donorNationalCode?: string | null;
+
+  @ApiProperty({ type: MoneyDto })
+  amount!: Money;
+
+  @ApiPropertyOptional({ nullable: true })
+  note?: string | null;
+
+  @ApiPropertyOptional({ default: false })
+  isAnonymous?: boolean;
 }
 
 export class PaginatedNazrRequestDto implements Paginated<NazrRequest> {

@@ -10,6 +10,7 @@ import databaseConfig from './config/database.config';
 import { AuthGuard } from './modules/auth/guards/auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { NazrRequestsModule } from './modules/nazr-requests/nazr-requests.module';
+import { NazrTypesModule } from './modules/nazr-types/nazr-types.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NazrRequestsModule } from './modules/nazr-requests/nazr-requests.module
         configService.getOrThrow('database'),
     }),
     AuthModule,
+    NazrTypesModule,
     NazrRequestsModule,
   ],
   controllers: [AppController],

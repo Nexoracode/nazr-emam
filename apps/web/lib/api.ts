@@ -2,8 +2,10 @@ import type {
   ApiError,
   AuthResponse,
   ChangePasswordRequest,
+  CreateNazrRequest,
   LoginRequest,
   NazrRequest,
+  NazrType,
   OtpRequestResponse,
   Paginated,
   RegisterRequest,
@@ -181,4 +183,12 @@ export function changePassword(payload: ChangePasswordRequest) {
 
 export function getMyNazrRequests(page = 1, pageSize = 12) {
   return get<Paginated<NazrRequest>>(`/nazr-requests/mine?page=${page}&pageSize=${pageSize}`);
+}
+
+export function getNazrTypes() {
+  return get<NazrType[]>('/nazr-types');
+}
+
+export function createNazrRequest(payload: CreateNazrRequest) {
+  return post<NazrRequest, CreateNazrRequest>('/nazr-requests', payload);
 }
