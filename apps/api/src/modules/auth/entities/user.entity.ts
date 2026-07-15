@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import type { UserRole } from '@nazr-emam/shared';
+import type { UserPlatform } from '@nazr-emam/shared';
 import { NazrRequestEntity } from '../../nazr-requests/entities/nazr-request.entity';
 import { NotificationEntity } from '../../notifications/entities/notification.entity';
 import { TicketEntity } from '../../tickets/entities/ticket.entity';
@@ -26,6 +27,15 @@ export class UserEntity {
 
   @Column({ name: 'password_hash', length: 255 })
   passwordHash!: string;
+
+  @Column({ name: 'eita_number', type: 'varchar', length: 40, nullable: true })
+  eitaNumber!: string | null;
+
+  @Column({ name: 'active_platforms', type: 'json', nullable: true })
+  activePlatforms!: UserPlatform[] | null;
+
+  @Column({ name: 'motivational_target', type: 'text', nullable: true })
+  motivationalTarget!: string | null;
 
   @Column({ type: 'enum', enum: ['donor', 'admin'], default: 'donor' })
   role!: UserRole;

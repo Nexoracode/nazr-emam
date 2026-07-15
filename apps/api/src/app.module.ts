@@ -12,7 +12,10 @@ import { AuthGuard } from './modules/auth/guards/auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { NazrRequestsModule } from './modules/nazr-requests/nazr-requests.module';
 import { NazrTypesModule } from './modules/nazr-types/nazr-types.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { ProfileModule } from './modules/profile/profile.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -30,6 +33,9 @@ import { PaymentsModule } from './modules/payments/payments.module';
     NazrTypesModule,
     NazrRequestsModule,
     PaymentsModule,
+    ProfileModule,
+    TicketsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [
