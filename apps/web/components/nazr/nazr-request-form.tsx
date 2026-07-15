@@ -251,7 +251,7 @@ export function NazrRequestForm() {
               <span>کد ملی اختیاری</span>
               <input
                 className={fieldCls(Boolean(fieldErrors.donorNationalCode))}
-                dir="ltr"
+                dir="rtl"
                 inputMode="numeric"
                 maxLength={10}
                 onChange={(e) => setDonorNationalCode(e.target.value.replace(/\D/g, ''))}
