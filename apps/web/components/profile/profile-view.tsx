@@ -183,25 +183,30 @@ function DashboardPanel({
           <div className="profile-list">
             {recent.map((item) => (
               <div className="profile-list-row" key={item.id}>
-                <div>
+                <div className="profile-list-main">
                   <p className="profile-list-title">{item.nazrType.title}</p>
                   <p className="profile-muted">
                     {item.amount.amount.toLocaleString('fa-IR')} تومان · {formatDate(item.createdAt)}
                   </p>
+                  {item.trackingCode && (
+                    <p className="profile-tracking-code">
+                      کد رهگیری: <span dir="ltr">{item.trackingCode}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="profile-list-actions">
                   <span className={STATUS_COLOR[item.status]}>{STATUS_LABEL[item.status]}</span>
-                  {item.status === 'awaiting_payment' && (
-                    <button
-                      className="profile-pay-link"
-                      disabled={startingPaymentId === item.id}
-                      onClick={() => handleContinuePayment(item.id)}
-                      type="button"
-                    >
-                      {startingPaymentId === item.id ? 'در حال اتصال...' : 'ادامه پرداخت'}
-                    </button>
-                  )}
                 </div>
+                {item.status === 'awaiting_payment' && (
+                  <button
+                    className="profile-pay-link"
+                    disabled={startingPaymentId === item.id}
+                    onClick={() => handleContinuePayment(item.id)}
+                    type="button"
+                  >
+                    {startingPaymentId === item.id ? 'در حال اتصال...' : 'ادامه پرداخت'}
+                  </button>
+                )}
               </div>
             ))}
             {paymentError && <p className="field-error">{paymentError}</p>}
