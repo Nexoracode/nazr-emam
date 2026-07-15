@@ -183,20 +183,23 @@ function DashboardPanel({
           <div className="profile-list">
             {recent.map((item) => (
               <div className="profile-list-row" key={item.id}>
-                <div className="profile-list-main">
-                  <p className="profile-list-title">{item.nazrType.title}</p>
-                  <p className="profile-muted">
-                    {item.amount.amount.toLocaleString('fa-IR')} تومان · {formatDate(item.createdAt)}
-                  </p>
-                  {item.trackingCode && (
-                    <p className="profile-tracking-code">
-                      کد رهگیری: <span dir="ltr">{item.trackingCode}</span>
-                    </p>
-                  )}
-                </div>
-                <div className="profile-list-actions">
+                <div className="profile-list-head">
+                  <div className="profile-list-main">
+                    <p className="profile-list-title">{item.nazrType.title}</p>
+                    {item.trackingCode && (
+                      <p className="profile-tracking-code">
+                        کد رهگیری: <span dir="ltr">{item.trackingCode}</span>
+                      </p>
+                    )}
+                  </div>
                   <span className={STATUS_COLOR[item.status]}>{STATUS_LABEL[item.status]}</span>
                 </div>
+
+                <div className="profile-list-info">
+                  <ProfileRecentInfo label="مبلغ" value={`${item.amount.amount.toLocaleString('fa-IR')} تومان`} />
+                  <ProfileRecentInfo label="تاریخ ثبت" value={formatDate(item.createdAt)} />
+                </div>
+
                 {item.status === 'awaiting_payment' && (
                   <button
                     className="profile-pay-link"
@@ -223,6 +226,15 @@ function DashboardPanel({
           <InfoRow label="عضویت از" value={formatDate(user.createdAt)} />
         </dl>
       </section>
+    </div>
+  );
+}
+
+function ProfileRecentInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="profile-recent-info-label">{label}: </span>
+      <span className="profile-recent-info-value">{value}</span>
     </div>
   );
 }

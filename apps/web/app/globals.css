@@ -569,57 +569,49 @@ input {
 
 .profile-list {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 
 .profile-list-row {
-  align-items: start;
   border: 1px solid var(--border);
   border-radius: 8px;
   display: grid;
-  gap: 10px;
-  grid-template-areas:
-    "main actions"
-    "payment actions";
-  grid-template-columns: minmax(0, 1fr) auto;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 14px;
+}
+
+.profile-list-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
 }
 
 .profile-list-main {
-  grid-area: main;
   min-width: 0;
 }
 
 .profile-list-title {
   color: var(--heading, var(--foreground));
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 700;
-  margin: 0 0 2px;
+  margin: 0 0 4px;
 }
 
-.profile-list .profile-muted {
-  font-size: 11px;
-  line-height: 1.7;
-}
-
-.profile-list-actions {
-  align-items: center;
+.profile-list-info {
   display: flex;
-  flex-shrink: 0;
-  gap: 8px;
-  grid-area: actions;
+  flex-wrap: wrap;
+  gap: 24px;
 }
 
 .profile-pay-link {
-  align-self: end;
+  justify-self: start;
   background: transparent;
   border: 0;
   color: var(--primary);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  grid-area: payment;
-  justify-self: start;
   padding: 2px 0;
 }
 
@@ -634,15 +626,26 @@ input {
 
 .profile-tracking-code {
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.7;
-  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0;
 }
 
 .profile-tracking-code span {
   color: var(--primary);
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: 10px;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.profile-recent-info-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.profile-recent-info-value {
+  color: var(--foreground);
+  font-size: 13px;
 }
 
 .profile-empty {
@@ -692,17 +695,9 @@ input {
     flex-direction: column;
   }
 
-  .profile-list-row {
-    grid-template-areas:
-      "main"
-      "actions"
-      "payment";
-    grid-template-columns: 1fr;
-  }
-
-  .profile-list-actions,
-  .profile-pay-link {
-    justify-self: start;
+  .profile-list-head {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 
