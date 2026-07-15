@@ -647,3 +647,216 @@ const designColors = {
   danger: '#A43B3B',
 };
 ```
+
+---
+
+# بخش ۹ — پنل کاربری
+
+این بخش قرارداد API پنل کاربری است و فرانت پروفایل باید از همین مسیرها استفاده کند.
+
+### `GET /profile/details`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 UserProfileDetails`
+
+### `PATCH /profile/details`
+
+- **Auth:** کاربر لاگین‌شده
+- **بدنه:** `UpdateUserProfileDetailsRequest`
+- **پاسخ:** `200 UserProfileDetails`
+
+### `GET /profile/summary`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 UserProfileSummary`
+
+### `GET /profile/contributions`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 UserContributionSummary`
+
+### `GET /profile/payments`
+
+- **Auth:** کاربر لاگین‌شده
+- **Query:** `page?, pageSize?, search?, from?, to?`
+- **پاسخ:** `200 Paginated<Payment>`
+
+### `GET /profile/goal`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 { motivationalTarget: string | null }`
+
+### `PATCH /profile/goal`
+
+- **Auth:** کاربر لاگین‌شده
+- **بدنه:** `UpdateMotivationalTargetRequest`
+- **پاسخ:** `200 { motivationalTarget: string | null }`
+
+### `GET /profile/wallet`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 Wallet`
+
+### `PATCH /profile/wallet`
+
+- **Auth:** کاربر لاگین‌شده
+- **بدنه:** `UpdateWalletSettingsRequest`
+- **پاسخ:** `200 Wallet`
+
+### `POST /profile/wallet/charges`
+
+- **Auth:** کاربر لاگین‌شده
+- **بدنه:** `CreateWalletChargeRequest`
+- **پاسخ:** `201 WalletTransaction`
+
+### `GET /profile/wallet/transactions`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 WalletTransaction[]`
+
+### `GET /profile/club`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 UserClubStatus`
+
+### `GET /profile/gallery`
+
+- **Auth:** کاربر لاگین‌شده
+- **Query:** `nazrTypeId?`
+- **پاسخ:** `200 GalleryAsset[]`
+
+### `GET /profile/invitations`
+
+- **Auth:** کاربر لاگین‌شده
+- **پاسخ:** `200 InvitationCard[]`
+
+### `POST /profile/invitations`
+
+- **Auth:** کاربر لاگین‌شده
+- **بدنه:** `CreateInvitationCardRequest`
+- **پاسخ:** `201 InvitationCard`
+
+```ts
+type UserPlatform =
+  | "eitaa"
+  | "instagram"
+  | "telegram"
+  | "whatsapp"
+  | "website"
+  | "other";
+
+interface UserProfileDetails {
+  id: ID;
+  fullName: string;
+  mobile: string;
+  eitaNumber: string | null;
+  activePlatforms: UserPlatform[];
+  motivationalTarget: string | null;
+  createdAt: ISODate;
+}
+
+interface UpdateUserProfileDetailsRequest {
+  fullName?: string;
+  mobile?: string;
+  eitaNumber?: string | null;
+  activePlatforms?: UserPlatform[];
+}
+
+interface UpdateMotivationalTargetRequest {
+  motivationalTarget: string | null;
+}
+
+interface UserContributionSummary {
+  totalRequests: number;
+  completedRequests: number;
+  awaitingPaymentRequests: number;
+  totalAmount: Money;
+  byNazrType: {
+    nazrTypeId: ID;
+    title: string;
+    count: number;
+    totalAmount: Money;
+    sharePercent: number;
+  }[];
+}
+
+interface UserProfileSummary {
+  profile: UserProfileDetails;
+  contributions: UserContributionSummary;
+  payments: {
+    totalPaidAmount: Money;
+    totalPayments: number;
+    recentPayments: Payment[];
+  };
+  club: UserClubStatus;
+  unreadNotifications: number;
+  openTickets: number;
+}
+
+type GalleryAssetType = "image" | "video";
+
+interface GalleryAsset {
+  id: ID;
+  nazrTypeId: ID | null;
+  title: string;
+  type: GalleryAssetType;
+  fileUrl: string;
+  thumbnailUrl: string | null;
+  createdAt: ISODate;
+}
+
+interface Wallet {
+  id: ID;
+  userId: ID;
+  balance: Money;
+  isMonthlyDeductionEnabled: boolean;
+  monthlyDeductionAmount: Money | null;
+  updatedAt: ISODate;
+}
+
+interface UpdateWalletSettingsRequest {
+  isMonthlyDeductionEnabled: boolean;
+  monthlyDeductionAmount?: Money | null;
+}
+
+interface CreateWalletChargeRequest {
+  amount: Money;
+}
+
+interface WalletTransaction {
+  id: ID;
+  walletId: ID;
+  type: "charge" | "deduction" | "payment" | "refund";
+  amount: Money;
+  description: string;
+  createdAt: ISODate;
+}
+
+interface UserClubStatus {
+  level: string;
+  points: number;
+  joinedDays: number;
+  missions: {
+    id: string;
+    title: string;
+    description: string;
+    points: number;
+    status: "available" | "completed" | "locked";
+  }[];
+}
+
+interface CreateInvitationCardRequest {
+  friendName: string;
+  friendMobile?: string | null;
+}
+
+interface InvitationCard {
+  id: ID;
+  userId: ID;
+  friendName: string;
+  friendMobile: string | null;
+  message: string;
+  downloadText: string;
+  createdAt: ISODate;
+}
+```
