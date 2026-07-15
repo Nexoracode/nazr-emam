@@ -14,9 +14,19 @@ import type {
   Paginated,
   User,
 } from '@nazr-emam/shared';
-import { isValidIranMobile, normalizeIranMobile } from '@nazr-emam/shared';
+import { isValidIranMobile } from '@nazr-emam/shared';
 import { NazrRequestEntity } from './entities/nazr-request.entity';
 import { NazrTypeEntity } from '../nazr-types/entities/nazr-type.entity';
+
+interface ValidatedCreateNazrRequest {
+  nazrTypeId: string;
+  donorFullName: string;
+  donorMobile: string;
+  donorNationalCode: string | null;
+  amount: Money;
+  note: string | null;
+  isAnonymous: boolean;
+}
 
 @Injectable()
 export class NazrRequestsService {
@@ -29,7 +39,7 @@ export class NazrRequestsService {
 
   async create(
     payload: CreateNazrRequest,
-    user: User | null,
+    user: User,
   ): Promise<NazrRequest> {
     const body = this.validateCreate(payload, user);
     const nazrType = await this.nazrTypesRepo.findOne({
@@ -46,7 +56,7 @@ export class NazrRequestsService {
 
     const request = this.repo.create({
       trackingCode: await this.createTrackingCode(),
-      userId: user?.id ?? null,
+      userId: user.id,
       nazrTypeId: nazrType.id,
       nazrType,
       donorFullName: body.donorFullName,
@@ -117,26 +127,18 @@ export class NazrRequestsService {
 
   private validateCreate(
     payload: CreateNazrRequest,
-    user: User | null,
-  ): Required<Pick<CreateNazrRequest, 'nazrTypeId' | 'donorFullName' | 'donorMobile' | 'amount'>> &
-    Pick<CreateNazrRequest, 'donorNationalCode' | 'note' | 'isAnonymous' | 'isForSelf'> {
+    user: User,
+  ): ValidatedCreateNazrRequest {
     const fields: Record<string, string> = {};
     const nazrTypeId = payload?.nazrTypeId?.trim();
-    const isForSelf = payload?.isForSelf !== false;
-    const donorFullName = isForSelf ? user?.fullName : payload?.donorFullName?.trim();
-    const donorMobile = isForSelf
-      ? user?.mobile
-      : normalizeIranMobile(payload?.donorMobile ?? '');
+    const donorFullName = user.fullName;
+    const donorMobile = user.mobile;
     const donorNationalCode = payload?.donorNationalCode?.trim() || null;
     const note = payload?.note?.trim() || null;
     const amount = payload?.amount;
 
     if (!nazrTypeId) {
       fields.nazrTypeId = 'انتخاب نوع نذر الزامی است';
-    }
-
-    if (isForSelf && !user) {
-      fields.isForSelf = 'برای ثبت نذر از طرف خودتان باید وارد حساب کاربری شوید';
     }
 
     if (!donorFullName || donorFullName.length < 2) {
@@ -171,7 +173,6 @@ export class NazrRequestsService {
       donorNationalCode,
       amount,
       note,
-      isForSelf,
       isAnonymous: Boolean(payload?.isAnonymous),
     };
   }

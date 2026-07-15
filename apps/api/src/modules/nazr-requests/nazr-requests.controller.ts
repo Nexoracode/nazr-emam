@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBadRequestResponse,
@@ -12,14 +12,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ACCESS_TOKEN_COOKIE } from '../auth/auth.service';
-import { AuthService } from '../auth/auth.service';
 import { ApiErrorDto } from '../../common/dto/api-error.dto';
-import { Public } from '../../common/decorators/public.decorator';
-import type { User } from '@nazr-emam/shared';
-import type {
-  AuthenticatedRequest,
-  AuthenticatedResponse,
-} from '../auth/auth.types';
+import type { AuthenticatedRequest } from '../auth/auth.types';
 import { NazrRequestsService } from './nazr-requests.service';
 import {
   CreateNazrRequestDto,
@@ -30,29 +24,25 @@ import {
 @ApiTags('nazr-requests')
 @Controller('nazr-requests')
 export class NazrRequestsController {
-  constructor(
-    private readonly service: NazrRequestsService,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly service: NazrRequestsService) {}
 
+  @ApiBearerAuth()
+  @ApiCookieAuth(ACCESS_TOKEN_COOKIE)
   @ApiOperation({
     summary: 'ثبت درخواست نذر',
     description:
-      'درخواست نذر را برای کاربر مهمان یا کاربر واردشده ثبت می‌کند و کد رهگیری برمی‌گرداند.',
+      'درخواست نذر را برای کاربر واردشده ثبت می‌کند. کد رهگیری بعد از تکمیل پرداخت به کاربر نمایش داده می‌شود.',
   })
   @ApiBody({ type: CreateNazrRequestDto })
   @ApiCreatedResponse({ type: NazrRequestDto })
   @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
   @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'UNAUTHORIZED' })
-  @Public()
   @Post()
   async create(
     @Body() body: CreateNazrRequestDto,
     @Req() request: AuthenticatedRequest,
-    @Res({ passthrough: true }) response: AuthenticatedResponse,
   ) {
-    const user = await this.getOptionalUser(request, response);
-    return this.service.create(body, user);
+    return this.service.create(body, request.user!);
   }
 
   @ApiBearerAuth()
@@ -75,34 +65,4 @@ export class NazrRequestsController {
     );
   }
 
-  private async getOptionalUser(
-    request: AuthenticatedRequest,
-    response: AuthenticatedResponse,
-  ): Promise<User | null> {
-    const accessToken = this.authService.getAccessTokenFromRequest(request);
-    const refreshToken = this.authService.getRefreshTokenFromRequest(request);
-
-    if (!accessToken && !refreshToken) {
-      return null;
-    }
-
-    try {
-      const authenticated = await this.authService.authenticate(
-        accessToken,
-        refreshToken,
-      );
-
-      if (!authenticated) {
-        return null;
-      }
-
-      if (authenticated.tokens) {
-        this.authService.setAuthCookies(response, authenticated.tokens);
-      }
-
-      return authenticated.user;
-    } catch {
-      return null;
-    }
-  }
 }

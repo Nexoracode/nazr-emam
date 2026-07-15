@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import type { CreateNazrRequest, NazrType, User } from '@nazr-emam/shared';
-import { isValidIranMobile, normalizeIranMobile } from '@nazr-emam/shared';
 import {
   ApiRequestError,
   createNazrRequest,
@@ -30,16 +29,6 @@ const textAreaCls = (err: boolean) =>
 const selectCls = (err: boolean) =>
   `${fieldCls(err)} appearance-none pl-9`;
 
-function validateMobile(mobile: string): string | null {
-  const normalized = normalizeIranMobile(mobile);
-  if (!normalized) return 'شماره همراه الزامی است.';
-  if (!/^\d+$/.test(normalized)) return 'شماره همراه فقط باید شامل عدد باشد.';
-  if (!normalized.startsWith('09')) return 'شماره همراه باید با ۰۹ شروع شود.';
-  if (normalized.length !== 11) return 'شماره همراه باید ۱۱ رقم باشد.';
-  if (!isValidIranMobile(normalized)) return 'پیش‌شماره همراه معتبر نیست.';
-  return null;
-}
-
 function normalizeAmount(value: string) {
   return Number(value.replace(/[,\s]/g, ''));
 }
@@ -47,13 +36,10 @@ function normalizeAmount(value: string) {
 export function NazrRequestForm() {
   const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
-  const [donorFullName, setDonorFullName] = useState('');
-  const [donorMobile, setDonorMobile] = useState('');
   const [donorNationalCode, setDonorNationalCode] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isForSelf, setIsForSelf] = useState(true);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loadingTypes, setLoadingTypes] = useState(true);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -92,12 +78,10 @@ export function NazrRequestForm() {
       .then((user) => {
         if (ignore) return;
         setCurrentUser(user);
-        setIsForSelf(true);
       })
       .catch(() => {
         if (ignore) return;
         setCurrentUser(null);
-        setIsForSelf(false);
       })
       .finally(() => {
         if (!ignore) setLoadingUser(false);
@@ -129,17 +113,12 @@ export function NazrRequestForm() {
     resetMessages();
 
     const errors: FieldErrors = {};
-    const mobileError = isForSelf ? null : validateMobile(donorMobile);
     const normalizedAmount = normalizeAmount(amount);
 
     if (!selectedTypeId) errors.nazrTypeId = 'انتخاب نوع نذر الزامی است.';
-    if (isForSelf && !currentUser) {
-      errors.isForSelf = 'برای ثبت نذر از طرف خودتان باید وارد حساب کاربری شوید.';
+    if (!currentUser) {
+      errors.user = 'برای ثبت نذر باید وارد حساب کاربری شوید.';
     }
-    if (!isForSelf && (!donorFullName.trim() || donorFullName.trim().length < 2)) {
-      errors.donorFullName = 'نام و نام خانوادگی معتبر نیست.';
-    }
-    if (mobileError) errors.donorMobile = mobileError;
     if (donorNationalCode.trim() && !/^\d{10}$/.test(donorNationalCode.trim())) {
       errors.donorNationalCode = 'کد ملی باید ۱۰ رقم باشد.';
     }
@@ -157,9 +136,6 @@ export function NazrRequestForm() {
 
     const payload: CreateNazrRequest = {
       nazrTypeId: selectedTypeId,
-      isForSelf,
-      donorFullName: isForSelf ? undefined : donorFullName.trim(),
-      donorMobile: isForSelf ? undefined : normalizeIranMobile(donorMobile),
       donorNationalCode: donorNationalCode.trim() || null,
       amount: { amount: normalizedAmount, currency: 'IRT' },
       note: note.trim() || null,
@@ -242,65 +218,17 @@ export function NazrRequestForm() {
           )}
 
           <div className="rounded-lg border border-auth-card-border bg-auth-link-surface px-3 py-3">
-            <label className="flex cursor-pointer items-center justify-between gap-3 text-[12px] font-bold text-auth-text">
-              <span>نذر از طرف خودم</span>
-              <input
-                checked={isForSelf}
-                className="h-4 w-4 accent-auth-accent"
-                disabled={loadingUser || !currentUser}
-                onChange={(e) => setIsForSelf(e.target.checked)}
-                type="checkbox"
-              />
-            </label>
             <p className="mb-0 mt-2 text-[11px] leading-6 text-auth-muted">
               {loadingUser
                 ? 'در حال بررسی حساب کاربری...'
-                : currentUser && isForSelf
-                  ? `اطلاعات از حساب ${currentUser.fullName} استفاده می‌شود.`
-                  : 'اگر نذر از طرف شخص دیگری است، نام و شماره همراه او را وارد کنید.'}
+                : currentUser
+                  ? `این نذر با اطلاعات حساب ${currentUser.fullName} ثبت می‌شود.`
+                  : 'برای ثبت نذر باید وارد حساب کاربری شوید.'}
             </p>
-            {fieldErrors.isForSelf && (
-              <small className="mt-2 block text-[10px] text-danger">{fieldErrors.isForSelf}</small>
+            {fieldErrors.user && (
+              <small className="mt-2 block text-[10px] text-danger">{fieldErrors.user}</small>
             )}
           </div>
-
-          {!isForSelf && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-                <span>نام و نام خانوادگی شخص</span>
-                <input
-                  autoComplete="name"
-                  className={fieldCls(Boolean(fieldErrors.donorFullName))}
-                  maxLength={80}
-                  onChange={(e) => setDonorFullName(e.target.value)}
-                  placeholder="مثلاً: علی رضایی"
-                  type="text"
-                  value={donorFullName}
-                />
-                {fieldErrors.donorFullName && (
-                  <small className="text-[10px] text-danger">{fieldErrors.donorFullName}</small>
-                )}
-              </label>
-
-              <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-                <span>شماره همراه شخص</span>
-                <input
-                  autoComplete="tel"
-                  className={fieldCls(Boolean(fieldErrors.donorMobile))}
-                  dir="ltr"
-                  inputMode="tel"
-                  maxLength={11}
-                  onChange={(e) => setDonorMobile(e.target.value)}
-                  placeholder="09123456789"
-                  type="tel"
-                  value={donorMobile}
-                />
-                {fieldErrors.donorMobile && (
-                  <small className="text-[10px] text-danger">{fieldErrors.donorMobile}</small>
-                )}
-              </label>
-            </div>
-          )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
@@ -365,7 +293,7 @@ export function NazrRequestForm() {
 
           <button
             className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
-            disabled={isSubmitting || loadingTypes || loadingUser || nazrTypes.length === 0}
+            disabled={isSubmitting || loadingTypes || loadingUser || !currentUser || nazrTypes.length === 0}
             type="submit"
           >
             {isSubmitting ? 'در حال ثبت...' : 'ثبت نذر و ادامه پرداخت'}

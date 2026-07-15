@@ -34,9 +34,6 @@ export type NazrRequestStatus =
 
 export interface CreateNazrRequest {
   nazrTypeId: ID;
-  isForSelf?: boolean;
-  donorFullName?: string;
-  donorMobile?: string;
   donorNationalCode?: string | null;
   amount: Money;
   note?: string | null;

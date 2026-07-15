@@ -42,15 +42,6 @@ export class CreateNazrRequestDto implements CreateNazrRequest {
   @ApiProperty()
   nazrTypeId!: string;
 
-  @ApiPropertyOptional({ default: true })
-  isForSelf?: boolean;
-
-  @ApiPropertyOptional()
-  donorFullName?: string;
-
-  @ApiPropertyOptional()
-  donorMobile?: string;
-
   @ApiPropertyOptional({ nullable: true })
   donorNationalCode?: string | null;
 

@@ -289,12 +289,12 @@ type NazrRequestStatus =
 
 ### `POST /nazr-requests`
 
-ثبت درخواست نذر توسط مهمان یا کاربر لاگین‌شده.
+ثبت درخواست نذر توسط کاربر لاگین‌شده. نام و شماره همراه اهداکننده از حساب کاربری گرفته می‌شود.
 
-- **Auth:** اختیاری
+- **Auth:** کاربر لاگین‌شده
 - **بدنه:** `CreateNazrRequest`
 - **پاسخ:** `201 NazrRequest`
-- **خطاها:** `404 NAZR_TYPE_NOT_FOUND`، `400 VALIDATION_ERROR`
+- **خطاها:** `401 UNAUTHORIZED`، `404 NAZR_TYPE_NOT_FOUND`، `400 VALIDATION_ERROR`
 
 ### `GET /nazr-requests/mine`
 
@@ -330,9 +330,6 @@ type NazrRequestStatus =
 ```ts
 interface CreateNazrRequest {
   nazrTypeId: ID;
-  isForSelf?: boolean;
-  donorFullName?: string;
-  donorMobile?: string;
   donorNationalCode?: string | null;
   amount: Money;
   note?: string | null;
