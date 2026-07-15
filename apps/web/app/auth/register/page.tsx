@@ -5,6 +5,19 @@ export const metadata: Metadata = {
   title: 'ثبت نام | نذر امام',
 };
 
-export default function RegisterPage() {
-  return <AuthForm mode="register" />;
+type AuthPageSearchParams = Promise<{
+  redirect?: string | string[];
+}>;
+
+function getRedirect(searchParams: Awaited<AuthPageSearchParams>) {
+  const redirect = searchParams.redirect;
+  return Array.isArray(redirect) ? redirect[0] : redirect;
+}
+
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: AuthPageSearchParams;
+}) {
+  return <AuthForm mode="register" initialRedirect={getRedirect(await searchParams)} />;
 }

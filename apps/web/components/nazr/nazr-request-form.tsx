@@ -96,6 +96,16 @@ export function NazrRequestForm() {
     () => nazrTypes.find((item) => item.id === selectedTypeId) ?? null,
     [nazrTypes, selectedTypeId],
   );
+  const accountNoticeClass = loadingUser
+    ? 'border-auth-card-border bg-auth-link-surface'
+    : currentUser
+      ? 'border-[var(--status-ok-color)] bg-[var(--status-ok-bg)]'
+      : 'border-auth-accent/60 bg-auth-accent/10';
+  const accountNoticeTextClass = loadingUser
+    ? 'text-auth-muted'
+    : currentUser
+      ? 'text-[var(--status-ok-color)]'
+      : 'text-auth-text';
 
   useEffect(() => {
     if (!selectedType?.suggestedAmount || amount) return;
@@ -217,13 +227,24 @@ export function NazrRequestForm() {
             </p>
           )}
 
-          <div className="rounded-lg border border-[var(--status-ok-color)] bg-[var(--status-ok-bg)] px-3 py-3">
-            <p className="m-0 text-[11px] leading-6 text-[var(--status-ok-color)]">
-              {loadingUser
-                ? 'در حال بررسی حساب کاربری...'
-                : currentUser
-                  ? `این نذر با اطلاعات حساب ${currentUser.fullName} ثبت می‌شود.`
-                  : 'برای ثبت نذر باید وارد حساب کاربری شوید.'}
+          <div className={`rounded-lg border px-3 py-3 ${accountNoticeClass}`}>
+            <p className={`m-0 text-[11px] leading-6 ${accountNoticeTextClass}`}>
+              {loadingUser ? 'در حال بررسی حساب کاربری...' : null}
+              {!loadingUser && currentUser
+                ? `این نذر با اطلاعات حساب ${currentUser.fullName} ثبت می‌شود.`
+                : null}
+              {!loadingUser && !currentUser ? (
+                <>
+                  برای ثبت نذر باید وارد{' '}
+                  <Link
+                    className="font-bold text-auth-link underline-offset-4 transition hover:underline"
+                    href="/auth/login?redirect=/nazr/new"
+                  >
+                    حساب کاربری
+                  </Link>{' '}
+                  شوید.
+                </>
+              ) : null}
             </p>
             {fieldErrors.user && (
               <small className="mt-2 block text-[10px] text-danger">{fieldErrors.user}</small>

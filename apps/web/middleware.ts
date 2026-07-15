@@ -3,6 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 const PUBLIC_AUTH_PATHS = ['/auth'];
 const PROTECTED_PATHS = ['/profile', '/dashboard'];
 
+function getSafeRedirect(value: string | null) {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/auth')) {
+    return '/';
+  }
+
+  return value;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('accessToken')?.value;
@@ -11,7 +19,7 @@ export function middleware(request: NextRequest) {
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
 
   if (isAuthPage && token) {
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.redirect(new URL(getSafeRedirect(request.nextUrl.searchParams.get('redirect')), request.url));
   }
 
   if (isProtected && !token) {

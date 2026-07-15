@@ -5,6 +5,19 @@ export const metadata: Metadata = {
   title: 'ورود | نذر امام',
 };
 
-export default function LoginPage() {
-  return <AuthForm mode="login" />;
+type AuthPageSearchParams = Promise<{
+  redirect?: string | string[];
+}>;
+
+function getRedirect(searchParams: Awaited<AuthPageSearchParams>) {
+  const redirect = searchParams.redirect;
+  return Array.isArray(redirect) ? redirect[0] : redirect;
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: AuthPageSearchParams;
+}) {
+  return <AuthForm mode="login" initialRedirect={getRedirect(await searchParams)} />;
 }

@@ -52,15 +52,46 @@ function handleApiError(
   }
 }
 
-export function AuthForm({ mode }: { mode: AuthMode }) {
-  if (mode === 'login') return <LoginForm />;
-  return <RegisterForm />;
+function getSafeRedirect(value: string | null): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/auth')) {
+    return '/';
+  }
+
+  return value;
+}
+
+function getAuthHref(path: '/auth/login' | '/auth/register', redirectTo: string): string {
+  if (redirectTo === '/') return path;
+  return `${path}?redirect=${encodeURIComponent(redirectTo)}`;
+}
+
+function useAuthRedirect(initialRedirect = '/') {
+  const [redirectTo, setRedirectTo] = useState(getSafeRedirect(initialRedirect));
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRedirectTo(getSafeRedirect(params.get('redirect') ?? initialRedirect));
+  }, [initialRedirect]);
+
+  return redirectTo;
+}
+
+export function AuthForm({
+  mode,
+  initialRedirect,
+}: {
+  mode: AuthMode;
+  initialRedirect?: string;
+}) {
+  if (mode === 'login') return <LoginForm initialRedirect={initialRedirect} />;
+  return <RegisterForm initialRedirect={initialRedirect} />;
 }
 
 // ─── Login (multi-step) ───────────────────────────────────────────────────────
 
-function LoginForm() {
+function LoginForm({ initialRedirect }: { initialRedirect?: string }) {
   const router = useRouter();
+  const redirectTo = useAuthRedirect(initialRedirect);
   const [step, setStep] = useState<LoginStep>('phone');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -128,7 +159,7 @@ function LoginForm() {
       await verifyOtp({ mobile: normalizeIranMobile(mobile), code: otp });
       setMessage('ورود با موفقیت انجام شد.');
       setMessageTone('success');
-      window.setTimeout(() => { router.push('/'); router.refresh(); }, 900);
+      window.setTimeout(() => { router.push(redirectTo); router.refresh(); }, 900);
     } catch (e) {
       handleApiError(e, setMessage, setMessageTone, setFieldErrors);
     } finally {
@@ -147,7 +178,7 @@ function LoginForm() {
       else window.localStorage.removeItem('nazr-emam-mobile');
       setMessage('ورود با موفقیت انجام شد.');
       setMessageTone('success');
-      window.setTimeout(() => { router.push('/'); router.refresh(); }, 900);
+      window.setTimeout(() => { router.push(redirectTo); router.refresh(); }, 900);
     } catch (e) {
       handleApiError(e, setMessage, setMessageTone, setFieldErrors);
     } finally {
@@ -324,7 +355,7 @@ function LoginForm() {
         <p className="m-0 text-[11px] leading-5 text-auth-muted">هنوز حساب کاربری ندارید؟</p>
         <Link
           className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold transition"
-          href="/auth/register"
+          href={getAuthHref('/auth/register', redirectTo)}
           style={{ color: '#c8d8e8' }}
         >
           ساخت حساب جدید
@@ -343,8 +374,9 @@ function LoginForm() {
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
-function RegisterForm() {
+function RegisterForm({ initialRedirect }: { initialRedirect?: string }) {
   const router = useRouter();
+  const redirectTo = useAuthRedirect(initialRedirect);
   const [fullName, setFullName] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -383,9 +415,9 @@ function RegisterForm() {
         mobile: normalizeIranMobile(mobile),
         password,
       });
-      setMessage('حساب کاربری شما ساخته شد. به صفحه ورود منتقل می‌شوید...');
+      setMessage('حساب کاربری شما ساخته شد. در حال بازگشت به ادامه مسیر...');
       setMessageTone('success');
-      window.setTimeout(() => router.push('/auth/login'), 1500);
+      window.setTimeout(() => { router.push(redirectTo); router.refresh(); }, 900);
     } catch (e) {
       handleApiError(e, setMessage, setMessageTone, setFieldErrors);
     } finally {
@@ -502,7 +534,7 @@ function RegisterForm() {
         <p className="m-0 text-[11px] leading-5 text-auth-muted">قبلاً ثبت نام کرده‌اید؟</p>
         <Link
           className="mt-2 flex h-9 items-center justify-center rounded-md border border-auth-link-border bg-auth-link-surface text-[12px] font-bold transition"
-          href="/auth/login"
+          href={getAuthHref('/auth/login', redirectTo)}
           style={{ color: '#c8d8e8' }}
         >
           ورود به حساب
