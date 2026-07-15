@@ -9,7 +9,7 @@ export default registerAs(
     host: process.env.DB_HOST ?? 'localhost',
     port: toNumber(process.env.DB_PORT, 3306),
     username: process.env.DB_USERNAME ?? 'root',
-    password: process.env.DB_PASSWORD ?? 'tehran1500@$@',
+    password: process.env.DB_PASSWORD ?? '',
     database: process.env.DB_DATABASE ?? 'nazr',
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     autoLoadEntities: true,
