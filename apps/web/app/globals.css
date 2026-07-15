@@ -465,8 +465,8 @@ input {
   align-items: start;
   display: grid;
   gap: 20px;
-  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
-  max-width: 1040px;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  max-width: 1120px;
 }
 
 .profile-sidebar {
@@ -494,7 +494,7 @@ input {
 
 .profile-nav {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .profile-nav-item {
@@ -503,9 +503,9 @@ input {
   border-radius: 8px;
   color: var(--foreground);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 10px 12px;
+  padding: 9px 10px;
   text-align: start;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
@@ -522,6 +522,42 @@ input {
   display: grid;
   gap: 16px;
   min-width: 0;
+}
+
+.profile-loading {
+  color: var(--muted);
+  padding: 64px 0;
+  text-align: center;
+}
+
+.profile-hero {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.profile-hero-title {
+  color: var(--heading, var(--foreground));
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.8;
+  margin: 0 0 4px;
+}
+
+.profile-goal-form,
+.profile-wallet-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.profile-search {
+  max-width: 220px;
 }
 
 .profile-section-heading {
@@ -624,6 +660,12 @@ input {
   opacity: 0.65;
 }
 
+.profile-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .profile-tracking-code {
   color: var(--muted);
   font-size: 13px;
@@ -662,6 +704,118 @@ input {
   margin: 0 0 6px;
 }
 
+.profile-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-chip {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+.profile-chip input {
+  accent-color: var(--primary);
+}
+
+.profile-progress-list {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-progress-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.profile-progress-row:hover {
+  color: var(--foreground);
+}
+
+.profile-progress-row strong {
+  color: var(--heading, var(--foreground));
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.profile-progress-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.profile-progress-track {
+  background: var(--primary-soft);
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.profile-progress-track span {
+  background: var(--primary);
+  display: block;
+  height: 100%;
+}
+
+.profile-section-gap {
+  margin-top: 16px;
+}
+
+.profile-ticket-message {
+  background: var(--primary-soft);
+  border-radius: 8px;
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.9;
+  margin: 0;
+  padding: 8px 10px;
+}
+
+.profile-inline-form {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.profile-gallery-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-gallery-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  display: grid;
+  gap: 6px;
+  min-height: 110px;
+  padding: 12px;
+}
+
+.profile-gallery-item span,
+.profile-gallery-item small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.profile-gallery-item strong {
+  color: var(--heading, var(--foreground));
+  font-size: 13px;
+}
+
 @media (max-width: 860px) {
   .profile-page-shell {
     grid-template-columns: 1fr;
@@ -672,7 +826,7 @@ input {
   }
 
   .profile-nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .profile-nav-item {
@@ -682,15 +836,21 @@ input {
   .profile-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .profile-gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 520px) {
   .profile-nav,
-  .profile-stat-grid {
+  .profile-stat-grid,
+  .profile-gallery-grid {
     grid-template-columns: 1fr;
   }
 
-  .profile-section-heading {
+  .profile-section-heading,
+  .profile-hero {
     align-items: stretch;
     flex-direction: column;
   }
@@ -698,6 +858,14 @@ input {
   .profile-list-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .profile-inline-form {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-search {
+    max-width: none;
   }
 }
 

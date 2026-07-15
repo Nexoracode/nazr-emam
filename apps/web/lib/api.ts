@@ -2,18 +2,36 @@ import type {
   ApiError,
   AuthResponse,
   ChangePasswordRequest,
+  CreateInvitationCardRequest,
   CreateNazrRequest,
+  CreateTicketRequest,
+  CreateWalletChargeRequest,
+  GalleryAsset,
+  InvitationCard,
   LoginRequest,
   NazrRequest,
   NazrType,
+  NotificationItem,
   OtpRequestResponse,
   Paginated,
+  Payment,
   RegisterRequest,
   RequestOtpRequest,
   StartOnlinePaymentResponse,
+  Ticket,
+  TicketMessage,
+  UpdateMotivationalTargetRequest,
   UpdateProfileRequest,
+  UpdateUserProfileDetailsRequest,
+  UpdateWalletSettingsRequest,
   User,
+  UserClubStatus,
+  UserContributionSummary,
+  UserProfileDetails,
+  UserProfileSummary,
   VerifyOtpRequest,
+  Wallet,
+  WalletTransaction,
 } from '@nazr-emam/shared';
 
 export class ApiRequestError extends Error {
@@ -199,4 +217,92 @@ export function startOnlineNazrPayment(requestId: string) {
     `/nazr-requests/${requestId}/payments/online/start`,
     {},
   );
+}
+
+export function getProfileDetails() {
+  return get<UserProfileDetails>('/profile/details');
+}
+
+export function updateProfileDetails(payload: UpdateUserProfileDetailsRequest) {
+  return patch<UserProfileDetails, UpdateUserProfileDetailsRequest>('/profile/details', payload);
+}
+
+export function getProfileSummary() {
+  return get<UserProfileSummary>('/profile/summary');
+}
+
+export function getProfileContributions() {
+  return get<UserContributionSummary>('/profile/contributions');
+}
+
+export function getProfilePayments(page = 1, pageSize = 12, search = '') {
+  const query = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  });
+  if (search.trim()) query.set('search', search.trim());
+  return get<Paginated<Payment>>(`/profile/payments?${query.toString()}`);
+}
+
+export function updateProfileGoal(payload: UpdateMotivationalTargetRequest) {
+  return patch<{ motivationalTarget: string | null }, UpdateMotivationalTargetRequest>(
+    '/profile/goal',
+    payload,
+  );
+}
+
+export function getProfileWallet() {
+  return get<Wallet>('/profile/wallet');
+}
+
+export function updateProfileWallet(payload: UpdateWalletSettingsRequest) {
+  return patch<Wallet, UpdateWalletSettingsRequest>('/profile/wallet', payload);
+}
+
+export function createWalletCharge(payload: CreateWalletChargeRequest) {
+  return post<WalletTransaction, CreateWalletChargeRequest>('/profile/wallet/charges', payload);
+}
+
+export function getWalletTransactions() {
+  return get<WalletTransaction[]>('/profile/wallet/transactions');
+}
+
+export function getProfileClub() {
+  return get<UserClubStatus>('/profile/club');
+}
+
+export function getProfileGallery() {
+  return get<GalleryAsset[]>('/profile/gallery');
+}
+
+export function getInvitationCards() {
+  return get<InvitationCard[]>('/profile/invitations');
+}
+
+export function createInvitationCard(payload: CreateInvitationCardRequest) {
+  return post<InvitationCard, CreateInvitationCardRequest>('/profile/invitations', payload);
+}
+
+export function getMyTickets(page = 1, pageSize = 12) {
+  return get<Paginated<Ticket>>(`/tickets/mine?page=${page}&pageSize=${pageSize}`);
+}
+
+export function createTicket(payload: CreateTicketRequest) {
+  return post<Ticket, CreateTicketRequest>('/tickets', payload);
+}
+
+export function replyTicket(ticketId: string, body: string) {
+  return post<TicketMessage, { body: string }>(`/tickets/${ticketId}/reply`, { body });
+}
+
+export function closeTicket(ticketId: string) {
+  return post<void, Record<string, never>>(`/tickets/${ticketId}/close`, {});
+}
+
+export function getNotifications(page = 1, pageSize = 12) {
+  return get<Paginated<NotificationItem>>(`/notifications?page=${page}&pageSize=${pageSize}`);
+}
+
+export function markNotificationAsRead(notificationId: string) {
+  return post<void, Record<string, never>>(`/notifications/${notificationId}/read`, {});
 }
