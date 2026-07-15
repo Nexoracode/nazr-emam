@@ -1,15 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState } from 'react';
-import { useTheme } from './theme-provider';
-import { useAuth } from '../../lib/use-auth';
-import { logout } from '../../lib/api';
 import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
+import { logout } from '../../lib/api';
+import { useAuth } from '../../lib/use-auth';
+import { useTheme } from './theme-provider';
 
 const navLinks = [
-  { href: '/nazr/new', label: 'ثبت نذر' },
-  { href: '/track', label: 'پیگیری وضعیت' },
+  { href: '/#why', label: 'چرا نذر امام' },
+  { href: '/#reports', label: 'گزارش‌ها' },
+  { href: '/#plans', label: 'طرح‌ها' },
+  { href: '/#faq', label: 'سوالات' },
 ];
 
 export function Header() {
@@ -36,7 +38,11 @@ export function Header() {
 
   async function handleLogout() {
     setProfileOpen(false);
-    try { await logout(); } catch { /* ignore */ }
+    try {
+      await logout();
+    } catch {
+      /* ignore */
+    }
     router.push('/auth/login');
     router.refresh();
   }
@@ -53,80 +59,62 @@ export function Header() {
       ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[var(--border)] bg-[var(--surface)] backdrop-blur-sm transition-colors">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
-
-        {/* Logo */}
-        <Link
-          href="/"
-          className="flex shrink-0 items-center gap-2 text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors"
-        >
-          <RobotMini />
-          <span className="text-[15px] font-extrabold tracking-tight">نذر امام</span>
+    <header className="site-header">
+      <div className="site-header-inner">
+        <Link href="/" className="site-brand" aria-label="نذر امام">
+          <span className="site-brand-mark" aria-hidden="true">
+            ن
+          </span>
+          <span>نذر امام</span>
         </Link>
 
-        {/* Nav */}
-        <nav className="hidden sm:flex items-center gap-1">
-          {navLinks.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="rounded-md px-3 py-1.5 text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] transition-colors"
-            >
-              {l.label}
+        <nav className="site-nav" aria-label="ناوبری اصلی">
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href}>
+              {link.label}
             </Link>
           ))}
         </nav>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {/* Theme toggle */}
+        <div className="site-actions">
+          <Link className="site-cta" href="/nazr/new">
+            شرکت در نذر
+          </Link>
+
           <button
             onClick={cycleTheme}
             title={resolved === 'dark' ? 'تغییر به حالت روشن' : 'تغییر به حالت تیره'}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
+            className="site-icon-button"
+            type="button"
           >
             {resolved === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
 
-          {/* Profile */}
-          <div
-            className="relative"
-            onMouseEnter={handleProfileEnter}
-            onMouseLeave={handleProfileLeave}
-          >
+          <div className="site-profile" onMouseEnter={handleProfileEnter} onMouseLeave={handleProfileLeave}>
             <button
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--primary-soft)] text-[var(--primary)] hover:border-[var(--primary)] transition-colors"
-              onClick={() => setProfileOpen((o) => !o)}
+              className="site-icon-button site-profile-button"
+              onClick={() => setProfileOpen((open) => !open)}
               aria-label="منوی پروفایل"
+              type="button"
             >
               <ProfileIcon />
             </button>
 
             {profileOpen && (
-              <div className="absolute left-0 top-10 z-50 min-w-[160px] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow)]">
+              <div className="site-profile-menu">
                 {auth.loading ? (
-                  <span className="block px-4 py-2 text-right text-[13px] text-[var(--muted)]">...</span>
+                  <span>...</span>
                 ) : (
-                  profileLinks.map((l) =>
-                    l.action ? (
-                      <button
-                        key={l.label}
-                        onClick={l.action}
-                        className="block w-full px-4 py-2 text-right text-[13px] text-[var(--danger)] hover:bg-[var(--primary-soft)] transition-colors"
-                      >
-                        {l.label}
+                  profileLinks.map((link) =>
+                    link.action ? (
+                      <button key={link.label} onClick={link.action} type="button">
+                        {link.label}
                       </button>
                     ) : (
-                      <Link
-                        key={l.href}
-                        href={l.href}
-                        onClick={() => setProfileOpen(false)}
-                        className="block px-4 py-2 text-right text-[13px] text-[var(--foreground)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] transition-colors"
-                      >
-                        {l.label}
+                      <Link key={link.href} href={link.href} onClick={() => setProfileOpen(false)}>
+                        {link.label}
                       </Link>
-                    )
+                    ),
                   )
                 )}
               </div>
@@ -135,36 +123,14 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile nav */}
-      <div className="flex sm:hidden border-t border-[var(--border)] overflow-x-auto">
-        {navLinks.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className="shrink-0 px-4 py-2 text-[13px] font-medium text-[var(--foreground)] hover:text-[var(--primary)] transition-colors"
-          >
-            {l.label}
+      <nav className="site-mobile-nav" aria-label="ناوبری موبایل">
+        {navLinks.map((link) => (
+          <Link key={link.href} href={link.href}>
+            {link.label}
           </Link>
         ))}
-      </div>
+      </nav>
     </header>
-  );
-}
-
-function RobotMini() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-      <rect x="9" y="11" width="26" height="20" rx="3" fill="currentColor" />
-      <rect x="14" y="16" width="5" height="5" rx="1" fill="var(--surface, #fff)" />
-      <rect x="25" y="16" width="5" height="5" rx="1" fill="var(--surface, #fff)" />
-      <rect x="16" y="24" width="12" height="3" rx="1.5" fill="var(--surface, #fff)" />
-      <rect x="19" y="5" width="6" height="6" rx="3" fill="currentColor" />
-      <rect x="21" y="8" width="2" height="3" fill="currentColor" />
-      <rect x="3" y="16" width="6" height="9" rx="3" fill="currentColor" />
-      <rect x="35" y="16" width="6" height="9" rx="3" fill="currentColor" />
-      <rect x="13" y="31" width="6" height="8" rx="3" fill="currentColor" />
-      <rect x="25" y="31" width="6" height="8" rx="3" fill="currentColor" />
-    </svg>
   );
 }
 
