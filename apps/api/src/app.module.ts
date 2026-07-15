@@ -7,17 +7,19 @@ import { AppService } from './app.service';
 import { RolesGuard } from './common/guards/roles.guard';
 import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
+import paymentConfig from './config/payment.config';
 import { AuthGuard } from './modules/auth/guards/auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { NazrRequestsModule } from './modules/nazr-requests/nazr-requests.module';
 import { NazrTypesModule } from './modules/nazr-types/nazr-types.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env', '../../.env.example'],
-      load: [authConfig, databaseConfig],
+      load: [authConfig, databaseConfig, paymentConfig],
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -27,6 +29,7 @@ import { NazrTypesModule } from './modules/nazr-types/nazr-types.module';
     AuthModule,
     NazrTypesModule,
     NazrRequestsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -10,6 +10,7 @@ import type {
   Paginated,
   RegisterRequest,
   RequestOtpRequest,
+  StartOnlinePaymentResponse,
   UpdateProfileRequest,
   User,
   VerifyOtpRequest,
@@ -191,4 +192,11 @@ export function getNazrTypes() {
 
 export function createNazrRequest(payload: CreateNazrRequest) {
   return post<NazrRequest, CreateNazrRequest>('/nazr-requests', payload);
+}
+
+export function startOnlineNazrPayment(requestId: string) {
+  return post<StartOnlinePaymentResponse, Record<string, never>>(
+    `/nazr-requests/${requestId}/payments/online/start`,
+    {},
+  );
 }

@@ -376,6 +376,22 @@ type PaymentMethod = "online" | "card_to_card" | "cash";
 type PaymentStatus = "pending" | "paid" | "rejected" | "refunded";
 ```
 
+### `POST /nazr-requests/:requestId/payments/online/start`
+
+شروع پرداخت آنلاین برای درخواست نذر با زرین‌پال. اگر تنظیمات زرین‌پال فعال نباشد، API خطای تنظیمات برمی‌گرداند و فرانت باید پیام قابل فهم نمایش دهد.
+
+- **Auth:** صاحب درخواست
+- **پاسخ:** `201 StartOnlinePaymentResponse`
+- **خطاها:** `401 UNAUTHORIZED`، `403 FORBIDDEN`، `404 NAZR_REQUEST_NOT_FOUND`، `400 PAYMENT_GATEWAY_DISABLED`
+
+### `GET /payments/zarinpal/callback`
+
+callback برگشت زرین‌پال. API پرداخت را verify می‌کند و کاربر را به فرانت برمی‌گرداند.
+
+- **Auth:** عمومی
+- **Query:** `Authority, Status`
+- **پاسخ:** redirect به فرانت
+
 ### `POST /nazr-requests/:requestId/payments`
 
 ثبت پرداخت یا رسید برای یک درخواست.
@@ -433,6 +449,12 @@ interface PaymentReceipt {
   paymentId: ID;
   fileUrl: string;
   uploadedAt: ISODate;
+}
+
+interface StartOnlinePaymentResponse {
+  paymentId: ID;
+  paymentUrl: string;
+  authority: string;
 }
 ```
 

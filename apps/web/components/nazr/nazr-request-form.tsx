@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import type { CreateNazrRequest, NazrType, User } from '@nazr-emam/shared';
+import type { CreateNazrRequest, NazrRequest, NazrType, User } from '@nazr-emam/shared';
 import {
   ApiRequestError,
   createNazrRequest,
   getMe,
   getNazrTypes,
+  startOnlineNazrPayment,
 } from '../../lib/api';
 
 type FieldErrors = Record<string, string>;
@@ -125,6 +126,7 @@ function amountToPersianWords(value: number) {
 }
 
 export function NazrRequestForm() {
+  const eitaaReceiptUrl = process.env.NEXT_PUBLIC_EITAA_RECEIPT_URL ?? 'https://eitaa.com/nazr_emam';
   const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
   const [donorNationalCode, setDonorNationalCode] = useState('');
@@ -135,6 +137,8 @@ export function NazrRequestForm() {
   const [loadingTypes, setLoadingTypes] = useState(true);
   const [loadingUser, setLoadingUser] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStartingPayment, setIsStartingPayment] = useState(false);
+  const [createdRequest, setCreatedRequest] = useState<NazrRequest | null>(null);
   const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState<'success' | 'error' | ''>('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -205,6 +209,26 @@ export function NazrRequestForm() {
     setFieldErrors({});
   }
 
+  async function handleOnlinePayment() {
+    if (!createdRequest) return;
+    resetMessages();
+    setIsStartingPayment(true);
+
+    try {
+      const payment = await startOnlineNazrPayment(createdRequest.id);
+      window.location.href = payment.paymentUrl;
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        setMessage(err.message);
+      } else {
+        setMessage('شروع پرداخت آنلاین انجام نشد. لطفاً دوباره تلاش کنید.');
+      }
+      setMessageTone('error');
+    } finally {
+      setIsStartingPayment(false);
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     resetMessages();
@@ -241,8 +265,9 @@ export function NazrRequestForm() {
 
     setIsSubmitting(true);
     try {
-      await createNazrRequest(payload);
-      setMessage('درخواست نذر ثبت شد. بعد از تکمیل پرداخت، کد رهگیری نمایش داده می‌شود.');
+      const created = await createNazrRequest(payload);
+      setCreatedRequest(created);
+      setMessage('درخواست نذر ثبت شد. روش پرداخت را انتخاب کنید.');
       setMessageTone('success');
     } catch (err) {
       if (err instanceof ApiRequestError) {
@@ -404,13 +429,39 @@ export function NazrRequestForm() {
 
           {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
-          <button
-            className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
-            disabled={isSubmitting || loadingTypes || loadingUser || !currentUser || nazrTypes.length === 0}
-            type="submit"
-          >
-            {isSubmitting ? 'در حال ثبت...' : 'ثبت نذر و ادامه پرداخت'}
-          </button>
+          {!createdRequest ? (
+            <button
+              className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+              disabled={isSubmitting || loadingTypes || loadingUser || !currentUser || nazrTypes.length === 0}
+              type="submit"
+            >
+              {isSubmitting ? 'در حال ثبت...' : 'ثبت نذر و انتخاب روش پرداخت'}
+            </button>
+          ) : (
+            <div className="grid gap-3 rounded-lg border border-auth-card-border bg-auth-link-surface px-3 py-3">
+              <p className="m-0 text-[11px] leading-6 text-auth-muted">
+                پرداخت را با یکی از روش‌های زیر ادامه دهید.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <a
+                  className="flex h-10 items-center justify-center rounded-lg border border-auth-link-border bg-auth-card text-[12px] font-bold text-auth-link transition hover:border-auth-link hover:text-auth-text"
+                  href={eitaaReceiptUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  ارسال رسید در ایتا
+                </a>
+                <button
+                  className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+                  disabled={isStartingPayment}
+                  onClick={handleOnlinePayment}
+                  type="button"
+                >
+                  {isStartingPayment ? 'در حال اتصال...' : 'پرداخت آنلاین زرین‌پال'}
+                </button>
+              </div>
+            </div>
+          )}
         </form>
 
         <div className="mt-4 border-t border-auth-card-border pt-3 text-center">

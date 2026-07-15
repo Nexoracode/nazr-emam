@@ -28,3 +28,9 @@ export interface PaymentReceipt {
   fileUrl: string;
   uploadedAt: ISODate;
 }
+
+export interface StartOnlinePaymentResponse {
+  paymentId: ID;
+  paymentUrl: string;
+  authority: string;
+}
