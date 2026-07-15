@@ -479,7 +479,7 @@ input {
 
 .profile-sidebar-title {
   color: var(--heading, var(--foreground));
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   margin: 0 0 4px;
 }
@@ -531,11 +531,17 @@ input {
   justify-content: space-between;
 }
 
+.profile-section-heading .card-title,
+.profile-content > .surface-card > .card-title {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
 .profile-stat-grid {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .profile-stat-card {
@@ -543,9 +549,9 @@ input {
   border: 1px solid var(--border);
   border-radius: 8px;
   display: grid;
-  gap: 8px;
-  min-height: 78px;
-  padding: 14px;
+  gap: 6px;
+  min-height: 68px;
+  padding: 12px;
 }
 
 .profile-stat-label {
@@ -555,8 +561,8 @@ input {
 
 .profile-stat-value {
   color: var(--heading, var(--foreground));
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -578,7 +584,7 @@ input {
 
 .profile-list-title {
   color: var(--heading, var(--foreground));
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   margin: 0 0 4px;
 }
@@ -592,7 +598,7 @@ input {
 
 .profile-empty-title {
   color: var(--heading, var(--foreground));
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   margin: 0 0 6px;
 }
