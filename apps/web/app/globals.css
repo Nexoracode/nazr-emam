@@ -569,7 +569,7 @@ input {
 
 .profile-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .profile-list-row {
@@ -577,16 +577,47 @@ input {
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: space-between;
-  padding: 12px;
+  padding: 10px 12px;
 }
 
 .profile-list-title {
   color: var(--heading, var(--foreground));
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
+}
+
+.profile-list .profile-muted {
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.profile-list-actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.profile-pay-link {
+  background: transparent;
+  border: 0;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 0;
+}
+
+.profile-pay-link:hover:not(:disabled) {
+  color: var(--primary-dark);
+}
+
+.profile-pay-link:disabled {
+  cursor: default;
+  opacity: 0.65;
 }
 
 .profile-empty {
@@ -636,6 +667,10 @@ input {
     align-items: stretch;
     flex-direction: column;
   }
+
+  .profile-list-actions {
+    justify-content: space-between;
+  }
 }
 
 /* ── Status badges ── */
@@ -645,9 +680,9 @@ input {
 .badge-success,
 .badge-danger {
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 3px 9px;
   white-space: nowrap;
 }
 

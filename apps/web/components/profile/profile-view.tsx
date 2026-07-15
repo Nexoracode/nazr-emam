@@ -9,6 +9,7 @@ import {
   changePassword,
   getMe,
   getMyNazrRequests,
+  startOnlineNazrPayment,
   updateProfile,
 } from '../../lib/api';
 
@@ -31,6 +32,18 @@ const STATUS_LABEL: Record<NazrRequestStatus, string> = {
   completed: 'انجام شده',
   cancelled: 'لغو شده',
   rejected: 'رد شده',
+};
+
+const STATUS_COLOR: Record<NazrRequestStatus, string> = {
+  draft: 'badge-neutral',
+  submitted: 'badge-info',
+  awaiting_payment: 'badge-warning',
+  payment_pending_review: 'badge-warning',
+  confirmed: 'badge-success',
+  in_progress: 'badge-info',
+  completed: 'badge-success',
+  cancelled: 'badge-neutral',
+  rejected: 'badge-danger',
 };
 
 export function ProfileView() {
@@ -115,6 +128,8 @@ function DashboardPanel({
   user: User;
   nazrs: Paginated<NazrRequest> | null;
 }) {
+  const [paymentError, setPaymentError] = useState('');
+  const [startingPaymentId, setStartingPaymentId] = useState<string | null>(null);
   const items = nazrs?.items ?? [];
   const totalAmount = useMemo(
     () => items.reduce((sum, item) => sum + item.amount.amount, 0),
@@ -123,6 +138,18 @@ function DashboardPanel({
   const completed = items.filter((item) => item.status === 'completed').length;
   const awaitingPayment = items.filter((item) => item.status === 'awaiting_payment').length;
   const recent = items.slice(0, 3);
+
+  async function handleContinuePayment(requestId: string) {
+    setPaymentError('');
+    setStartingPaymentId(requestId);
+    try {
+      const payment = await startOnlineNazrPayment(requestId);
+      window.location.href = payment.paymentUrl;
+    } catch (e) {
+      setPaymentError(e instanceof ApiRequestError ? e.message : 'اتصال به پرداخت انجام نشد. دوباره تلاش کنید.');
+      setStartingPaymentId(null);
+    }
+  }
 
   return (
     <div className="profile-stack">
@@ -162,9 +189,22 @@ function DashboardPanel({
                     {item.amount.amount.toLocaleString('fa-IR')} تومان · {formatDate(item.createdAt)}
                   </p>
                 </div>
-                <span className="badge-info">{STATUS_LABEL[item.status]}</span>
+                <div className="profile-list-actions">
+                  <span className={STATUS_COLOR[item.status]}>{STATUS_LABEL[item.status]}</span>
+                  {item.status === 'awaiting_payment' && (
+                    <button
+                      className="profile-pay-link"
+                      disabled={startingPaymentId === item.id}
+                      onClick={() => handleContinuePayment(item.id)}
+                      type="button"
+                    >
+                      {startingPaymentId === item.id ? 'در حال اتصال...' : 'ادامه پرداخت'}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
+            {paymentError && <p className="field-error">{paymentError}</p>}
           </div>
         )}
       </section>
