@@ -217,8 +217,8 @@ export function NazrRequestForm() {
             </p>
           )}
 
-          <div className="rounded-lg border border-auth-card-border bg-auth-link-surface px-3 py-3">
-            <p className="m-0 text-[11px] leading-6 text-auth-muted">
+          <div className="rounded-lg border border-[var(--status-ok-color)] bg-[var(--status-ok-bg)] px-3 py-3">
+            <p className="m-0 text-[11px] leading-6 text-[var(--status-ok-color)]">
               {loadingUser
                 ? 'در حال بررسی حساب کاربری...'
                 : currentUser
