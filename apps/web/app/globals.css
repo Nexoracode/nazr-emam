@@ -592,7 +592,7 @@ input {
 
 .profile-list-title {
   color: var(--heading, var(--foreground));
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   margin: 0 0 2px;
 }
@@ -634,7 +634,7 @@ input {
 
 .profile-tracking-code {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.7;
   margin: 2px 0 0;
 }
