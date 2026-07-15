@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(pandoc -t markdown \"C:\\\\Users\\\\khadem-mh\\\\Desktop\\\\??? ???? \\(1\\).docx\" 2>$null)"
+    ]
+  }
+}
