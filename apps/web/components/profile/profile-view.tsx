@@ -315,11 +315,8 @@ function RecentActivities({ items }: { items: NazrRequest[] }) {
                 <ProfileRecentInfo label="مبلغ" value={formatMoney(item.amount)} />
                 <ProfileRecentInfo label="تاریخ ثبت" value={formatDate(item.createdAt)} />
               </div>
-              <div className="profile-row-actions">
-                <Link className="profile-pay-link" href={`/nazr/new?type=${item.nazrType.slug}`}>
-                  مشارکت دوباره
-                </Link>
-                {item.status === 'awaiting_payment' && (
+              {item.status === 'awaiting_payment' && (
+                <div className="profile-row-actions">
                   <button
                     className="profile-pay-link"
                     disabled={startingPaymentId === item.id}
@@ -328,8 +325,15 @@ function RecentActivities({ items }: { items: NazrRequest[] }) {
                   >
                     {startingPaymentId === item.id ? 'در حال اتصال...' : 'ادامه پرداخت'}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
+              {(item.status === 'confirmed' || item.status === 'completed') && (
+                <div className="profile-row-actions">
+                  <Link className="profile-pay-link" href={`/nazr/new?type=${item.nazrType.slug}`}>
+                    مشارکت دوباره
+                  </Link>
+                </div>
+              )}
             </div>
           ))}
           {paymentError && <p className="field-error">{paymentError}</p>}
