@@ -86,6 +86,7 @@ export class PaymentsService {
 
     const authority = response.data?.authority;
     if (response.data?.code !== 100 || !authority) {
+      await this.rejectPaymentAndCancelRequest(payment);
       throw new BadRequestException({
         statusCode: 400,
         code: 'ZARINPAL_REQUEST_FAILED',
@@ -114,8 +115,7 @@ export class PaymentsService {
     if (!payment) return `${this.frontendUrl}/dashboard?payment=failed`;
 
     if (status !== 'OK') {
-      payment.status = 'rejected';
-      await this.paymentsRepo.save(payment);
+      await this.rejectPaymentAndCancelRequest(payment);
       return `${this.frontendUrl}/dashboard?payment=cancelled`;
     }
 
@@ -131,8 +131,17 @@ export class PaymentsService {
     }
 
     payment.status = 'rejected';
-    await this.paymentsRepo.save(payment);
+    await this.rejectPaymentAndCancelRequest(payment);
     return `${this.frontendUrl}/dashboard?payment=failed`;
+  }
+
+  private async rejectPaymentAndCancelRequest(payment: PaymentEntity): Promise<void> {
+    payment.status = 'rejected';
+    if (payment.nazrRequest) {
+      payment.nazrRequest.status = 'cancelled';
+      await this.nazrRequestsRepo.save(payment.nazrRequest);
+    }
+    await this.paymentsRepo.save(payment);
   }
 
   private ensureGatewayEnabled() {
