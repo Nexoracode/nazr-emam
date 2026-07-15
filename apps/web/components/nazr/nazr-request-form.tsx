@@ -363,8 +363,8 @@ export function NazrRequestForm() {
             )}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+          <div className="grid items-start gap-3 sm:grid-cols-2">
+            <label className="grid content-start gap-1.5 text-right text-[11px] font-bold text-auth-text">
               <span>مبلغ نذر به تومان</span>
               <input
                 className={fieldCls(Boolean(fieldErrors.amount))}
@@ -385,7 +385,7 @@ export function NazrRequestForm() {
               )}
             </label>
 
-            <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <label className="grid content-start gap-1.5 text-right text-[11px] font-bold text-auth-text">
               <span>کد ملی اختیاری</span>
               <input
                 className={fieldCls(Boolean(fieldErrors.donorNationalCode))}
