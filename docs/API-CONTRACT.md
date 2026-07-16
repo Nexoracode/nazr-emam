@@ -135,6 +135,13 @@ interface ProjectInfo {
 - **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
 - **خطاها:** `401 INVALID_OTP`، `400 VALIDATION_ERROR`
 
+### `POST /auth/password/reset`
+
+- **بدنه:** `ResetPasswordRequest`
+- **پاسخ:** `204 No Content`
+- **رفتار:** کد تایید را مصرف می‌کند، رمز عبور جدید را ذخیره می‌کند و کاربر را لاگین نمی‌کند.
+- **خطاها:** `401 INVALID_OTP`، `400 VALIDATION_ERROR`
+
 ### `POST /auth/refresh`
 
 - **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
@@ -184,6 +191,12 @@ interface RequestOtpRequest {
 interface VerifyOtpRequest {
   mobile: string;
   code: string;
+}
+
+interface ResetPasswordRequest {
+  mobile: string;
+  code: string;
+  newPassword: string;
 }
 
 interface OtpRequestResponse {

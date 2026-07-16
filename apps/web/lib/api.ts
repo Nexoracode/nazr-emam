@@ -17,6 +17,7 @@ import type {
   Payment,
   RegisterRequest,
   RequestOtpRequest,
+  ResetPasswordRequest,
   StartOnlinePaymentResponse,
   Ticket,
   TicketMessage,
@@ -190,6 +191,10 @@ export function requestOtp(payload: RequestOtpRequest) {
 
 export function verifyOtp(payload: VerifyOtpRequest) {
   return post<AuthResponse, VerifyOtpRequest>('/auth/otp/verify', payload);
+}
+
+export function resetPassword(payload: ResetPasswordRequest) {
+  return post<void, ResetPasswordRequest>('/auth/password/reset', payload);
 }
 
 export function updateProfile(payload: UpdateProfileRequest) {
