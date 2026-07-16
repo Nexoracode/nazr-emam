@@ -82,7 +82,7 @@ export class AdminController {
     return this.service.updateNazrType(id, body);
   }
 
-  @ApiOperation({ summary: 'غیرفعال‌کردن نوع نذر' })
+  @ApiOperation({ summary: 'حذف نوع نذر استفاده‌نشده' })
   @HttpCode(204)
   @Delete('nazr-types/:id')
   deleteNazrType(@Param('id') id: string) {

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -213,8 +213,14 @@ export class AdminService implements OnModuleInit {
   async deleteNazrType(id: string): Promise<void> {
     const item = await this.nazrTypesRepo.findOne({ where: { id } });
     if (!item) this.notFound('NAZR_TYPE_NOT_FOUND', 'نوع نذر پیدا نشد');
-    item!.isActive = false;
-    await this.nazrTypesRepo.save(item!);
+    if (await this.requestsRepo.exists({ where: { nazrTypeId: id } })) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'NAZR_TYPE_IN_USE',
+        message: 'این طرح دارای نذر ثبت‌شده است؛ به‌جای حذف، آن را غیرفعال کنید',
+      });
+    }
+    await this.nazrTypesRepo.delete(id);
   }
 
   async updateRequestStatus(id: string, status: NazrRequestStatus, adminNote?: string | null): Promise<NazrRequest> {

@@ -898,7 +898,8 @@ interface InvitationCard {
 - `GET /admin/nazr-types` → `200 NazrType[]`
 - `POST /admin/nazr-types` با `CreateNazrTypeRequest` → `201 NazrType`
 - `PATCH /admin/nazr-types/:id` با `UpdateNazrTypeRequest` → `200 NazrType`
-- `DELETE /admin/nazr-types/:id` → `204` (غیرفعال‌سازی نرم)
+- `DELETE /admin/nazr-types/:id` → `204` (حذف قطعی فقط وقتی هیچ نذری از این نوع ثبت نشده باشد)
+  - اگر نوع نذر استفاده شده باشد: `409 NAZR_TYPE_IN_USE` و مدیر باید آن را غیرفعال کند.
 - `GET /admin/nazr-requests?page&pageSize&search&status` → `200 Paginated<NazrRequest>`
 - `PATCH /admin/nazr-requests/:id/status` با `UpdateNazrRequestStatus` → `200 NazrRequest`
 - `GET /admin/payments?page&pageSize&search&status` → `200 Paginated<Payment>`
