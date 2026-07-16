@@ -15,6 +15,7 @@ import type {
   PaymentMethod,
   PaymentStatus,
   Ticket,
+  UserMissionStatus,
   UserPlatform,
   UserProfileDetails,
   UserProfileSummary,
@@ -122,6 +123,18 @@ const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   online: 'پرداخت آنلاین',
   card_to_card: 'کارت به کارت',
   cash: 'نقدی',
+};
+
+const MISSION_STATUS_LABEL: Record<UserMissionStatus, string> = {
+  available: 'در دسترس',
+  completed: 'تکمیل شده',
+  locked: 'قفل شده',
+};
+
+const MISSION_STATUS_COLOR: Record<UserMissionStatus, string> = {
+  available: 'badge-info',
+  completed: 'badge-success',
+  locked: 'badge-neutral',
 };
 
 export function ProfileView() {
@@ -761,7 +774,9 @@ function ClubPanel({ summary }: { summary: UserProfileSummary }) {
           <div className="profile-list-row" key={mission.id}>
             <div className="profile-list-head">
               <p className="profile-list-title">{mission.title}</p>
-              <span className={mission.status === 'completed' ? 'badge-success' : 'badge-neutral'}>{mission.status}</span>
+              <span className={MISSION_STATUS_COLOR[mission.status]}>
+                {MISSION_STATUS_LABEL[mission.status]}
+              </span>
             </div>
             <p className="profile-muted">{mission.description}</p>
             <ProfileRecentInfo label="امتیاز" value={mission.points.toLocaleString('fa-IR')} />
