@@ -281,7 +281,88 @@ function PaymentsSection({ payments, run, working }: { payments: Payment[]; run:
 
 function TicketsSection({ tickets, run, working }: { tickets: Ticket[]; run: Runner; working: boolean }) {
   const [replies, setReplies] = useState<Record<string, string>>({});
-  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>مرکز پشتیبانی</h2><p>تمام گفتگوها در یک صف واحد</p></div></div><div className="admin-ticket-list">{tickets.map((ticket) => <article key={ticket.id}><header><div><h3>{ticket.subject}</h3><p>{ticket.guestMobile ?? ticket.userId ?? 'مخاطب'}</p></div><span className={`admin-status ${statusClass(ticket.status)}`}>{ticketLabels[ticket.status]}</span></header><div className="admin-messages">{ticket.messages.map((message) => <p className={message.authorType === 'support' ? 'is-support' : ''} key={message.id}><span>{message.body}</span><small>{message.authorType === 'support' ? 'پشتیبانی' : 'مخاطب'} · {date(message.createdAt)}</small></p>)}</div>{ticket.status !== 'closed' ? <footer><input onChange={(event) => setReplies((value) => ({ ...value, [ticket.id]: event.target.value }))} placeholder="پاسخ به مخاطب..." value={replies[ticket.id] ?? ''} /><button className="admin-primary" disabled={working || !replies[ticket.id]?.trim()} onClick={() => void run(async () => { await replyTicket(ticket.id, replies[ticket.id]); setReplies((value) => ({ ...value, [ticket.id]: '' })); }, 'پاسخ ارسال شد')} type="button">ارسال پاسخ</button><button className="admin-secondary" disabled={working} onClick={() => void run(() => closeTicket(ticket.id), 'تیکت بسته شد')} type="button">بستن</button></footer> : null}</article>)}{!tickets.length ? <Empty /> : null}</div></section>;
+  const [selectedId, setSelectedId] = useState<string | null>(tickets[0]?.id ?? null);
+  const [filter, setFilter] = useState<'all' | Ticket['status']>('all');
+  const filteredTickets = filter === 'all' ? tickets : tickets.filter((ticket) => ticket.status === filter);
+  const selectedTicket = filteredTickets.find((ticket) => ticket.id === selectedId) ?? filteredTickets[0] ?? null;
+  const openCount = tickets.filter((ticket) => ticket.status === 'open').length;
+
+  return (
+    <section className="admin-ticket-center">
+      <header className="admin-ticket-toolbar">
+        <div>
+          <h2>مرکز پشتیبانی</h2>
+          <p>{openCount.toLocaleString('fa-IR')} تیکت در انتظار پاسخ</p>
+        </div>
+        <div className="admin-ticket-filters" role="group" aria-label="فیلتر وضعیت تیکت‌ها">
+          {([['all', 'همه'], ['open', 'باز'], ['answered', 'پاسخ‌داده‌شده'], ['closed', 'بسته']] as const).map(([value, label]) => (
+            <button className={filter === value ? 'is-active' : ''} key={value} onClick={() => setFilter(value)} type="button">{label}</button>
+          ))}
+        </div>
+      </header>
+
+      <div className="admin-ticket-layout">
+        <aside className="admin-ticket-inbox" aria-label="فهرست تیکت‌ها">
+          {filteredTickets.map((ticket) => {
+            const lastMessage = ticket.messages[ticket.messages.length - 1];
+            return (
+              <button className={selectedTicket?.id === ticket.id ? 'is-active' : ''} key={ticket.id} onClick={() => setSelectedId(ticket.id)} type="button">
+                <span className={`admin-ticket-state ${statusClass(ticket.status)}`}></span>
+                <span className="admin-ticket-preview">
+                  <strong>{ticket.subject}</strong>
+                  <small>{ticket.guestMobile ?? (ticket.userId ? 'کاربر ثبت‌نام‌شده' : 'مخاطب')}</small>
+                  <p>{lastMessage?.body ?? 'بدون پیام'}</p>
+                </span>
+                <time>{date(ticket.updatedAt)}</time>
+              </button>
+            );
+          })}
+          {!filteredTickets.length ? <Empty text="تیکتی با این وضعیت وجود ندارد." /> : null}
+        </aside>
+
+        {selectedTicket ? (
+          <article className="admin-ticket-conversation">
+            <header>
+              <div>
+                <h3>{selectedTicket.subject}</h3>
+                <p>{selectedTicket.guestMobile ?? (selectedTicket.userId ? 'کاربر ثبت‌نام‌شده' : 'مخاطب')} · ایجاد در {date(selectedTicket.createdAt)}</p>
+              </div>
+              <span className={`admin-status ${statusClass(selectedTicket.status)}`}>{ticketLabels[selectedTicket.status]}</span>
+            </header>
+
+            <div className="admin-ticket-thread">
+              {selectedTicket.messages.map((message) => (
+                <div className={`admin-ticket-message ${message.authorType === 'support' ? 'is-own' : ''}`} key={message.id}>
+                  <div>
+                    <span className="admin-ticket-author">{message.authorType === 'support' ? 'پشتیبانی' : 'مخاطب'}</span>
+                    <p>{message.body}</p>
+                    <time>{new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(message.createdAt))}</time>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {selectedTicket.status !== 'closed' ? (
+              <footer className="admin-ticket-composer">
+                <textarea
+                  onChange={(event) => setReplies((value) => ({ ...value, [selectedTicket.id]: event.target.value }))}
+                  placeholder="پاسخ خود را برای مخاطب بنویسید..."
+                  rows={3}
+                  value={replies[selectedTicket.id] ?? ''}
+                />
+                <div>
+                  <button className="admin-secondary" disabled={working} onClick={() => void run(() => closeTicket(selectedTicket.id), 'تیکت بسته شد')} type="button">بستن تیکت</button>
+                  <button className="admin-primary" disabled={working || !replies[selectedTicket.id]?.trim()} onClick={() => void run(async () => { await replyTicket(selectedTicket.id, replies[selectedTicket.id]); setReplies((value) => ({ ...value, [selectedTicket.id]: '' })); }, 'پاسخ ارسال شد')} type="button">ارسال پاسخ</button>
+                </div>
+              </footer>
+            ) : <p className="admin-ticket-closed">این گفتگو بسته شده است.</p>}
+          </article>
+        ) : (
+          <div className="admin-ticket-no-selection"><Empty text="برای مشاهده گفتگو، یک تیکت را انتخاب کنید." /></div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 function NotificationsSection({ items, users, run, working }: { items: AdminNotificationItem[]; users: AdminUserListItem[]; run: Runner; working: boolean }) {

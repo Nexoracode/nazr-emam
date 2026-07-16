@@ -81,6 +81,18 @@ const PLATFORM_OPTIONS: Array<{ id: UserPlatform; label: string }> = [
   { id: 'other', label: 'سایر' },
 ];
 
+const TICKET_STATUS_LABEL: Record<Ticket['status'], string> = {
+  open: 'در انتظار پاسخ',
+  answered: 'پاسخ داده شده',
+  closed: 'بسته شده',
+};
+
+const TICKET_STATUS_CLASS: Record<Ticket['status'], string> = {
+  open: 'badge-warning',
+  answered: 'badge-success',
+  closed: 'badge-neutral',
+};
+
 const STATUS_LABEL: Record<NazrRequestStatus, string> = {
   draft: 'پیش‌نویس',
   submitted: 'ثبت شده',
@@ -589,36 +601,57 @@ function TicketsPanel() {
           <button className="btn-primary" type="submit">ارسال تیکت</button>
         </form>
       </section>
-      <section className="surface-card">
-        <h2 className="card-title">تیکت‌های من</h2>
-        <div className="profile-list">
+      <section className="profile-ticket-section">
+        <div className="profile-section-heading">
+          <div>
+            <h2 className="card-title">تیکت‌های من</h2>
+            <p className="profile-muted">گفتگوهای شما با پشتیبانی</p>
+          </div>
+          {tickets ? <span className="profile-ticket-count">{tickets.total.toLocaleString('fa-IR')} گفتگو</span> : null}
+        </div>
+        <div className="profile-ticket-list">
           {!tickets || tickets.items.length === 0 ? (
             <EmptyState title="تیکتی وجود ندارد" body="برای ارتباط با پشتیبانی سایت، از فرم بالا استفاده کنید." />
           ) : (
             tickets.items.map((ticket) => (
-              <div className="profile-list-row" key={ticket.id}>
-                <div className="profile-list-head">
-                  <p className="profile-list-title">{ticket.subject}</p>
-                  <span className={ticket.status === 'closed' ? 'badge-neutral' : 'badge-info'}>{ticket.status}</span>
+              <article className="profile-ticket-card" key={ticket.id}>
+                <header className="profile-ticket-header">
+                  <div>
+                    <h3>{ticket.subject}</h3>
+                    <p>ایجاد شده در {formatDate(ticket.createdAt)}</p>
+                  </div>
+                  <span className={TICKET_STATUS_CLASS[ticket.status]}>{TICKET_STATUS_LABEL[ticket.status]}</span>
+                </header>
+
+                <div className="profile-ticket-thread">
+                  {ticket.messages.map((item) => (
+                    <div className={`profile-ticket-bubble-row ${item.authorType === 'user' ? 'is-own' : ''}`} key={item.id}>
+                      <div className="profile-ticket-bubble">
+                        <span>{item.authorType === 'support' ? 'پشتیبانی' : 'شما'}</span>
+                        <p>{item.body}</p>
+                        <time>{formatTicketDate(item.createdAt)}</time>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {ticket.messages.map((item) => (
-                  <p className="profile-ticket-message" key={item.id}>
-                    {item.authorType === 'support' ? 'پشتیبانی' : 'شما'}: {item.body}
-                  </p>
-                ))}
+
                 {ticket.status !== 'closed' && (
-                  <div className="profile-inline-form">
-                    <input
-                      className="field-input"
+                  <div className="profile-ticket-reply">
+                    <textarea
+                      className="field-input profile-ticket-reply-input"
                       onChange={(e) => setReplyBody((current) => ({ ...current, [ticket.id]: e.target.value }))}
-                      placeholder="پاسخ کوتاه"
+                      placeholder="پاسخ خود را بنویسید..."
+                      rows={2}
                       value={replyBody[ticket.id] ?? ''}
                     />
-                    <button className="btn-ghost" onClick={() => handleReply(ticket.id)} type="button">پاسخ</button>
-                    <button className="btn-ghost" onClick={() => handleClose(ticket.id)} type="button">بستن</button>
+                    <div>
+                      <button className="btn-ghost" onClick={() => handleClose(ticket.id)} type="button">بستن تیکت</button>
+                      <button className="btn-primary" disabled={!replyBody[ticket.id]?.trim()} onClick={() => handleReply(ticket.id)} type="button">ارسال پاسخ</button>
+                    </div>
                   </div>
                 )}
-              </div>
+                {ticket.status === 'closed' ? <p className="profile-ticket-closed">این گفتگو بسته شده است.</p> : null}
+              </article>
             ))
           )}
         </div>
@@ -1057,4 +1090,14 @@ function formatDate(iso: string): string {
     month: 'long',
     year: 'numeric',
   });
+}
+
+function formatTicketDate(iso: string): string {
+  return new Intl.DateTimeFormat('fa-IR', {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(iso));
 }
