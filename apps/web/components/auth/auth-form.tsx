@@ -585,7 +585,7 @@ function PasswordField({
       <span className="relative block">
         <input
           autoComplete={autoComplete}
-          className={`${fieldCls(Boolean(error))} pl-10`}
+          className={`${fieldCls(Boolean(error))} pr-10`}
           dir="ltr"
           minLength={8}
           onChange={(e) => onChange(e.target.value)}
@@ -594,7 +594,7 @@ function PasswordField({
         />
         <button
           aria-label={visible ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
-          className="absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-auth-muted transition hover:bg-auth-link-surface hover:text-auth-text"
+          className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-auth-muted transition hover:bg-auth-link-surface hover:text-auth-text"
           onClick={() => setVisible((current) => !current)}
           type="button"
         >
