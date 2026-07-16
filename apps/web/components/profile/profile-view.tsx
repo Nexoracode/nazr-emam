@@ -166,6 +166,20 @@ const MISSION_STATUS_COLOR: Record<UserMissionStatus, string> = {
   locked: 'badge-neutral',
 };
 
+const WALLET_TRANSACTION_LABEL: Record<WalletTransaction['type'], string> = {
+  charge: 'شارژ کیف پول',
+  deduction: 'برداشت ماهانه',
+  payment: 'پرداخت نذر',
+  refund: 'بازگشت وجه',
+};
+
+const WALLET_TRANSACTION_COLOR: Record<WalletTransaction['type'], string> = {
+  charge: 'badge-success',
+  deduction: 'badge-warning',
+  payment: 'badge-info',
+  refund: 'badge-neutral',
+};
+
 export function ProfileView() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ProfileTab>('dashboard');
@@ -925,7 +939,10 @@ function WalletPanel() {
   const [charge, setCharge] = useState('');
   const [monthlyAmount, setMonthlyAmount] = useState('');
   const [monthlyEnabled, setMonthlyEnabled] = useState(false);
-  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [savingAction, setSavingAction] = useState<'charge' | 'settings' | null>(null);
+  const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
 
   async function loadWallet() {
     const [walletData, transactionData] = await Promise.all([getProfileWallet(), getWalletTransactions()]);
@@ -936,72 +953,218 @@ function WalletPanel() {
   }
 
   useEffect(() => {
-    loadWallet().catch(() => undefined);
+    loadWallet()
+      .catch(() => setError('اطلاعات کیف پول دریافت نشد. دوباره تلاش کنید.'))
+      .finally(() => setLoading(false));
   }, []);
 
   async function handleCharge(e: FormEvent) {
     e.preventDefault();
-    await createWalletCharge({ amount: { amount: Number(charge), currency: 'IRT' } });
-    setCharge('');
-    setMessage('شارژ کیف پول ثبت شد.');
-    await loadWallet();
+    const amount = Number(charge);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    setSavingAction('charge');
+    setMessage(null);
+    try {
+      await createWalletCharge({ amount: { amount, currency: 'IRT' } });
+      setCharge('');
+      setMessage({ kind: 'success', text: 'شارژ کیف پول با موفقیت ثبت شد.' });
+      await loadWallet();
+    } catch (err) {
+      setMessage({
+        kind: 'error',
+        text: err instanceof ApiRequestError ? err.message : 'ثبت شارژ انجام نشد.',
+      });
+    } finally {
+      setSavingAction(null);
+    }
   }
 
   async function handleSettings(e: FormEvent) {
     e.preventDefault();
-    const updated = await updateProfileWallet({
-      isMonthlyDeductionEnabled: monthlyEnabled,
-      monthlyDeductionAmount: monthlyEnabled
-        ? { amount: Number(monthlyAmount), currency: 'IRT' }
-        : null,
-    });
-    setWallet(updated);
-    setMessage('تنظیمات کیف پول ذخیره شد.');
+    const amount = Number(monthlyAmount);
+    if (monthlyEnabled && (!Number.isFinite(amount) || amount <= 0)) return;
+    setSavingAction('settings');
+    setMessage(null);
+    try {
+      const updated = await updateProfileWallet({
+        isMonthlyDeductionEnabled: monthlyEnabled,
+        monthlyDeductionAmount: monthlyEnabled
+          ? { amount, currency: 'IRT' }
+          : null,
+      });
+      setWallet(updated);
+      setMessage({ kind: 'success', text: 'تنظیمات پرداخت ماهانه ذخیره شد.' });
+    } catch (err) {
+      setMessage({
+        kind: 'error',
+        text: err instanceof ApiRequestError ? err.message : 'ذخیره تنظیمات انجام نشد.',
+      });
+    } finally {
+      setSavingAction(null);
+    }
+  }
+
+  async function handleRetry() {
+    setLoading(true);
+    setError('');
+    try {
+      await loadWallet();
+    } catch {
+      setError('اطلاعات کیف پول دریافت نشد. دوباره تلاش کنید.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="surface-card wallet-state">در حال دریافت اطلاعات کیف پول...</div>;
+  }
+
+  if (error || !wallet) {
+    return (
+      <section className="surface-card wallet-state">
+        <p className="field-error">{error || 'اطلاعات کیف پول در دسترس نیست.'}</p>
+        <button className="btn-ghost" onClick={handleRetry} type="button">تلاش دوباره</button>
+      </section>
+    );
   }
 
   return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">کیف پول</h1>
-        <div className="profile-stat-grid">
-          <StatCard label="موجودی" value={wallet ? formatMoney(wallet.balance) : '۰ تومان'} />
-          <StatCard label="برداشت ماهانه" value={monthlyEnabled ? 'فعال' : 'غیرفعال'} />
+    <div className="profile-stack wallet-stack">
+      <section className="surface-card wallet-overview">
+        <div className="wallet-overview-main">
+          <p className="wallet-eyebrow">کیف پول من</p>
+          <h1 className="wallet-balance">{formatMoney(wallet.balance)}</h1>
+          <p className="profile-muted">موجودی قابل استفاده برای مشارکت در طرح‌های نذر</p>
+        </div>
+        <div className={`wallet-monthly-status${monthlyEnabled ? ' is-active' : ''}`}>
+          <span aria-hidden="true" />
+          <div>
+            <strong>{monthlyEnabled ? 'پرداخت ماهانه فعال است' : 'پرداخت ماهانه غیرفعال است'}</strong>
+            <small>
+              {monthlyEnabled && wallet.monthlyDeductionAmount
+                ? `${formatMoney(wallet.monthlyDeductionAmount)} در هر ماه`
+                : 'در صورت نیاز از بخش تنظیمات فعال کنید'}
+            </small>
+          </div>
         </div>
       </section>
-      <section className="surface-card">
-        <h2 className="card-title">شارژ و تنظیمات</h2>
-        <form className="profile-wallet-grid" onSubmit={handleCharge}>
-          <Field label="مبلغ شارژ" onChange={setCharge} type="number" value={charge} />
-          <button className="btn-primary" type="submit">ثبت شارژ</button>
-        </form>
-        <form className="profile-wallet-grid" onSubmit={handleSettings}>
-          <label className="profile-chip">
-            <input checked={monthlyEnabled} onChange={(e) => setMonthlyEnabled(e.target.checked)} type="checkbox" />
-            <span>برداشت ماهانه فعال باشد</span>
-          </label>
-          <Field label="مبلغ برداشت ماهانه" onChange={setMonthlyAmount} required={monthlyEnabled} type="number" value={monthlyAmount} />
-          <button className="btn-ghost" type="submit">ذخیره تنظیمات</button>
-        </form>
-        {message && <p className="profile-muted">{message}</p>}
-      </section>
-      <section className="surface-card">
-        <h2 className="card-title">تراکنش‌های کیف پول</h2>
-        <div className="profile-list">
+
+      {message && (
+        <p aria-live="polite" className={message.kind === 'success' ? 'field-success' : 'field-error'}>
+          {message.text}
+        </p>
+      )}
+
+      <div className="wallet-action-grid">
+        <section className="surface-card wallet-action-card">
+          <div className="wallet-section-heading">
+            <h2 className="card-title">شارژ کیف پول</h2>
+            <p className="profile-muted">مبلغ موردنظر را به موجودی کیف پول اضافه کنید.</p>
+          </div>
+          <form className="profile-wallet-grid" onSubmit={handleCharge}>
+            <label className="field-group">
+              <span className="field-label">مبلغ شارژ</span>
+              <span className="wallet-amount-field">
+                <input
+                  className="field-input"
+                  dir="ltr"
+                  inputMode="numeric"
+                  min="1"
+                  onChange={(e) => setCharge(e.target.value)}
+                  placeholder="300,000"
+                  required
+                  type="number"
+                  value={charge}
+                />
+                <span>تومان</span>
+              </span>
+            </label>
+            <button className="btn-primary" disabled={savingAction !== null || Number(charge) <= 0} type="submit">
+              {savingAction === 'charge' ? 'در حال ثبت...' : 'ثبت شارژ'}
+            </button>
+          </form>
+        </section>
+
+        <section className="surface-card wallet-action-card">
+          <div className="wallet-section-heading">
+            <h2 className="card-title">پرداخت ماهانه</h2>
+            <p className="profile-muted">مبلغ ثابتی را برای مشارکت ماهانه تعیین کنید.</p>
+          </div>
+          <form className="profile-wallet-grid" onSubmit={handleSettings}>
+            <label className="wallet-toggle-row">
+              <span>
+                <strong>برداشت خودکار ماهانه</strong>
+                <small>{monthlyEnabled ? 'روشن' : 'خاموش'}</small>
+              </span>
+              <input
+                checked={monthlyEnabled}
+                onChange={(e) => setMonthlyEnabled(e.target.checked)}
+                type="checkbox"
+              />
+              <span aria-hidden="true" className="wallet-toggle-track"><span /></span>
+            </label>
+            <label className="field-group">
+              <span className="field-label">مبلغ برداشت ماهانه</span>
+              <span className="wallet-amount-field">
+                <input
+                  className="field-input"
+                  dir="ltr"
+                  disabled={!monthlyEnabled}
+                  inputMode="numeric"
+                  min="1"
+                  onChange={(e) => setMonthlyAmount(e.target.value)}
+                  placeholder="300,000"
+                  required={monthlyEnabled}
+                  type="number"
+                  value={monthlyAmount}
+                />
+                <span>تومان</span>
+              </span>
+            </label>
+            <button
+              className="btn-ghost"
+              disabled={savingAction !== null || (monthlyEnabled && Number(monthlyAmount) <= 0)}
+              type="submit"
+            >
+              {savingAction === 'settings' ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
+            </button>
+          </form>
+        </section>
+      </div>
+
+      <section className="surface-card wallet-transactions">
+        <div className="wallet-transactions-heading">
+          <div>
+            <h2 className="card-title">تراکنش‌های کیف پول</h2>
+            <p className="profile-muted">ریز شارژها، پرداخت‌ها و برداشت‌های انجام‌شده</p>
+          </div>
+          <span>{transactions.length.toLocaleString('fa-IR')} تراکنش</span>
+        </div>
+        <div className="wallet-transaction-list">
           {transactions.length === 0 ? (
             <EmptyState title="تراکنشی وجود ندارد" body="شارژها و برداشت‌های کیف پول اینجا نمایش داده می‌شوند." />
           ) : (
-            transactions.map((item) => (
-              <div className="profile-list-row" key={item.id}>
-                <div className="profile-list-head">
-                  <p className="profile-list-title">{item.description}</p>
-                  <span className="badge-info">{item.type}</span>
-                </div>
-                <div className="profile-list-info">
-                  <ProfileRecentInfo label="مبلغ" value={formatMoney(item.amount)} />
-                  <ProfileRecentInfo label="تاریخ" value={formatDate(item.createdAt)} />
-                </div>
-              </div>
-            ))
+            transactions.map((item) => {
+              const incoming = item.type === 'charge' || item.type === 'refund';
+              return (
+                <article className="wallet-transaction-row" key={item.id}>
+                  <span className={`wallet-transaction-sign${incoming ? ' is-incoming' : ' is-outgoing'}`} aria-hidden="true">
+                    {incoming ? '+' : '−'}
+                  </span>
+                  <div className="wallet-transaction-main">
+                    <p>{item.description}</p>
+                    <time>{formatDate(item.createdAt)}</time>
+                  </div>
+                  <div className="wallet-transaction-meta">
+                    <strong className={incoming ? 'is-incoming' : 'is-outgoing'}>
+                      {incoming ? '+' : '−'} {formatMoney(item.amount)}
+                    </strong>
+                    <span className={WALLET_TRANSACTION_COLOR[item.type]}>{WALLET_TRANSACTION_LABEL[item.type]}</span>
+                  </div>
+                </article>
+              );
+            })
           )}
         </div>
       </section>
