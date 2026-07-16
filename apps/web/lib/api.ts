@@ -1,9 +1,20 @@
 import type {
+  AdminDashboardSummary,
+  AdminNotificationItem,
+  AdminUserDetails,
+  AdminUserListItem,
   ApiError,
   AuthResponse,
+  CallTask,
+  CallTaskStatus,
   ChangePasswordRequest,
+  CreateCallTaskRequest,
+  CreateCrmActivityRequest,
+  CreateGalleryAssetRequest,
   CreateInvitationCardRequest,
   CreateNazrRequest,
+  CreateNazrTypeRequest,
+  CreateNotificationRequest,
   CreateTicketRequest,
   CreateWalletChargeRequest,
   GalleryAsset,
@@ -22,6 +33,14 @@ import type {
   Ticket,
   TicketMessage,
   UpdateMotivationalTargetRequest,
+  UpdateCallTaskRequest,
+  UpdateCrmProfileRequest,
+  UpdateGalleryAssetRequest,
+  UpdateNazrTypeRequest,
+  CrmActivity,
+  CrmProfile,
+  NazrRequestStatus,
+  PaymentStatus,
   UpdateProfileRequest,
   UpdateUserProfileDetailsRequest,
   UpdateWalletSettingsRequest,
@@ -310,4 +329,108 @@ export function getNotifications(page = 1, pageSize = 12) {
 
 export function markNotificationAsRead(notificationId: string) {
   return post<void, Record<string, never>>(`/notifications/${notificationId}/read`, {});
+}
+
+function adminQuery(values: Record<string, string | number | undefined>) {
+  const query = new URLSearchParams();
+  Object.entries(values).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') query.set(key, String(value));
+  });
+  return query.toString();
+}
+
+export function getAdminDashboard() {
+  return get<AdminDashboardSummary>('/admin/dashboard');
+}
+
+export function getAdminUsers(page = 1, pageSize = 30, search = '', stage = '') {
+  return get<Paginated<AdminUserListItem>>(`/admin/users?${adminQuery({ page, pageSize, search, stage })}`);
+}
+
+export function getAdminUser(id: string) {
+  return get<AdminUserDetails>(`/admin/users/${id}`);
+}
+
+export function updateAdminCrm(id: string, payload: UpdateCrmProfileRequest) {
+  return patch<CrmProfile, UpdateCrmProfileRequest>(`/admin/users/${id}/crm`, payload);
+}
+
+export function addAdminCrmActivity(id: string, payload: CreateCrmActivityRequest) {
+  return post<CrmActivity, CreateCrmActivityRequest>(`/admin/users/${id}/activities`, payload);
+}
+
+export function getAdminNazrRequests(page = 1, pageSize = 30, search = '', status = '') {
+  return get<Paginated<NazrRequest>>(`/admin/nazr-requests?${adminQuery({ page, pageSize, search, status })}`);
+}
+
+export function getAdminNazrTypes() {
+  return get<NazrType[]>('/admin/nazr-types');
+}
+
+export function createAdminNazrType(payload: CreateNazrTypeRequest) {
+  return post<NazrType, CreateNazrTypeRequest>('/admin/nazr-types', payload);
+}
+
+export function updateAdminNazrType(id: string, payload: UpdateNazrTypeRequest) {
+  return patch<NazrType, UpdateNazrTypeRequest>(`/admin/nazr-types/${id}`, payload);
+}
+
+export function deleteAdminNazrType(id: string) {
+  return del(`/admin/nazr-types/${id}`);
+}
+
+export function updateAdminNazrStatus(id: string, status: NazrRequestStatus, adminNote?: string) {
+  return patch<NazrRequest, { status: NazrRequestStatus; adminNote?: string }>(`/admin/nazr-requests/${id}/status`, { status, adminNote });
+}
+
+export function getAdminPayments(page = 1, pageSize = 30, search = '', status = '') {
+  return get<Paginated<Payment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status })}`);
+}
+
+export function setAdminPaymentStatus(id: string, status: Extract<PaymentStatus, 'paid' | 'rejected'>, reason?: string) {
+  return post<Payment, { reason?: string }>(`/admin/payments/${id}/${status === 'paid' ? 'approve' : 'reject'}`, { reason });
+}
+
+export function getAdminTickets(page = 1, pageSize = 30) {
+  return get<Paginated<Ticket>>(`/admin/tickets?${adminQuery({ page, pageSize })}`);
+}
+
+export function getAdminNotifications(page = 1, pageSize = 30) {
+  return get<Paginated<AdminNotificationItem>>(`/admin/notifications?${adminQuery({ page, pageSize })}`);
+}
+
+export function createAdminNotification(payload: CreateNotificationRequest) {
+  return post<AdminNotificationItem, CreateNotificationRequest>('/admin/notifications', payload);
+}
+
+export function getAdminGallery() {
+  return get<GalleryAsset[]>('/admin/gallery');
+}
+
+export function createAdminGallery(payload: CreateGalleryAssetRequest) {
+  return post<GalleryAsset, CreateGalleryAssetRequest>('/admin/gallery', payload);
+}
+
+export function updateAdminGallery(id: string, payload: UpdateGalleryAssetRequest) {
+  return patch<GalleryAsset, UpdateGalleryAssetRequest>(`/admin/gallery/${id}`, payload);
+}
+
+export function deleteAdminGallery(id: string) {
+  return del(`/admin/gallery/${id}`);
+}
+
+export function getAdminCallTasks(page = 1, pageSize = 50, status: CallTaskStatus | '' = '') {
+  return get<Paginated<CallTask>>(`/admin/call-tasks?${adminQuery({ page, pageSize, status })}`);
+}
+
+export function createAdminCallTask(payload: CreateCallTaskRequest) {
+  return post<CallTask, CreateCallTaskRequest>('/admin/call-tasks', payload);
+}
+
+export function generateAdminCallTasks(period: string, dueDate: string) {
+  return post<{ created: number }, { period: string; dueDate: string }>('/admin/call-tasks/generate', { period, dueDate });
+}
+
+export function updateAdminCallTask(id: string, payload: UpdateCallTaskRequest) {
+  return patch<CallTask, UpdateCallTaskRequest>(`/admin/call-tasks/${id}`, payload);
 }

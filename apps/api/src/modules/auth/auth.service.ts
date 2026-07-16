@@ -194,6 +194,24 @@ export class AuthService {
     return this.createAuthResponse(user);
   }
 
+  async ensureBootstrapAdmin(mobile: string, password: string, fullName: string): Promise<User> {
+    if (!isValidIranMobile(mobile) || password.length < 8) {
+      throw new Error('ADMIN_BOOTSTRAP_MOBILE or ADMIN_BOOTSTRAP_PASSWORD is invalid');
+    }
+
+    const existing = await this.usersRepository.findOne({ where: { mobile } });
+    const user = existing ?? this.usersRepository.create({
+      mobile,
+      fullName,
+      passwordHash: this.hashPassword(password),
+      role: 'admin',
+    });
+    user.role = 'admin';
+    user.passwordHash = this.hashPassword(password);
+    if (!existing) user.fullName = fullName;
+    return this.toPublicUser(await this.usersRepository.save(user));
+  }
+
   async resetPassword(payload: ResetPasswordRequest): Promise<void> {
     const body = this.validateResetPassword(payload);
     const otp = await this.otpCodesRepository.findOne({
