@@ -1111,6 +1111,7 @@ input {
 
 .btn-primary:hover:not(:disabled) {
   background: var(--primary-dark);
+  color: #fff;
 }
 
 .btn-primary:disabled {
@@ -1141,6 +1142,11 @@ input {
 }
 
 .profile-page-shell {
+  --profile-font-caption: 11px;
+  --profile-font-supporting: 12px;
+  --profile-font-body: 13px;
+  --profile-font-heading: 15px;
+  --profile-font-display: 18px;
   align-items: start;
   display: grid;
   gap: 18px;
@@ -1231,7 +1237,7 @@ input {
 
 .profile-nav-group-title {
   color: var(--muted) !important;
-  font-size: 9px !important;
+  font-size: var(--profile-font-caption) !important;
   font-weight: 700;
   margin: 0 !important;
   padding: 3px 9px 4px;
@@ -1248,7 +1254,7 @@ input {
   border-radius: 8px;
   color: var(--foreground);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--profile-font-supporting);
   font-weight: 600;
   line-height: 1.7;
   min-height: 35px;
@@ -1320,6 +1326,21 @@ input {
   min-width: 0;
 }
 
+.profile-page-shell p {
+  font-size: var(--profile-font-body);
+  line-height: 1.8;
+}
+
+.profile-page-shell .profile-muted,
+.profile-page-shell .profile-sidebar-subtitle {
+  font-size: var(--profile-font-supporting);
+}
+
+.profile-page-shell .profile-content .card-title {
+  font-size: var(--profile-font-heading);
+  line-height: 1.7;
+}
+
 .profile-loading {
   color: var(--muted);
   padding: 64px 0;
@@ -1371,7 +1392,7 @@ input {
 
 .dashboard-title {
   color: var(--heading, var(--foreground));
-  font-size: 19px !important;
+  font-size: var(--profile-font-display) !important;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.7 !important;
@@ -1434,7 +1455,7 @@ input {
 
 .dashboard-attention-item span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--profile-font-supporting);
 }
 
 .dashboard-attention-item strong {
@@ -1486,7 +1507,7 @@ input {
 
 .dashboard-stat-card span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--profile-font-supporting);
 }
 
 .dashboard-stat-card strong {
@@ -1526,14 +1547,14 @@ input {
 }
 
 .dashboard-panel-heading .card-title {
-  font-size: 14px;
+  font-size: var(--profile-font-heading);
   margin: 0 0 3px;
 }
 
 .dashboard-character-count {
   color: var(--muted);
   direction: ltr;
-  font-size: 10px;
+  font-size: var(--profile-font-caption);
   white-space: nowrap;
 }
 
@@ -1549,7 +1570,7 @@ input {
 }
 
 .dashboard-shortcuts .card-title {
-  font-size: 14px;
+  font-size: var(--profile-font-heading);
   margin-bottom: 8px;
 }
 
@@ -1578,12 +1599,12 @@ input {
 
 .dashboard-shortcut strong {
   color: var(--heading, var(--foreground));
-  font-size: 12px;
+  font-size: var(--profile-font-body);
 }
 
 .dashboard-shortcut small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--profile-font-caption);
   line-height: 1.7;
 }
 
@@ -1605,7 +1626,7 @@ input {
   cursor: pointer;
   flex: 0 0 auto;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--profile-font-supporting);
   font-weight: 700;
   padding: 4px 0;
 }
@@ -1620,7 +1641,7 @@ input {
 }
 
 .dashboard-activity-row .profile-list-title {
-  font-size: 13px;
+  font-size: var(--profile-font-body);
 }
 
 .dashboard-activity-row .profile-tracking-code,
@@ -1673,7 +1694,7 @@ input {
 
 .profile-section-heading .card-title,
 .profile-content > .surface-card > .card-title {
-  font-size: 15px;
+  font-size: var(--profile-font-heading);
   margin-bottom: 6px;
 }
 
@@ -1733,7 +1754,7 @@ input {
 
 .profile-list-title {
   color: var(--heading, var(--foreground));
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   margin: 0 0 4px;
 }
@@ -1772,7 +1793,7 @@ input {
 
 .profile-tracking-code {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--profile-font-supporting);
   line-height: 1.8;
   margin: 0;
 }
@@ -1780,7 +1801,7 @@ input {
 .profile-tracking-code span {
   color: var(--primary);
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: 13px;
+  font-size: var(--profile-font-supporting);
   letter-spacing: 1px;
 }
 
@@ -1894,7 +1915,7 @@ input {
 
 .profile-ticket-list-header .card-title,
 .profile-ticket-create-heading .card-title {
-  font-size: 15px;
+  font-size: var(--profile-font-heading);
   margin: 0 0 3px;
 }
 
@@ -1958,7 +1979,7 @@ input {
 
 .profile-ticket-header h3 {
   color: var(--heading, var(--foreground));
-  font-size: 14px;
+  font-size: var(--profile-font-body);
   margin: 0 0 4px;
 }
 
@@ -2004,13 +2025,13 @@ input {
 .profile-ticket-bubble span {
   color: var(--primary);
   display: block;
-  font-size: 10px;
+  font-size: var(--profile-font-caption);
   font-weight: 700;
 }
 
 .profile-ticket-bubble p {
   color: var(--foreground);
-  font-size: 12px;
+  font-size: var(--profile-font-body);
   line-height: 1.9;
   margin: 3px 0 5px;
   overflow-wrap: anywhere;
@@ -2020,7 +2041,7 @@ input {
 .profile-ticket-bubble time {
   color: var(--muted);
   display: block;
-  font-size: 9px;
+  font-size: var(--profile-font-caption);
   text-align: end;
 }
 
@@ -2117,7 +2138,7 @@ input {
 
   .profile-mobile-account strong {
     color: var(--heading, var(--foreground));
-    font-size: 12px;
+    font-size: var(--profile-font-body);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2125,7 +2146,7 @@ input {
 
   .profile-mobile-account small {
     color: var(--muted);
-    font-size: 10px;
+    font-size: var(--profile-font-caption);
   }
 
   .profile-mobile-bar .profile-avatar {
