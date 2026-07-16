@@ -10,6 +10,7 @@ import databaseConfig from './config/database.config';
 import paymentConfig from './config/payment.config';
 import { AuthGuard } from './modules/auth/guards/auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { NazrRequestsModule } from './modules/nazr-requests/nazr-requests.module';
 import { NazrTypesModule } from './modules/nazr-types/nazr-types.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -30,6 +31,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
         configService.getOrThrow('database'),
     }),
     AuthModule,
+    AdminModule,
     NazrTypesModule,
     NazrRequestsModule,
     PaymentsModule,

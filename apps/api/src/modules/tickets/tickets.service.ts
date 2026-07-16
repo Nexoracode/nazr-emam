@@ -63,7 +63,6 @@ export class TicketsService {
     const message = await this.messagesRepo.save(
       this.messagesRepo.create({
         ticketId: ticket.id,
-        ticket,
         body,
         authorType: 'user',
       }),
@@ -96,13 +95,13 @@ export class TicketsService {
     const message = await this.messagesRepo.save(
       this.messagesRepo.create({
         ticketId: ticket.id,
-        ticket,
         body: text,
         authorType: user.role === 'admin' ? 'support' : 'user',
       }),
     );
-    ticket.status = user.role === 'admin' ? 'answered' : 'open';
-    await this.ticketsRepo.save(ticket);
+    await this.ticketsRepo.update(ticket.id, {
+      status: user.role === 'admin' ? 'answered' : 'open',
+    });
     return this.toMessageDto(message);
   }
 

@@ -14,6 +14,7 @@ import type {
   OtpRequestResponse,
   RefreshTokenRequest,
   RequestOtpRequest,
+  ResetPasswordRequest,
   RegisterRequest,
   UpdateProfileRequest,
   User,
@@ -191,6 +192,65 @@ export class AuthService {
 
     const user = await this.findOrCreateOtpUser(body.mobile);
     return this.createAuthResponse(user);
+  }
+
+  async ensureBootstrapAdmin(mobile: string, password: string, fullName: string): Promise<User> {
+    if (!isValidIranMobile(mobile) || password.length < 8) {
+      throw new Error('ADMIN_BOOTSTRAP_MOBILE or ADMIN_BOOTSTRAP_PASSWORD is invalid');
+    }
+
+    const existing = await this.usersRepository.findOne({ where: { mobile } });
+    const user = existing ?? this.usersRepository.create({
+      mobile,
+      fullName,
+      passwordHash: this.hashPassword(password),
+      role: 'admin',
+    });
+    user.role = 'admin';
+    user.passwordHash = this.hashPassword(password);
+    if (!existing) user.fullName = fullName;
+    return this.toPublicUser(await this.usersRepository.save(user));
+  }
+
+  async resetPassword(payload: ResetPasswordRequest): Promise<void> {
+    const body = this.validateResetPassword(payload);
+    const otp = await this.otpCodesRepository.findOne({
+      where: { mobile: body.mobile, consumedAt: IsNull() },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!otp || otp.expiresAt.getTime() <= Date.now()) {
+      if (otp) {
+        otp.consumedAt = new Date();
+        await this.otpCodesRepository.save(otp);
+      }
+      this.throwInvalidOtp();
+    }
+
+    if (otp.attempts >= this.otpMaxAttempts) {
+      otp.consumedAt = new Date();
+      await this.otpCodesRepository.save(otp);
+      this.throwInvalidOtp();
+    }
+
+    const isValidCode = this.verifyOtpCode(body.mobile, body.code, otp.codeHash);
+    if (!isValidCode) {
+      otp.attempts += 1;
+      await this.otpCodesRepository.save(otp);
+      this.throwInvalidOtp();
+    }
+
+    const user = await this.usersRepository.findOne({ where: { mobile: body.mobile } });
+    if (!user) {
+      this.throwInvalidOtp();
+    }
+
+    otp.consumedAt = new Date();
+    await this.otpCodesRepository.save(otp);
+    await this.usersRepository.update(
+      { id: user.id },
+      { passwordHash: this.hashPassword(body.newPassword) },
+    );
   }
 
   async refresh(payload: RefreshTokenRequest): Promise<IssuedAuthTokens> {
@@ -498,6 +558,28 @@ export class AuthService {
     return { mobile, code };
   }
 
+  private validateResetPassword(payload: ResetPasswordRequest): ResetPasswordRequest {
+    const fields: Record<string, string> = {};
+    const mobile = payload?.mobile?.trim();
+    const code = payload?.code?.trim();
+    const newPassword = payload?.newPassword;
+
+    if (!this.isValidMobile(mobile)) {
+      fields.mobile = 'شماره موبایل معتبر نیست';
+    }
+
+    if (!code || !new RegExp(`^\\d{${this.otpLength}}$`).test(code)) {
+      fields.code = 'کد تایید معتبر نیست';
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+      fields.newPassword = 'رمز عبور جدید باید حداقل ۸ کاراکتر باشد';
+    }
+
+    this.throwValidation(fields);
+    return { mobile, code, newPassword };
+  }
+
   private validateRefresh(payload: RefreshTokenRequest): RefreshTokenRequest {
     const refreshToken = payload?.refreshToken?.trim();
 
@@ -568,6 +650,14 @@ export class AuthService {
     const hash = Buffer.from(this.hashOtpCode(mobile, code), 'hex');
     const stored = Buffer.from(storedHash, 'hex');
     return hash.length === stored.length && timingSafeEqual(hash, stored);
+  }
+
+  private throwInvalidOtp(): never {
+    throw new UnauthorizedException({
+      statusCode: 401,
+      code: 'INVALID_OTP',
+      message: 'کد تایید معتبر نیست',
+    });
   }
 
   private async findOrCreateOtpUser(mobile: string): Promise<UserEntity> {

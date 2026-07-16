@@ -135,6 +135,13 @@ interface ProjectInfo {
 - **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
 - **خطاها:** `401 INVALID_OTP`، `400 VALIDATION_ERROR`
 
+### `POST /auth/password/reset`
+
+- **بدنه:** `ResetPasswordRequest`
+- **پاسخ:** `204 No Content`
+- **رفتار:** کد تایید را مصرف می‌کند، رمز عبور جدید را ذخیره می‌کند و کاربر را لاگین نمی‌کند.
+- **خطاها:** `401 INVALID_OTP`، `400 VALIDATION_ERROR`
+
 ### `POST /auth/refresh`
 
 - **پاسخ:** `200 AuthResponse` + `Set-Cookie: accessToken, refreshToken`
@@ -184,6 +191,12 @@ interface RequestOtpRequest {
 interface VerifyOtpRequest {
   mobile: string;
   code: string;
+}
+
+interface ResetPasswordRequest {
+  mobile: string;
+  code: string;
+  newPassword: string;
 }
 
 interface OtpRequestResponse {
@@ -860,3 +873,61 @@ interface InvitationCard {
   createdAt: ISODate;
 }
 ```
+
+---
+
+# بخش ۹ — پنل مدیریت و CRM
+
+همه مسیرهای این بخش به نشست معتبر با نقش `admin` نیاز دارند. اطلاعات تراکنشی در API نگه‌داری می‌شود و پنل `/admin` فقط مصرف‌کننده این قرارداد است.
+
+### داشبورد و مخاطبان
+
+- `GET /admin/dashboard` → `200 AdminDashboardSummary`
+- `GET /admin/users?page&pageSize&search&stage` → `200 Paginated<AdminUserListItem>`
+- `GET /admin/users/:id` → `200 AdminUserDetails`
+- `PATCH /admin/users/:id/crm` با `UpdateCrmProfileRequest` → `200 CrmProfile`
+- `POST /admin/users/:id/activities` با `CreateCrmActivityRequest` → `201 CrmActivity`
+
+مرحله‌های CRM: `new | engaged | recurring | at_risk | inactive`.
+فعالیت‌ها: `call | note | payment | ticket | status`.
+
+پرونده مخاطب شامل مشخصات، خلاصه مشارکت، نذرها، پرداخت‌ها، تیکت‌ها، وضعیت CRM و تاریخچه فعالیت است. داده‌های حساس مانند هش رمز در پاسخ وجود ندارند.
+
+### نذر و پرداخت
+
+- `GET /admin/nazr-types` → `200 NazrType[]`
+- `POST /admin/nazr-types` با `CreateNazrTypeRequest` → `201 NazrType`
+- `PATCH /admin/nazr-types/:id` با `UpdateNazrTypeRequest` → `200 NazrType`
+- `DELETE /admin/nazr-types/:id` → `204` (حذف قطعی فقط وقتی هیچ نذری از این نوع ثبت نشده باشد)
+  - اگر نوع نذر استفاده شده باشد: `409 NAZR_TYPE_IN_USE` و مدیر باید آن را غیرفعال کند.
+- `GET /admin/nazr-requests?page&pageSize&search&status` → `200 Paginated<NazrRequest>`
+- `PATCH /admin/nazr-requests/:id/status` با `UpdateNazrRequestStatus` → `200 NazrRequest`
+- `GET /admin/payments?page&pageSize&search&status` → `200 Paginated<Payment>`
+- `POST /admin/payments/:id/approve` → `200 Payment`
+- `POST /admin/payments/:id/reject` با `{ reason?: string }` → `200 Payment`
+
+تأیید پرداخت، درخواست نذر را `confirmed` می‌کند. رد پرداخت، درخواست را `cancelled` می‌کند و دلیل در یادداشت مدیریتی ثبت می‌شود.
+
+### پشتیبانی، اعلان و گالری
+
+- `GET /admin/tickets?page&pageSize` → `200 Paginated<Ticket>`
+- پاسخ و بستن تیکت از مسیرهای مشترک `POST /tickets/:id/reply` و `POST /tickets/:id/close` انجام می‌شود.
+- `GET /admin/notifications?page&pageSize` → `200 Paginated<AdminNotificationItem>`
+- `POST /admin/notifications` با `CreateNotificationRequest` → `201 AdminNotificationItem`
+- `GET /admin/gallery` → `200 GalleryAsset[]`
+- `POST /admin/gallery` با `CreateGalleryAssetRequest` → `201 GalleryAsset`
+- `PATCH /admin/gallery/:id` با `UpdateGalleryAssetRequest` → `200 GalleryAsset`
+- `DELETE /admin/gallery/:id` → `204`
+
+### کال‌سنتر و پیگیری ماهانه
+
+- `GET /admin/call-tasks?page&pageSize&status` → `200 Paginated<CallTask>`
+- `POST /admin/call-tasks` با `CreateCallTaskRequest` → `201 CallTask`
+- `POST /admin/call-tasks/generate` با `GenerateMonthlyCallTasksRequest` → `201 { created: number }`
+- `PATCH /admin/call-tasks/:id` با `UpdateCallTaskRequest` → `200 CallTask`
+
+دوره با قالب `YYYY-MM` ارسال می‌شود. تولید ماهانه فقط برای کیف‌پول‌هایی انجام می‌شود که برداشت دوره‌ای فعال دارند و برای هر مخاطب در هر دوره فقط یک وظیفه ساخته می‌شود.
+
+وضعیت‌های تماس: `pending | contacted | promised | paid | unreachable | cancelled`.
+
+تعریف کامل تایپ‌های این بخش در `packages/shared/src/admin.ts` منبع حقیقت قرارداد است.

@@ -40,6 +40,7 @@ import {
   OtpRequestResponseDto,
   RefreshTokenRequestDto,
   RequestOtpRequestDto,
+  ResetPasswordRequestDto,
   RegisterRequestDto,
   UpdateProfileRequestDto,
   VerifyOtpRequestDto,
@@ -126,6 +127,22 @@ export class AuthController {
     const authResponse = await this.authService.verifyOtp(body);
     this.authService.setAuthCookies(response, authResponse);
     return { user: authResponse.user };
+  }
+
+  @ApiOperation({
+    summary: 'بازنشانی رمز عبور',
+    description:
+      'بعد از دریافت کد تایید، رمز عبور جدید را ذخیره می‌کند و کاربر را وارد حساب نمی‌کند.',
+  })
+  @ApiBody({ type: ResetPasswordRequestDto })
+  @ApiNoContentResponse({ description: 'رمز عبور با موفقیت تغییر کرد' })
+  @ApiBadRequestResponse({ type: ApiErrorDto, description: 'VALIDATION_ERROR' })
+  @ApiUnauthorizedResponse({ type: ApiErrorDto, description: 'INVALID_OTP' })
+  @Public()
+  @HttpCode(204)
+  @Post('password/reset')
+  resetPassword(@Body() body: ResetPasswordRequestDto) {
+    return this.authService.resetPassword(body);
   }
 
   @ApiCookieAuth(REFRESH_TOKEN_COOKIE)

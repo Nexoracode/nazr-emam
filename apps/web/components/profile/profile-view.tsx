@@ -12,7 +12,10 @@ import type {
   NotificationItem,
   Paginated,
   Payment,
+  PaymentMethod,
+  PaymentStatus,
   Ticket,
+  UserMissionStatus,
   UserPlatform,
   UserProfileDetails,
   UserProfileSummary,
@@ -78,6 +81,18 @@ const PLATFORM_OPTIONS: Array<{ id: UserPlatform; label: string }> = [
   { id: 'other', label: 'سایر' },
 ];
 
+const TICKET_STATUS_LABEL: Record<Ticket['status'], string> = {
+  open: 'در انتظار پاسخ',
+  answered: 'پاسخ داده شده',
+  closed: 'بسته شده',
+};
+
+const TICKET_STATUS_CLASS: Record<Ticket['status'], string> = {
+  open: 'badge-warning',
+  answered: 'badge-success',
+  closed: 'badge-neutral',
+};
+
 const STATUS_LABEL: Record<NazrRequestStatus, string> = {
   draft: 'پیش‌نویس',
   submitted: 'ثبت شده',
@@ -100,6 +115,38 @@ const STATUS_COLOR: Record<NazrRequestStatus, string> = {
   completed: 'badge-success',
   cancelled: 'badge-neutral',
   rejected: 'badge-danger',
+};
+
+const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
+  pending: 'در انتظار بررسی',
+  paid: 'پرداخت موفق',
+  rejected: 'رد شده',
+  refunded: 'بازگشت داده شده',
+};
+
+const PAYMENT_STATUS_COLOR: Record<PaymentStatus, string> = {
+  pending: 'badge-warning',
+  paid: 'badge-success',
+  rejected: 'badge-danger',
+  refunded: 'badge-neutral',
+};
+
+const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  online: 'پرداخت آنلاین',
+  card_to_card: 'کارت به کارت',
+  cash: 'نقدی',
+};
+
+const MISSION_STATUS_LABEL: Record<UserMissionStatus, string> = {
+  available: 'در دسترس',
+  completed: 'تکمیل شده',
+  locked: 'قفل شده',
+};
+
+const MISSION_STATUS_COLOR: Record<UserMissionStatus, string> = {
+  available: 'badge-info',
+  completed: 'badge-success',
+  locked: 'badge-neutral',
 };
 
 export function ProfileView() {
@@ -179,6 +226,7 @@ export function ProfileView() {
         {activeTab === 'dashboard' && (
           <DashboardPanel
             nazrs={nazrs?.items ?? []}
+            onNavigate={setActiveTab}
             onSummaryChange={setSummary}
             summary={summary}
           />
@@ -204,14 +252,17 @@ export function ProfileView() {
 
 function DashboardPanel({
   nazrs,
+  onNavigate,
   onSummaryChange,
   summary,
 }: {
   nazrs: NazrRequest[];
+  onNavigate: (tab: ProfileTab) => void;
   onSummaryChange: (summary: UserProfileSummary) => void;
   summary: UserProfileSummary;
 }) {
   const recent = nazrs.slice(0, 3);
+  const firstName = summary.profile.fullName.trim().split(/\s+/)[0] || 'همراه عزیز';
   const [target, setTarget] = useState(summary.profile.motivationalTarget ?? '');
   const [targetStatus, setTargetStatus] = useState('');
   const [savingTarget, setSavingTarget] = useState(false);
@@ -235,49 +286,113 @@ function DashboardPanel({
   }
 
   return (
-    <div className="profile-stack">
-      <section className="surface-card profile-hero">
-        <div>
-          <h1 className="profile-hero-title">هر نذر کوچک، یک چراغ روشن‌تر.</h1>
-          <p className="profile-muted">خلاصه همراهی، پرداخت‌ها و مسیر شخصی شما در این پنل جمع شده است.</p>
+    <div className="profile-stack dashboard-stack">
+      <section className="surface-card dashboard-welcome">
+        <div className="dashboard-welcome-copy">
+          <p className="dashboard-kicker">سلام {firstName}</p>
+          <h1 className="dashboard-title">نمای کلی حساب شما</h1>
+          <p className="dashboard-subtitle">هر نذر کوچک، یک چراغ روشن‌تر.</p>
+          <div className="dashboard-welcome-actions">
+            <Link className="btn-primary" href="/nazr/new">
+              ثبت نذر جدید
+            </Link>
+            <button className="btn-ghost" onClick={() => onNavigate('contributions')} type="button">
+              مشاهده مشارکت‌ها
+            </button>
+          </div>
         </div>
-        <Link className="btn-primary" href="/nazr/new">
-          مشارکت دوباره
-        </Link>
-      </section>
 
-      <section className="surface-card">
-        <div className="profile-stat-grid">
-          <StatCard label="تعداد مشارکت" value={String(summary.contributions.totalRequests)} />
-          <StatCard label="مبلغ مشارکت" value={formatMoney(summary.contributions.totalAmount)} />
-          <StatCard label="امتیاز باشگاه" value={summary.club.points.toLocaleString('fa-IR')} />
-          <StatCard label="اعلان خوانده‌نشده" value={String(summary.unreadNotifications)} />
-        </div>
-      </section>
-
-      <section className="surface-card">
-        <h2 className="card-title">هدف شخصی من</h2>
-        <form className="profile-goal-form" onSubmit={handleTargetSubmit}>
-          <textarea
-            className="field-input profile-textarea"
-            maxLength={500}
-            onChange={(e) => setTarget(e.target.value)}
-            placeholder="مثلاً امسال در سه طرح نذر شرکت کنم."
-            value={target}
+        <div className="dashboard-attention" aria-label="موارد نیازمند پیگیری">
+          <p className="dashboard-attention-title">نیازمند پیگیری</p>
+          <DashboardAttentionItem
+            count={summary.contributions.awaitingPaymentRequests}
+            label="پرداخت ناتمام"
+            onClick={() => onNavigate('contributions')}
           />
-          {targetStatus && <p className="profile-muted">{targetStatus}</p>}
-          <button className="btn-primary" disabled={savingTarget} type="submit">
-            {savingTarget ? 'در حال ذخیره...' : 'ذخیره هدف'}
-          </button>
-        </form>
+          <DashboardAttentionItem
+            count={summary.openTickets}
+            label="تیکت باز"
+            onClick={() => onNavigate('tickets')}
+          />
+          <DashboardAttentionItem
+            count={summary.unreadNotifications}
+            label="اعلان خوانده‌نشده"
+            onClick={() => onNavigate('notifications')}
+          />
+        </div>
       </section>
 
-      <RecentActivities items={recent} />
+      <section className="dashboard-stat-grid" aria-label="خلاصه حساب">
+        <DashboardStatCard label="کل مشارکت‌ها" tone="primary" value={summary.contributions.totalRequests.toLocaleString('fa-IR')} />
+        <DashboardStatCard label="مبلغ پرداخت‌شده" tone="success" value={formatMoney(summary.payments.totalPaidAmount)} />
+        <DashboardStatCard label="نذرهای تکمیل‌شده" tone="warm" value={summary.contributions.completedRequests.toLocaleString('fa-IR')} />
+        <DashboardStatCard label="امتیاز باشگاه" tone="neutral" value={summary.club.points.toLocaleString('fa-IR')} />
+      </section>
+
+      <div className="dashboard-content-grid">
+        <RecentActivities
+          hasMore={nazrs.length > recent.length}
+          items={recent}
+          onViewAll={() => onNavigate('contributions')}
+        />
+
+        <div className="dashboard-side-column">
+          <section className="surface-card dashboard-goal-card">
+            <div className="dashboard-panel-heading">
+              <div>
+                <h2 className="card-title">هدف شخصی من</h2>
+                <p className="profile-muted">چیزی که می‌خواهید با همراهی در نذرها به آن برسید.</p>
+              </div>
+              <span className="dashboard-character-count">{target.length.toLocaleString('fa-IR')}/۵۰۰</span>
+            </div>
+            <form className="profile-goal-form" onSubmit={handleTargetSubmit}>
+              <textarea
+                className="field-input profile-textarea dashboard-goal-input"
+                maxLength={500}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="مثلاً امسال در سه طرح نذر شرکت کنم."
+                value={target}
+              />
+              {targetStatus && <p aria-live="polite" className="profile-muted">{targetStatus}</p>}
+              <button className="btn-primary dashboard-goal-submit" disabled={savingTarget} type="submit">
+                {savingTarget ? 'در حال ذخیره...' : 'ذخیره هدف'}
+              </button>
+            </form>
+          </section>
+
+          <section className="surface-card dashboard-shortcuts">
+            <h2 className="card-title">دسترسی سریع</h2>
+            <DashboardShortcut
+              detail={`${summary.payments.totalPayments.toLocaleString('fa-IR')} واریز ثبت‌شده`}
+              label="واریزهای من"
+              onClick={() => onNavigate('payments')}
+            />
+            <DashboardShortcut
+              detail={`${summary.openTickets.toLocaleString('fa-IR')} تیکت باز`}
+              label="پشتیبانی و تیکت‌ها"
+              onClick={() => onNavigate('tickets')}
+            />
+            <DashboardShortcut
+              detail={`${summary.club.points.toLocaleString('fa-IR')} امتیاز · سطح ${summary.club.level}`}
+              label="باشگاه همراهان"
+              onClick={() => onNavigate('club')}
+            />
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
 
-function RecentActivities({ items }: { items: NazrRequest[] }) {
+function RecentActivities({
+  hasMore = false,
+  items,
+  onViewAll,
+}: {
+  hasMore?: boolean;
+  items: NazrRequest[];
+  onViewAll?: () => void;
+}) {
   const [paymentError, setPaymentError] = useState('');
   const [startingPaymentId, setStartingPaymentId] = useState<string | null>(null);
 
@@ -294,14 +409,27 @@ function RecentActivities({ items }: { items: NazrRequest[] }) {
   }
 
   return (
-    <section className="surface-card">
-      <h2 className="card-title">فعالیت‌های اخیر</h2>
+    <section className="surface-card dashboard-activities">
+      <div className="dashboard-panel-heading dashboard-activities-heading">
+        <div>
+          <h2 className="card-title">فعالیت‌های اخیر</h2>
+          <p className="profile-muted">آخرین نذرها و وضعیت پیگیری آن‌ها</p>
+        </div>
+        {onViewAll && (items.length > 0 || hasMore) && (
+          <button className="dashboard-text-button" onClick={onViewAll} type="button">
+            مشاهده همه
+          </button>
+        )}
+      </div>
       {items.length === 0 ? (
-        <EmptyState title="هنوز مشارکتی ثبت نشده است" body="بعد از ثبت اولین نذر، فعالیت‌های اخیر اینجا نمایش داده می‌شود." />
+        <div className="dashboard-empty-activity">
+          <EmptyState title="هنوز مشارکتی ثبت نشده است" body="بعد از ثبت اولین نذر، وضعیت آن را از همین بخش پیگیری می‌کنید." />
+          <Link className="btn-primary" href="/nazr/new">ثبت اولین نذر</Link>
+        </div>
       ) : (
-        <div className="profile-list">
+        <div className="profile-list dashboard-activity-list">
           {items.map((item) => (
-            <div className="profile-list-row" key={item.id}>
+            <article className="profile-list-row dashboard-activity-row" key={item.id}>
               <div className="profile-list-head">
                 <div className="profile-list-main">
                   <p className="profile-list-title">{item.nazrType.title}</p>
@@ -334,12 +462,66 @@ function RecentActivities({ items }: { items: NazrRequest[] }) {
                   </Link>
                 </div>
               )}
-            </div>
+            </article>
           ))}
           {paymentError && <p className="field-error">{paymentError}</p>}
         </div>
       )}
     </section>
+  );
+}
+
+function DashboardAttentionItem({
+  count,
+  label,
+  onClick,
+}: {
+  count: number;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button className="dashboard-attention-item" onClick={onClick} type="button">
+      <span>{label}</span>
+      <strong>{count.toLocaleString('fa-IR')}</strong>
+    </button>
+  );
+}
+
+function DashboardStatCard({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone: 'neutral' | 'primary' | 'success' | 'warm';
+  value: string;
+}) {
+  return (
+    <div className={`dashboard-stat-card is-${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function DashboardShortcut({
+  detail,
+  label,
+  onClick,
+}: {
+  detail: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button className="dashboard-shortcut" onClick={onClick} type="button">
+      <span>
+        <strong>{label}</strong>
+        <small>{detail}</small>
+      </span>
+      <span aria-hidden="true" className="dashboard-shortcut-arrow">←</span>
+    </button>
   );
 }
 
@@ -478,10 +660,12 @@ function PaymentsPanel() {
             <div className="profile-list-row" key={payment.id}>
               <div className="profile-list-head">
                 <p className="profile-list-title">{formatMoney(payment.amount)}</p>
-                <span className={payment.status === 'paid' ? 'badge-success' : 'badge-warning'}>{payment.status}</span>
+                <span className={PAYMENT_STATUS_COLOR[payment.status]}>
+                  {PAYMENT_STATUS_LABEL[payment.status]}
+                </span>
               </div>
               <div className="profile-list-info">
-                <ProfileRecentInfo label="روش" value={payment.method} />
+                <ProfileRecentInfo label="روش" value={PAYMENT_METHOD_LABEL[payment.method]} />
                 <ProfileRecentInfo label="تاریخ" value={formatDate(payment.createdAt)} />
                 {payment.transactionReference && <ProfileRecentInfo label="کد تراکنش" value={payment.transactionReference} />}
               </div>
@@ -552,36 +736,57 @@ function TicketsPanel() {
           <button className="btn-primary" type="submit">ارسال تیکت</button>
         </form>
       </section>
-      <section className="surface-card">
-        <h2 className="card-title">تیکت‌های من</h2>
-        <div className="profile-list">
+      <section className="profile-ticket-section">
+        <div className="profile-section-heading">
+          <div>
+            <h2 className="card-title">تیکت‌های من</h2>
+            <p className="profile-muted">گفتگوهای شما با پشتیبانی</p>
+          </div>
+          {tickets ? <span className="profile-ticket-count">{tickets.total.toLocaleString('fa-IR')} گفتگو</span> : null}
+        </div>
+        <div className="profile-ticket-list">
           {!tickets || tickets.items.length === 0 ? (
             <EmptyState title="تیکتی وجود ندارد" body="برای ارتباط با پشتیبانی سایت، از فرم بالا استفاده کنید." />
           ) : (
             tickets.items.map((ticket) => (
-              <div className="profile-list-row" key={ticket.id}>
-                <div className="profile-list-head">
-                  <p className="profile-list-title">{ticket.subject}</p>
-                  <span className={ticket.status === 'closed' ? 'badge-neutral' : 'badge-info'}>{ticket.status}</span>
+              <article className="profile-ticket-card" key={ticket.id}>
+                <header className="profile-ticket-header">
+                  <div>
+                    <h3>{ticket.subject}</h3>
+                    <p>ایجاد شده در {formatDate(ticket.createdAt)}</p>
+                  </div>
+                  <span className={TICKET_STATUS_CLASS[ticket.status]}>{TICKET_STATUS_LABEL[ticket.status]}</span>
+                </header>
+
+                <div className="profile-ticket-thread">
+                  {ticket.messages.map((item) => (
+                    <div className={`profile-ticket-bubble-row ${item.authorType === 'user' ? 'is-own' : ''}`} key={item.id}>
+                      <div className="profile-ticket-bubble">
+                        <span>{item.authorType === 'support' ? 'پشتیبانی' : 'شما'}</span>
+                        <p>{item.body}</p>
+                        <time>{formatTicketDate(item.createdAt)}</time>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {ticket.messages.map((item) => (
-                  <p className="profile-ticket-message" key={item.id}>
-                    {item.authorType === 'support' ? 'پشتیبانی' : 'شما'}: {item.body}
-                  </p>
-                ))}
+
                 {ticket.status !== 'closed' && (
-                  <div className="profile-inline-form">
-                    <input
-                      className="field-input"
+                  <div className="profile-ticket-reply">
+                    <textarea
+                      className="field-input profile-ticket-reply-input"
                       onChange={(e) => setReplyBody((current) => ({ ...current, [ticket.id]: e.target.value }))}
-                      placeholder="پاسخ کوتاه"
+                      placeholder="پاسخ خود را بنویسید..."
+                      rows={2}
                       value={replyBody[ticket.id] ?? ''}
                     />
-                    <button className="btn-ghost" onClick={() => handleReply(ticket.id)} type="button">پاسخ</button>
-                    <button className="btn-ghost" onClick={() => handleClose(ticket.id)} type="button">بستن</button>
+                    <div>
+                      <button className="btn-ghost" onClick={() => handleClose(ticket.id)} type="button">بستن تیکت</button>
+                      <button className="btn-primary" disabled={!replyBody[ticket.id]?.trim()} onClick={() => handleReply(ticket.id)} type="button">ارسال پاسخ</button>
+                    </div>
                   </div>
                 )}
-              </div>
+                {ticket.status === 'closed' ? <p className="profile-ticket-closed">این گفتگو بسته شده است.</p> : null}
+              </article>
             ))
           )}
         </div>
@@ -737,7 +942,9 @@ function ClubPanel({ summary }: { summary: UserProfileSummary }) {
           <div className="profile-list-row" key={mission.id}>
             <div className="profile-list-head">
               <p className="profile-list-title">{mission.title}</p>
-              <span className={mission.status === 'completed' ? 'badge-success' : 'badge-neutral'}>{mission.status}</span>
+              <span className={MISSION_STATUS_COLOR[mission.status]}>
+                {MISSION_STATUS_LABEL[mission.status]}
+              </span>
             </div>
             <p className="profile-muted">{mission.description}</p>
             <ProfileRecentInfo label="امتیاز" value={mission.points.toLocaleString('fa-IR')} />
@@ -864,9 +1071,24 @@ function ChangePasswordCard() {
     <section className="surface-card">
       <h2 className="card-title">گذرواژه</h2>
       <form className="field-stack" onSubmit={handleSubmit}>
-        <Field autoComplete="current-password" label="گذرواژه فعلی" onChange={setCurrentPassword} type="password" value={currentPassword} />
-        <Field autoComplete="new-password" label="گذرواژه جدید" onChange={setNewPassword} type="password" value={newPassword} />
-        <Field autoComplete="new-password" label="تکرار گذرواژه جدید" onChange={setConfirmPassword} type="password" value={confirmPassword} />
+        <PasswordField
+          autoComplete="current-password"
+          label="گذرواژه فعلی"
+          onChange={setCurrentPassword}
+          value={currentPassword}
+        />
+        <PasswordField
+          autoComplete="new-password"
+          label="گذرواژه جدید"
+          onChange={setNewPassword}
+          value={newPassword}
+        />
+        <PasswordField
+          autoComplete="new-password"
+          label="تکرار گذرواژه جدید"
+          onChange={setConfirmPassword}
+          value={confirmPassword}
+        />
         {message && <p className="profile-muted">{message}</p>}
         <button className="btn-primary" disabled={saving} type="submit">
           {saving ? 'در حال ذخیره...' : 'تغییر گذرواژه'}
@@ -927,12 +1149,69 @@ function Field({
   );
 }
 
+function PasswordField({
+  autoComplete,
+  label,
+  onChange,
+  value,
+}: {
+  autoComplete: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className="field-group">
+      <span className="field-label">{label}</span>
+      <span className="relative block">
+        <input
+          autoComplete={autoComplete}
+          className="field-input pr-10"
+          dir="ltr"
+          onChange={(e) => onChange(e.target.value)}
+          type={visible ? 'text' : 'password'}
+          value={value}
+        />
+        <button
+          aria-label={visible ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
+          className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[var(--muted)] transition hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+          onClick={() => setVisible((current) => !current)}
+          type="button"
+        >
+          {visible ? <EyeOffIcon /> : <EyeIcon />}
+        </button>
+      </span>
+    </label>
+  );
+}
+
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <div className="profile-empty">
       <p className="profile-empty-title">{title}</p>
       <p className="profile-muted">{body}</p>
     </div>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
+      <path d="m3 3 18 18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M10.7 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.8 18.8 0 0 1-3.1 4.1M6.6 6.6C3.7 8.6 2 12 2 12s3.5 7 10 7c1.5 0 2.8-.3 4-.8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <path d="M9.9 9.9A3 3 0 0 0 14.1 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
   );
 }
 
@@ -946,4 +1225,14 @@ function formatDate(iso: string): string {
     month: 'long',
     year: 'numeric',
   });
+}
+
+function formatTicketDate(iso: string): string {
+  return new Intl.DateTimeFormat('fa-IR', {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(iso));
 }

@@ -84,6 +84,12 @@ export interface VerifyOtpRequest {
   code: string;
 }
 
+export interface ResetPasswordRequest {
+  mobile: string;
+  code: string;
+  newPassword: string;
+}
+
 export interface OtpRequestResponse {
   expiresAt: ISODate;
 }

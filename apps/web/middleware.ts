@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const PUBLIC_AUTH_PATHS = ['/auth'];
-const PROTECTED_PATHS = ['/profile', '/dashboard'];
+const PROTECTED_PATHS = ['/profile', '/dashboard', '/admin'];
 
 function getSafeRedirect(value: string | null) {
   if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/auth')) {
@@ -32,5 +32,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/auth/:path*', '/profile/:path*', '/dashboard/:path*'],
+  matcher: ['/auth/:path*', '/profile/:path*', '/dashboard/:path*', '/admin/:path*'],
 };

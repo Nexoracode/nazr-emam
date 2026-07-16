@@ -6,6 +6,7 @@ import type {
   OtpRequestResponse,
   RefreshTokenRequest,
   RequestOtpRequest,
+  ResetPasswordRequest,
   RegisterRequest,
   UpdateProfileRequest,
   User,
@@ -51,6 +52,17 @@ export class VerifyOtpRequestDto implements VerifyOtpRequest {
 
   @ApiProperty({ example: '123456', description: 'کد یکبار مصرف' })
   code!: string;
+}
+
+export class ResetPasswordRequestDto implements ResetPasswordRequest {
+  @ApiProperty({ example: '09123456789', description: 'شماره موبایل ایران' })
+  mobile!: string;
+
+  @ApiProperty({ example: '123456', description: 'کد تایید ارسال‌شده' })
+  code!: string;
+
+  @ApiProperty({ example: 'NewStrongPass123', minLength: 8, description: 'رمز عبور جدید' })
+  newPassword!: string;
 }
 
 export class OtpRequestResponseDto implements OtpRequestResponse {
