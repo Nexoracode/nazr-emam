@@ -125,8 +125,9 @@ function amountToPersianWords(value: number) {
   return `${words} تومان`;
 }
 
-export function NazrRequestForm() {
+export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?: string }) {
   const eitaaReceiptUrl = process.env.NEXT_PUBLIC_EITAA_RECEIPT_URL ?? 'https://eitaa.com/nazr_emam';
+  const requestedNazrTypeId = initialNazrTypeId;
   const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
   const [donorNationalCode, setDonorNationalCode] = useState('');
@@ -150,7 +151,13 @@ export function NazrRequestForm() {
       .then((items) => {
         if (ignore) return;
         setNazrTypes(items);
-        setSelectedTypeId((current) => current || items[0]?.id || '');
+        setSelectedTypeId((current) => {
+          if (current) return current;
+          if (requestedNazrTypeId && items.some((item) => item.id === requestedNazrTypeId)) {
+            return requestedNazrTypeId;
+          }
+          return items[0]?.id || '';
+        });
       })
       .catch(() => {
         if (ignore) return;
@@ -164,7 +171,7 @@ export function NazrRequestForm() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [requestedNazrTypeId]);
 
   useEffect(() => {
     let ignore = false;
@@ -202,6 +209,9 @@ export function NazrRequestForm() {
       ? 'text-[var(--status-ok-color)]'
       : 'text-auth-text';
   const amountInWords = useMemo(() => amountToPersianWords(normalizeAmount(amount)), [amount]);
+  const loginRedirectPath = requestedNazrTypeId
+    ? `/nazr/new?nazrTypeId=${encodeURIComponent(requestedNazrTypeId)}`
+    : '/nazr/new';
 
   function resetMessages() {
     setMessage('');
@@ -350,7 +360,7 @@ export function NazrRequestForm() {
                   برای ثبت نذر باید وارد{' '}
                   <Link
                     className="font-bold text-auth-link underline-offset-4 transition hover:underline"
-                    href="/auth/login?redirect=/nazr/new"
+                    href={`/auth/login?redirect=${encodeURIComponent(loginRedirectPath)}`}
                   >
                     حساب کاربری
                   </Link>{' '}

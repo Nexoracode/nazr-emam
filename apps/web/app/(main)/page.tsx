@@ -249,7 +249,11 @@ export default async function Home() {
               const progress = getPlanProgress(index);
 
               return (
-                <article className={isActive ? 'home-plan-card' : 'home-plan-card is-complete'} key={type.id}>
+                <Link
+                  className={isActive ? 'home-plan-card' : 'home-plan-card is-complete'}
+                  href={isActive ? `/nazr/new?nazrTypeId=${encodeURIComponent(type.id)}` : '/#plans'}
+                  key={type.id}
+                >
                   <div className="home-plan-head">
                     <h3>{type.title}</h3>
                     <span>{isActive ? 'فعال' : 'غیرفعال'}</span>
@@ -259,10 +263,10 @@ export default async function Home() {
                   <div className="home-plan-progress" aria-label={`پیشرفت ${progress} درصد`}>
                     <span style={{ width: `${progress}%` }} />
                   </div>
-                  <Link className="home-plan-link" href={isActive ? '/nazr/new' : '/#plans'}>
+                  <span className="home-plan-link">
                     {isActive ? 'شرکت در طرح' : 'فعلاً غیرفعال'}
-                  </Link>
-                </article>
+                  </span>
+                </Link>
               );
             })}
           </div>
