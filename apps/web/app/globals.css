@@ -813,6 +813,13 @@ input {
   gap: 14px;
 }
 
+.home-plan-amount {
+  color: #0d6952;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.7;
+}
+
 .home-plan-card.is-complete {
   opacity: 0.58;
 }

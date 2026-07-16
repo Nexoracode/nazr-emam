@@ -1,4 +1,7 @@
+import type { NazrType, ProjectInfo } from '@nazr-emam/shared';
 import Link from 'next/link';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 const stats = [
   { value: '۱۲۸۰+', label: 'نذر ثبت‌شده' },
@@ -14,7 +17,7 @@ const whyCards = [
   },
   {
     title: 'انتخاب طرح مناسب',
-    text: 'طرح‌های فعال، مبلغ مورد نیاز و وضعیت تکمیل هر طرح در یک نگاه دیده می‌شود.',
+    text: 'طرح‌های فعال، مبلغ پیشنهادی و مسیر مشارکت هر طرح در یک نگاه دیده می‌شود.',
     featured: true,
   },
   {
@@ -38,16 +41,86 @@ const faqItems = [
   },
 ];
 
-const plans = [
-  { title: 'اطعام زائران', amount: '۳۲۰,۰۰۰ تومان', progress: 68, status: 'فعال' },
-  { title: 'بسته معیشتی', amount: '۷۵۰,۰۰۰ تومان', progress: 46, status: 'فعال' },
-  { title: 'چراغ حرم دل‌ها', amount: '۱۸۰,۰۰۰ تومان', progress: 100, status: 'تکمیل‌شده' },
-  { title: 'نذر درمان', amount: '۱,۲۰۰,۰۰۰ تومان', progress: 38, status: 'فعال' },
-  { title: 'نذر فرهنگی', amount: '۲۵۰,۰۰۰ تومان', progress: 57, status: 'فعال' },
-  { title: 'خدمت داوطلبانه', amount: 'ثبت مشارکت', progress: 82, status: 'فعال' },
+const fallbackProject: ProjectInfo = {
+  name: 'Nazr Emam',
+  description: 'سامانه ثبت، پرداخت و پیگیری نذر امام',
+  workflow: ['انتخاب طرح', 'ثبت نذر', 'پرداخت', 'دریافت کد رهگیری'],
+};
+
+const fallbackNazrTypes: NazrType[] = [
+  {
+    id: 'fallback-food',
+    slug: 'food',
+    title: 'اطعام زائران',
+    description: 'مشارکت در تامین اطعام و پذیرایی از زائران و خانواده‌های نیازمند.',
+    suggestedAmount: { amount: 320000, currency: 'IRT' },
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'fallback-livelihood',
+    slug: 'livelihood',
+    title: 'بسته معیشتی',
+    description: 'کمک به تهیه بسته‌های معیشتی برای خانواده‌های کم‌برخوردار.',
+    suggestedAmount: { amount: 750000, currency: 'IRT' },
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'fallback-culture',
+    slug: 'culture',
+    title: 'نذر فرهنگی',
+    description: 'حمایت از تولید و توزیع محتوای فرهنگی و آموزشی.',
+    suggestedAmount: { amount: 250000, currency: 'IRT' },
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  },
 ];
 
-export default function Home() {
+async function fetchPublicApi<T>(path: string): Promise<T | null> {
+  try {
+    const response = await fetch(`${apiUrl}${path}`, {
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function formatMoney(type: NazrType): string {
+  if (!type.suggestedAmount) {
+    return 'مبلغ آزاد';
+  }
+
+  const amount = new Intl.NumberFormat('fa-IR').format(type.suggestedAmount.amount);
+  const unit = type.suggestedAmount.currency === 'IRT' ? 'تومان' : 'ریال';
+  return `${amount} ${unit}`;
+}
+
+function getPlanProgress(index: number): number {
+  const progress = [68, 46, 82, 57, 38, 74];
+  return progress[index % progress.length];
+}
+
+export default async function Home() {
+  const [project, nazrTypesResponse] = await Promise.all([
+    fetchPublicApi<ProjectInfo>('/project'),
+    fetchPublicApi<NazrType[]>('/nazr-types'),
+  ]);
+
+  const projectInfo = project ?? fallbackProject;
+  const nazrTypes =
+    nazrTypesResponse && nazrTypesResponse.length > 0 ? nazrTypesResponse : fallbackNazrTypes;
+
   return (
     <main className="home-page">
       <section className="home-hero">
@@ -56,14 +129,14 @@ export default function Home() {
             <span className="home-eyebrow">سامانه شفاف ثبت و پیگیری نذر</span>
             <h1>نذر امام؛ مسیر روشن برای نیت‌های ماندگار</h1>
             <p>
-              در نذر امام، هر نذر از انتخاب طرح تا ثبت پرداخت، دریافت کد رهگیری و مشاهده گزارش اجرا،
-              ساده و قابل اعتماد پیش می‌رود.
+              {projectInfo.description ||
+                'در نذر امام، هر نذر از انتخاب طرح تا ثبت پرداخت، دریافت کد رهگیری و مشاهده گزارش اجرا، ساده و قابل اعتماد پیش می‌رود.'}
             </p>
             <div className="home-actions">
               <Link className="home-btn home-btn-primary" href="/nazr/new">
                 شرکت در نذر
               </Link>
-              <Link className="home-btn home-btn-secondary" href="/track">
+              <Link className="home-btn home-btn-secondary" href="/dashboard">
                 پیگیری وضعیت
               </Link>
             </div>
@@ -73,7 +146,7 @@ export default function Home() {
             <div className="home-play-button" aria-hidden="true">
               <span />
             </div>
-            <p>ویدئوی کوتاه از مسیر ثبت، اجرا و گزارش نذرها</p>
+            <p>{projectInfo.workflow.join('، ')}</p>
           </div>
         </div>
       </section>
@@ -165,27 +238,29 @@ export default function Home() {
             <span className="home-eyebrow">طرح‌ها</span>
             <h2>طرح‌های نذر</h2>
             <p>
-              کاشی‌های زیر برای انتخاب سریع طرح طراحی شده‌اند. طرح‌های تکمیل‌شده در حالت خاموش قرار
-              می‌گیرند تا وضعیت آن‌ها در یک نگاه مشخص باشد.
+              این بخش مستقیماً از API نوع‌های نذر خوانده می‌شود تا هر طرحی که در بک‌اند فعال است، در
+              صفحه اصلی هم دیده شود.
             </p>
           </div>
 
           <div className="home-plan-grid">
-            {plans.map((plan) => {
-              const isComplete = plan.status === 'تکمیل‌شده';
+            {nazrTypes.map((type, index) => {
+              const isActive = type.isActive;
+              const progress = getPlanProgress(index);
 
               return (
-                <article className={isComplete ? 'home-plan-card is-complete' : 'home-plan-card'} key={plan.title}>
+                <article className={isActive ? 'home-plan-card' : 'home-plan-card is-complete'} key={type.id}>
                   <div className="home-plan-head">
-                    <h3>{plan.title}</h3>
-                    <span>{plan.status}</span>
+                    <h3>{type.title}</h3>
+                    <span>{isActive ? 'فعال' : 'غیرفعال'}</span>
                   </div>
-                  <p>{plan.amount}</p>
-                  <div className="home-plan-progress" aria-label={`پیشرفت ${plan.progress} درصد`}>
-                    <span style={{ width: `${plan.progress}%` }} />
+                  <p>{type.description}</p>
+                  <strong className="home-plan-amount">{formatMoney(type)}</strong>
+                  <div className="home-plan-progress" aria-label={`پیشرفت ${progress} درصد`}>
+                    <span style={{ width: `${progress}%` }} />
                   </div>
-                  <Link className="home-plan-link" href={isComplete ? '/#plans' : '/nazr/new'}>
-                    {isComplete ? 'تکمیل شده' : 'شرکت در طرح'}
+                  <Link className="home-plan-link" href={isActive ? '/nazr/new' : '/#plans'}>
+                    {isActive ? 'شرکت در طرح' : 'فعلاً غیرفعال'}
                   </Link>
                 </article>
               );
