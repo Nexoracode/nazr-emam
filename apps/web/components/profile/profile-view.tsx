@@ -59,18 +59,35 @@ type ProfileTab =
   | 'gallery'
   | 'invite';
 
-const TABS: Array<{ id: ProfileTab; label: string }> = [
-  { id: 'dashboard', label: 'داشبورد' },
-  { id: 'account', label: 'اطلاعات حساب' },
-  { id: 'contributions', label: 'مشارکت‌ها' },
-  { id: 'payments', label: 'واریزها' },
-  { id: 'tickets', label: 'تیکت‌ها' },
-  { id: 'notifications', label: 'اعلان‌ها' },
-  { id: 'wallet', label: 'کیف پول' },
-  { id: 'club', label: 'باشگاه' },
-  { id: 'gallery', label: 'گالری' },
-  { id: 'invite', label: 'دعوت دوستان' },
+const TAB_GROUPS: Array<{ label: string; tabs: Array<{ id: ProfileTab; label: string }> }> = [
+  {
+    label: 'فعالیت‌های من',
+    tabs: [
+      { id: 'dashboard', label: 'داشبورد' },
+      { id: 'contributions', label: 'مشارکت‌ها' },
+      { id: 'payments', label: 'واریزها' },
+      { id: 'wallet', label: 'کیف پول' },
+      { id: 'club', label: 'باشگاه' },
+    ],
+  },
+  {
+    label: 'ارتباطات',
+    tabs: [
+      { id: 'tickets', label: 'تیکت‌ها' },
+      { id: 'notifications', label: 'اعلان‌ها' },
+    ],
+  },
+  {
+    label: 'حساب و محتوا',
+    tabs: [
+      { id: 'account', label: 'اطلاعات حساب' },
+      { id: 'gallery', label: 'گالری' },
+      { id: 'invite', label: 'دعوت دوستان' },
+    ],
+  },
 ];
+
+const TABS = TAB_GROUPS.flatMap((group) => group.tabs);
 
 const PLATFORM_OPTIONS: Array<{ id: UserPlatform; label: string }> = [
   { id: 'eitaa', label: 'ایتا' },
@@ -156,6 +173,7 @@ export function ProfileView() {
   const [nazrs, setNazrs] = useState<Paginated<NazrRequest> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -200,24 +218,68 @@ export function ProfileView() {
     );
   }
 
+  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label ?? 'داشبورد';
+
+  function handleTabChange(tab: ProfileTab) {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+  }
+
   return (
-    <main className="page-shell profile-page-shell">
-      <aside className="profile-sidebar surface-card" aria-label="بخش‌های پروفایل">
-        <div>
-          <p className="profile-sidebar-title">{summary.profile.fullName}</p>
-          <p className="profile-sidebar-subtitle" dir="ltr">{summary.profile.mobile}</p>
+    <main className="page-shell profile-page-shell profile-standalone-shell">
+      <div className="profile-mobile-bar">
+        <div className="profile-mobile-account">
+          <span className="profile-avatar" aria-hidden="true">{summary.profile.fullName.trim().charAt(0)}</span>
+          <div>
+            <strong>{summary.profile.fullName}</strong>
+            <small>{activeTabLabel}</small>
+          </div>
+        </div>
+        <button
+          aria-controls="profile-navigation"
+          aria-expanded={mobileMenuOpen}
+          aria-label={mobileMenuOpen ? 'بستن منوی پروفایل' : 'باز کردن منوی پروفایل'}
+          className={`profile-menu-toggle${mobileMenuOpen ? ' is-open' : ''}`}
+          onClick={() => setMobileMenuOpen((current) => !current)}
+          type="button"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+      </div>
+
+      <aside
+        className={`profile-sidebar surface-card${mobileMenuOpen ? ' is-open' : ''}`}
+        id="profile-navigation"
+        aria-label="بخش‌های پروفایل"
+      >
+        <div className="profile-sidebar-account">
+          <span className="profile-avatar" aria-hidden="true">{summary.profile.fullName.trim().charAt(0)}</span>
+          <div>
+            <p className="profile-sidebar-title">{summary.profile.fullName}</p>
+            <p className="profile-sidebar-subtitle" dir="ltr">{summary.profile.mobile}</p>
+          </div>
         </div>
 
         <nav className="profile-nav">
-          {TABS.map((tab) => (
-            <button
-              className={`profile-nav-item${activeTab === tab.id ? ' is-active' : ''}`}
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              type="button"
-            >
-              {tab.label}
-            </button>
+          {TAB_GROUPS.map((group) => (
+            <div className="profile-nav-group" key={group.label}>
+              <p className="profile-nav-group-title">{group.label}</p>
+              <div className="profile-nav-items">
+                {group.tabs.map((tab) => (
+                  <button
+                    aria-current={activeTab === tab.id ? 'page' : undefined}
+                    className={`profile-nav-item${activeTab === tab.id ? ' is-active' : ''}`}
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    type="button"
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </aside>
@@ -679,6 +741,7 @@ function PaymentsPanel() {
 
 function TicketsPanel() {
   const [tickets, setTickets] = useState<Paginated<Ticket> | null>(null);
+  const [view, setView] = useState<'list' | 'create'>('list');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [replyBody, setReplyBody] = useState<Record<string, string>>({});
@@ -701,6 +764,7 @@ function TicketsPanel() {
       setBody('');
       setMessage('تیکت ثبت شد.');
       await loadTickets();
+      setView('list');
     } catch (err) {
       setMessage(err instanceof ApiRequestError ? err.message : 'ثبت تیکت انجام نشد.');
     }
@@ -719,10 +783,16 @@ function TicketsPanel() {
     await loadTickets();
   }
 
-  return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">ثبت تیکت</h1>
+  if (view === 'create') {
+    return (
+      <section className="surface-card profile-ticket-create">
+        <div className="profile-section-heading profile-ticket-create-heading">
+          <div>
+            <h1 className="card-title">ثبت تیکت جدید</h1>
+            <p className="profile-muted">پیام شما مستقیماً برای پشتیبانی سایت ارسال می‌شود.</p>
+          </div>
+          <button className="btn-ghost" onClick={() => setView('list')} type="button">بازگشت به تیکت‌ها</button>
+        </div>
         <form className="field-stack" onSubmit={handleCreate}>
           <Field label="موضوع" onChange={setSubject} value={subject} />
           <textarea
@@ -733,65 +803,76 @@ function TicketsPanel() {
             value={body}
           />
           {message && <p className="profile-muted">{message}</p>}
-          <button className="btn-primary" type="submit">ارسال تیکت</button>
+          <button className="btn-primary profile-ticket-submit" type="submit">ارسال تیکت</button>
         </form>
       </section>
-      <section className="profile-ticket-section">
-        <div className="profile-section-heading">
-          <div>
-            <h2 className="card-title">تیکت‌های من</h2>
-            <p className="profile-muted">گفتگوهای شما با پشتیبانی</p>
-          </div>
+    );
+  }
+
+  return (
+    <section className="profile-ticket-section">
+      <div className="surface-card profile-ticket-list-header">
+        <div>
+          <h1 className="card-title">تیکت‌های من</h1>
+          <p className="profile-muted">گفتگوها و پاسخ‌های پشتیبانی را از اینجا پیگیری کنید.</p>
+        </div>
+        <div className="profile-ticket-list-actions">
           {tickets ? <span className="profile-ticket-count">{tickets.total.toLocaleString('fa-IR')} گفتگو</span> : null}
+          <button className="btn-primary" onClick={() => { setMessage(''); setView('create'); }} type="button">
+            ثبت تیکت جدید
+          </button>
         </div>
-        <div className="profile-ticket-list">
-          {!tickets || tickets.items.length === 0 ? (
-            <EmptyState title="تیکتی وجود ندارد" body="برای ارتباط با پشتیبانی سایت، از فرم بالا استفاده کنید." />
-          ) : (
-            tickets.items.map((ticket) => (
-              <article className="profile-ticket-card" key={ticket.id}>
-                <header className="profile-ticket-header">
-                  <div>
-                    <h3>{ticket.subject}</h3>
-                    <p>ایجاد شده در {formatDate(ticket.createdAt)}</p>
-                  </div>
-                  <span className={TICKET_STATUS_CLASS[ticket.status]}>{TICKET_STATUS_LABEL[ticket.status]}</span>
-                </header>
-
-                <div className="profile-ticket-thread">
-                  {ticket.messages.map((item) => (
-                    <div className={`profile-ticket-bubble-row ${item.authorType === 'user' ? 'is-own' : ''}`} key={item.id}>
-                      <div className="profile-ticket-bubble">
-                        <span>{item.authorType === 'support' ? 'پشتیبانی' : 'شما'}</span>
-                        <p>{item.body}</p>
-                        <time>{formatTicketDate(item.createdAt)}</time>
-                      </div>
-                    </div>
-                  ))}
+      </div>
+      {message && <p className="field-success">{message}</p>}
+      <div className="profile-ticket-list">
+        {!tickets || tickets.items.length === 0 ? (
+          <div className="surface-card">
+            <EmptyState title="تیکتی وجود ندارد" body="برای شروع گفتگو با پشتیبانی، تیکت جدیدی ثبت کنید." />
+          </div>
+        ) : (
+          tickets.items.map((ticket) => (
+            <article className="profile-ticket-card" key={ticket.id}>
+              <header className="profile-ticket-header">
+                <div>
+                  <h3>{ticket.subject}</h3>
+                  <p>ایجاد شده در {formatDate(ticket.createdAt)}</p>
                 </div>
+                <span className={TICKET_STATUS_CLASS[ticket.status]}>{TICKET_STATUS_LABEL[ticket.status]}</span>
+              </header>
 
-                {ticket.status !== 'closed' && (
-                  <div className="profile-ticket-reply">
-                    <textarea
-                      className="field-input profile-ticket-reply-input"
-                      onChange={(e) => setReplyBody((current) => ({ ...current, [ticket.id]: e.target.value }))}
-                      placeholder="پاسخ خود را بنویسید..."
-                      rows={2}
-                      value={replyBody[ticket.id] ?? ''}
-                    />
-                    <div>
-                      <button className="btn-ghost" onClick={() => handleClose(ticket.id)} type="button">بستن تیکت</button>
-                      <button className="btn-primary" disabled={!replyBody[ticket.id]?.trim()} onClick={() => handleReply(ticket.id)} type="button">ارسال پاسخ</button>
+              <div className="profile-ticket-thread">
+                {ticket.messages.map((item) => (
+                  <div className={`profile-ticket-bubble-row ${item.authorType === 'user' ? 'is-own' : ''}`} key={item.id}>
+                    <div className="profile-ticket-bubble">
+                      <span>{item.authorType === 'support' ? 'پشتیبانی' : 'شما'}</span>
+                      <p>{item.body}</p>
+                      <time>{formatTicketDate(item.createdAt)}</time>
                     </div>
                   </div>
-                )}
-                {ticket.status === 'closed' ? <p className="profile-ticket-closed">این گفتگو بسته شده است.</p> : null}
-              </article>
-            ))
-          )}
-        </div>
-      </section>
-    </div>
+                ))}
+              </div>
+
+              {ticket.status !== 'closed' && (
+                <div className="profile-ticket-reply">
+                  <textarea
+                    className="field-input profile-ticket-reply-input"
+                    onChange={(e) => setReplyBody((current) => ({ ...current, [ticket.id]: e.target.value }))}
+                    placeholder="پاسخ خود را بنویسید..."
+                    rows={2}
+                    value={replyBody[ticket.id] ?? ''}
+                  />
+                  <div>
+                    <button className="btn-ghost" onClick={() => handleClose(ticket.id)} type="button">بستن تیکت</button>
+                    <button className="btn-primary" disabled={!replyBody[ticket.id]?.trim()} onClick={() => handleReply(ticket.id)} type="button">ارسال پاسخ</button>
+                  </div>
+                </div>
+              )}
+              {ticket.status === 'closed' ? <p className="profile-ticket-closed">این گفتگو بسته شده است.</p> : null}
+            </article>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 

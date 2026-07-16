@@ -1143,17 +1143,54 @@ input {
 .profile-page-shell {
   align-items: start;
   display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: 18px;
+  grid-template-columns: minmax(0, 208px) minmax(0, 1fr);
   max-width: 1120px;
+}
+
+.profile-standalone-shell {
+  padding-top: 24px;
+}
+
+.profile-mobile-bar {
+  display: none;
 }
 
 .profile-sidebar {
   display: grid;
-  gap: 14px;
-  padding: 14px;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
   position: sticky;
-  top: 84px;
+  top: 24px;
+}
+
+.profile-sidebar-account {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  padding: 15px 14px;
+}
+
+.profile-sidebar-account > div {
+  min-width: 0;
+}
+
+.profile-avatar {
+  align-items: center;
+  background: var(--primary-soft);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+  border-radius: 50%;
+  color: var(--primary);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
 }
 
 .profile-sidebar-title {
@@ -1162,6 +1199,9 @@ input {
   font-weight: 700;
   line-height: 1.7;
   margin: 0 0 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-sidebar-subtitle,
@@ -1174,8 +1214,32 @@ input {
 
 .profile-nav {
   display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 9px;
+}
+
+.profile-nav-group {
+  display: grid;
+  gap: 2px;
+}
+
+.profile-nav-group + .profile-nav-group {
+  border-top: 1px solid var(--border);
+  margin-top: 5px;
+  padding-top: 7px;
+}
+
+.profile-nav-group-title {
+  color: var(--muted) !important;
+  font-size: 9px !important;
+  font-weight: 700;
+  margin: 0 !important;
+  padding: 3px 9px 4px;
+}
+
+.profile-nav-items {
+  display: grid;
+  gap: 2px;
 }
 
 .profile-nav-item {
@@ -1187,10 +1251,12 @@ input {
   font-size: 11px;
   font-weight: 600;
   line-height: 1.7;
-  min-height: 34px;
-  padding: 6px 7px;
-  text-align: center;
+  min-height: 35px;
+  padding: 7px 10px;
+  position: relative;
+  text-align: start;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
+  width: 100%;
 }
 
 .profile-nav-item:hover,
@@ -1198,6 +1264,53 @@ input {
   background: var(--primary-soft);
   border-color: var(--border);
   color: var(--primary);
+}
+
+.profile-nav-item.is-active::before {
+  background: var(--primary);
+  border-radius: 999px;
+  content: '';
+  height: 16px;
+  inset-inline-start: 4px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+}
+
+.profile-menu-toggle {
+  align-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  height: 38px;
+  justify-content: center;
+  padding: 0;
+  width: 38px;
+}
+
+.profile-menu-toggle span {
+  background: var(--foreground);
+  border-radius: 999px;
+  display: block;
+  height: 2px;
+  transition: opacity 0.15s, transform 0.15s;
+  width: 17px;
+}
+
+.profile-menu-toggle.is-open span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.profile-menu-toggle.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.profile-menu-toggle.is-open span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 .profile-content,
@@ -1770,6 +1883,59 @@ input {
   gap: 14px;
 }
 
+.profile-ticket-list-header {
+  align-items: center;
+  border-radius: 8px;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 18px;
+}
+
+.profile-ticket-list-header .card-title,
+.profile-ticket-create-heading .card-title {
+  font-size: 15px;
+  margin: 0 0 3px;
+}
+
+.profile-ticket-list-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
+.profile-ticket-list-actions .btn-primary,
+.profile-ticket-create-heading .btn-ghost {
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.profile-ticket-create {
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.profile-ticket-create-heading {
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.profile-ticket-submit {
+  justify-self: start;
+  min-width: 118px;
+}
+
+.profile-ticket-list > .surface-card {
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.profile-ticket-list > .surface-card .profile-empty {
+  border: 0;
+  padding: 18px 8px;
+}
+
 .profile-ticket-count {
   color: var(--muted);
   font-size: 12px;
@@ -1918,19 +2084,79 @@ input {
 
 @media (max-width: 860px) {
   .profile-page-shell {
+    gap: 12px;
     grid-template-columns: 1fr;
+    padding-top: 12px;
+  }
+
+  .profile-mobile-bar {
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 10px 12px;
+    position: sticky;
+    top: 8px;
+    z-index: 10;
+  }
+
+  .profile-mobile-account {
+    align-items: center;
+    display: flex;
+    gap: 9px;
+    min-width: 0;
+  }
+
+  .profile-mobile-account > div {
+    display: grid;
+    min-width: 0;
+  }
+
+  .profile-mobile-account strong {
+    color: var(--heading, var(--foreground));
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-mobile-account small {
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .profile-mobile-bar .profile-avatar {
+    height: 34px;
+    width: 34px;
   }
 
   .profile-sidebar {
+    display: none;
     position: static;
   }
 
+  .profile-sidebar.is-open {
+    display: block;
+  }
+
+  .profile-sidebar-account {
+    display: none;
+  }
+
   .profile-nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .profile-nav-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .profile-nav-item {
-    text-align: center;
+    text-align: start;
   }
 
   .profile-stat-grid {
@@ -1954,10 +2180,6 @@ input {
   .profile-stat-grid,
   .profile-gallery-grid {
     grid-template-columns: 1fr;
-  }
-
-  .profile-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .profile-section-heading,
@@ -2024,6 +2246,21 @@ input {
   .profile-ticket-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .profile-ticket-list-header,
+  .profile-ticket-create-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-ticket-list-actions {
+    justify-content: space-between;
+  }
+
+  .profile-ticket-list-actions .btn-primary,
+  .profile-ticket-create-heading .btn-ghost {
+    text-align: center;
   }
 
   .profile-ticket-bubble {
