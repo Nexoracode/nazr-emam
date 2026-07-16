@@ -350,22 +350,36 @@ function DashboardPanel({
   const recent = nazrs.slice(0, 3);
   const firstName = summary.profile.fullName.trim().split(/\s+/)[0] || 'همراه عزیز';
   const [target, setTarget] = useState(summary.profile.motivationalTarget ?? '');
-  const [targetStatus, setTargetStatus] = useState('');
+  const [targetStatus, setTargetStatus] = useState<{
+    kind: 'error' | 'success';
+    text: string;
+  } | null>(null);
   const [savingTarget, setSavingTarget] = useState(false);
+  const [editingTarget, setEditingTarget] = useState(
+    !summary.profile.motivationalTarget?.trim(),
+  );
+  const savedTarget = summary.profile.motivationalTarget?.trim() ?? '';
 
   async function handleTargetSubmit(e: FormEvent) {
     e.preventDefault();
     setSavingTarget(true);
-    setTargetStatus('');
+    setTargetStatus(null);
     try {
       const updated = await updateProfileGoal({ motivationalTarget: target.trim() || null });
       onSummaryChange({
         ...summary,
         profile: { ...summary.profile, motivationalTarget: updated.motivationalTarget },
       });
-      setTargetStatus('هدف شخصی ذخیره شد.');
+      setTargetStatus({
+        kind: 'success',
+        text: updated.motivationalTarget ? 'هدف شخصی ذخیره شد.' : 'هدف شخصی حذف شد.',
+      });
+      setEditingTarget(!updated.motivationalTarget);
     } catch (err) {
-      setTargetStatus(err instanceof ApiRequestError ? err.message : 'ذخیره هدف انجام نشد.');
+      setTargetStatus({
+        kind: 'error',
+        text: err instanceof ApiRequestError ? err.message : 'ذخیره هدف انجام نشد.',
+      });
     } finally {
       setSavingTarget(false);
     }
@@ -373,6 +387,86 @@ function DashboardPanel({
 
   return (
     <div className="profile-stack dashboard-stack">
+      <section className={`dashboard-goal-banner${savedTarget ? ' has-goal' : ' is-empty'}`}>
+        <div className="dashboard-goal-banner-copy">
+          <p className="dashboard-goal-eyebrow">
+            {savedTarget ? 'هدف شخصی من' : 'یک قدم روشن برای خودت'}
+          </p>
+          {!editingTarget && savedTarget ? (
+            <>
+              <p className="dashboard-goal-statement">{savedTarget}</p>
+              <p className="dashboard-goal-support">هر بار که برمی‌گردی، یادت باشد برای چه شروع کردی.</p>
+            </>
+          ) : (
+            <>
+              <h2>{savedTarget ? 'هدفت را تازه کن' : 'بیا هدفت را مشخص کن'}</h2>
+              <p className="dashboard-goal-support">
+                یک جمله کوتاه بنویس که با دیدنش برای ادامه مسیر انگیزه بگیری.
+              </p>
+              <form className="dashboard-goal-form" onSubmit={handleTargetSubmit}>
+                <textarea
+                  aria-label="هدف شخصی"
+                  className="field-input profile-textarea dashboard-goal-input"
+                  maxLength={500}
+                  onChange={(e) => setTarget(e.target.value)}
+                  placeholder="مثلاً امسال در سه طرح نذر شرکت کنم."
+                  value={target}
+                />
+                <div className="dashboard-goal-form-footer">
+                  <span className="dashboard-character-count">{target.length.toLocaleString('fa-IR')}/۵۰۰</span>
+                  <div className="dashboard-goal-form-actions">
+                    {savedTarget && (
+                      <button
+                        className="dashboard-goal-cancel"
+                        onClick={() => {
+                          setTarget(savedTarget);
+                          setTargetStatus(null);
+                          setEditingTarget(false);
+                        }}
+                        type="button"
+                      >
+                        انصراف
+                      </button>
+                    )}
+                    <button
+                      className="btn-primary dashboard-goal-submit"
+                      disabled={savingTarget || (!target.trim() && !savedTarget)}
+                      type="submit"
+                    >
+                      {savingTarget
+                        ? 'در حال ذخیره...'
+                        : savedTarget && !target.trim()
+                          ? 'حذف هدف'
+                          : 'ذخیره هدف'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </>
+          )}
+          {targetStatus && (
+            <p
+              aria-live="polite"
+              className={targetStatus.kind === 'success' ? 'dashboard-goal-message is-success' : 'dashboard-goal-message is-error'}
+            >
+              {targetStatus.text}
+            </p>
+          )}
+        </div>
+        {!editingTarget && savedTarget && (
+          <button
+            className="dashboard-goal-edit"
+            onClick={() => {
+              setTargetStatus(null);
+              setEditingTarget(true);
+            }}
+            type="button"
+          >
+            ویرایش هدف
+          </button>
+        )}
+      </section>
+
       <section className="surface-card dashboard-welcome">
         <div className="dashboard-welcome-copy">
           <p className="dashboard-kicker">سلام {firstName}</p>
@@ -423,29 +517,6 @@ function DashboardPanel({
         />
 
         <div className="dashboard-side-column">
-          <section className="surface-card dashboard-goal-card">
-            <div className="dashboard-panel-heading">
-              <div>
-                <h2 className="card-title">هدف شخصی من</h2>
-                <p className="profile-muted">چیزی که می‌خواهید با همراهی در نذرها به آن برسید.</p>
-              </div>
-              <span className="dashboard-character-count">{target.length.toLocaleString('fa-IR')}/۵۰۰</span>
-            </div>
-            <form className="profile-goal-form" onSubmit={handleTargetSubmit}>
-              <textarea
-                className="field-input profile-textarea dashboard-goal-input"
-                maxLength={500}
-                onChange={(e) => setTarget(e.target.value)}
-                placeholder="مثلاً امسال در سه طرح نذر شرکت کنم."
-                value={target}
-              />
-              {targetStatus && <p aria-live="polite" className="profile-muted">{targetStatus}</p>}
-              <button className="btn-primary dashboard-goal-submit" disabled={savingTarget} type="submit">
-                {savingTarget ? 'در حال ذخیره...' : 'ذخیره هدف'}
-              </button>
-            </form>
-          </section>
-
           <section className="surface-card dashboard-shortcuts">
             <h2 className="card-title">دسترسی سریع</h2>
             <DashboardShortcut

@@ -1366,6 +1366,128 @@ input {
   gap: 14px;
 }
 
+.dashboard-goal-banner {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--status-ok-bg) 58%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border));
+  border-inline-start: 4px solid var(--dashboard-warm);
+  border-radius: 8px;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 18px 20px;
+}
+
+.dashboard-goal-banner.is-empty {
+  background: color-mix(in srgb, var(--primary-soft) 46%, var(--surface));
+  border-color: color-mix(in srgb, var(--dashboard-warm) 30%, var(--border));
+}
+
+.dashboard-goal-banner-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dashboard-goal-eyebrow {
+  color: var(--dashboard-warm) !important;
+  font-size: var(--profile-font-caption) !important;
+  font-weight: 800;
+  margin: 0 0 4px !important;
+}
+
+.dashboard-goal-banner h2 {
+  color: var(--heading);
+  font-size: var(--profile-font-heading);
+  line-height: 1.8;
+  margin: 0;
+}
+
+.dashboard-goal-statement {
+  color: var(--heading) !important;
+  font-size: 16px !important;
+  font-weight: 800;
+  line-height: 2 !important;
+  margin: 0 !important;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-goal-support {
+  color: var(--muted) !important;
+  font-size: var(--profile-font-supporting) !important;
+  line-height: 1.9 !important;
+  margin: 3px 0 0 !important;
+}
+
+.dashboard-goal-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  max-width: 760px;
+}
+
+.dashboard-goal-form .dashboard-goal-input {
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  line-height: 1.9;
+  min-height: 76px;
+  resize: vertical;
+}
+
+.dashboard-goal-form-footer {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.dashboard-goal-form-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.dashboard-goal-edit,
+.dashboard-goal-cancel {
+  background: transparent;
+  border: 0;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--profile-font-supporting);
+  font-weight: 700;
+  min-height: 36px;
+  padding: 7px 10px;
+}
+
+.dashboard-goal-edit {
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--border));
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+.dashboard-goal-edit:hover,
+.dashboard-goal-cancel:hover {
+  color: var(--primary-dark);
+}
+
+.dashboard-goal-message {
+  border-radius: 6px;
+  font-size: var(--profile-font-caption) !important;
+  line-height: 1.8 !important;
+  margin: 9px 0 0 !important;
+  padding: 6px 10px;
+}
+
+.dashboard-goal-message.is-success {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-color) !important;
+}
+
+.dashboard-goal-message.is-error {
+  background: var(--status-error-bg);
+  color: var(--status-error-color) !important;
+}
+
 .dashboard-welcome {
   background: color-mix(in srgb, var(--primary-soft) 55%, var(--surface));
   border-inline-start: 4px solid var(--primary);
@@ -2871,6 +2993,26 @@ input {
     gap: 16px;
     grid-template-columns: 1fr;
     padding: 16px;
+  }
+
+  .dashboard-goal-banner {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .dashboard-goal-edit {
+    align-self: flex-start;
+  }
+
+  .dashboard-goal-form-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-goal-form-actions {
+    justify-content: flex-end;
   }
 
   .dashboard-attention {
