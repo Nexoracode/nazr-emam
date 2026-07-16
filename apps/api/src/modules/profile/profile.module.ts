@@ -11,6 +11,7 @@ import { WalletTransactionEntity } from './entities/wallet-transaction.entity';
 import { WalletEntity } from './entities/wallet.entity';
 import { ProfileController } from './profile.controller';
 import { ProfileService } from './profile.service';
+import { WalletMonthlyService } from './wallet-monthly.service';
 
 @Module({
   imports: [
@@ -27,6 +28,6 @@ import { ProfileService } from './profile.service';
     ]),
   ],
   controllers: [ProfileController],
-  providers: [ProfileService],
+  providers: [ProfileService, WalletMonthlyService],
 })
 export class ProfileModule {}

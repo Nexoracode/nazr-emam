@@ -46,6 +46,11 @@ import {
   updateProfileGoal,
   updateProfileWallet,
 } from '../../lib/api';
+import {
+  amountToPersianWords,
+  formatAmountInput,
+  parseAmountInput,
+} from '../../lib/amount';
 
 type ProfileTab =
   | 'dashboard'
@@ -59,18 +64,35 @@ type ProfileTab =
   | 'gallery'
   | 'invite';
 
-const TABS: Array<{ id: ProfileTab; label: string }> = [
-  { id: 'dashboard', label: 'داشبورد' },
-  { id: 'account', label: 'اطلاعات حساب' },
-  { id: 'contributions', label: 'مشارکت‌ها' },
-  { id: 'payments', label: 'واریزها' },
-  { id: 'tickets', label: 'تیکت‌ها' },
-  { id: 'notifications', label: 'اعلان‌ها' },
-  { id: 'wallet', label: 'کیف پول' },
-  { id: 'club', label: 'باشگاه' },
-  { id: 'gallery', label: 'گالری' },
-  { id: 'invite', label: 'دعوت دوستان' },
+const TAB_GROUPS: Array<{ label: string; tabs: Array<{ id: ProfileTab; label: string }> }> = [
+  {
+    label: 'فعالیت‌های من',
+    tabs: [
+      { id: 'dashboard', label: 'داشبورد' },
+      { id: 'contributions', label: 'مشارکت‌ها' },
+      { id: 'payments', label: 'واریزها' },
+      { id: 'wallet', label: 'کیف پول' },
+      { id: 'club', label: 'باشگاه' },
+    ],
+  },
+  {
+    label: 'ارتباطات',
+    tabs: [
+      { id: 'tickets', label: 'تیکت‌ها' },
+      { id: 'notifications', label: 'اعلان‌ها' },
+    ],
+  },
+  {
+    label: 'حساب و محتوا',
+    tabs: [
+      { id: 'account', label: 'اطلاعات حساب' },
+      { id: 'gallery', label: 'گالری' },
+      { id: 'invite', label: 'دعوت دوستان' },
+    ],
+  },
 ];
+
+const TABS = TAB_GROUPS.flatMap((group) => group.tabs);
 
 const PLATFORM_OPTIONS: Array<{ id: UserPlatform; label: string }> = [
   { id: 'eitaa', label: 'ایتا' },
@@ -149,6 +171,18 @@ const MISSION_STATUS_COLOR: Record<UserMissionStatus, string> = {
   locked: 'badge-neutral',
 };
 
+const WALLET_TRANSACTION_STATUS_LABEL: Record<WalletTransaction['status'], string> = {
+  pending: 'در انتظار پرداخت',
+  completed: 'انجام‌شده',
+  failed: 'ناموفق',
+};
+
+const WALLET_TRANSACTION_STATUS_COLOR: Record<WalletTransaction['status'], string> = {
+  pending: 'badge-warning',
+  completed: 'badge-success',
+  failed: 'badge-danger',
+};
+
 export function ProfileView() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ProfileTab>('dashboard');
@@ -156,6 +190,14 @@ export function ProfileView() {
   const [nazrs, setNazrs] = useState<Paginated<NazrRequest> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    if (TABS.some((tab) => tab.id === requestedTab)) {
+      setActiveTab(requestedTab as ProfileTab);
+    }
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -200,24 +242,68 @@ export function ProfileView() {
     );
   }
 
+  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label ?? 'داشبورد';
+
+  function handleTabChange(tab: ProfileTab) {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+  }
+
   return (
-    <main className="page-shell profile-page-shell">
-      <aside className="profile-sidebar surface-card" aria-label="بخش‌های پروفایل">
-        <div>
-          <p className="profile-sidebar-title">{summary.profile.fullName}</p>
-          <p className="profile-sidebar-subtitle" dir="ltr">{summary.profile.mobile}</p>
+    <main className="page-shell profile-page-shell profile-standalone-shell">
+      <div className="profile-mobile-bar">
+        <div className="profile-mobile-account">
+          <span className="profile-avatar" aria-hidden="true">{summary.profile.fullName.trim().charAt(0)}</span>
+          <div>
+            <strong>{summary.profile.fullName}</strong>
+            <small>{activeTabLabel}</small>
+          </div>
+        </div>
+        <button
+          aria-controls="profile-navigation"
+          aria-expanded={mobileMenuOpen}
+          aria-label={mobileMenuOpen ? 'بستن منوی پروفایل' : 'باز کردن منوی پروفایل'}
+          className={`profile-menu-toggle${mobileMenuOpen ? ' is-open' : ''}`}
+          onClick={() => setMobileMenuOpen((current) => !current)}
+          type="button"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+      </div>
+
+      <aside
+        className={`profile-sidebar surface-card${mobileMenuOpen ? ' is-open' : ''}`}
+        id="profile-navigation"
+        aria-label="بخش‌های پروفایل"
+      >
+        <div className="profile-sidebar-account">
+          <span className="profile-avatar" aria-hidden="true">{summary.profile.fullName.trim().charAt(0)}</span>
+          <div>
+            <p className="profile-sidebar-title">{summary.profile.fullName}</p>
+            <p className="profile-sidebar-subtitle" dir="ltr">{summary.profile.mobile}</p>
+          </div>
         </div>
 
         <nav className="profile-nav">
-          {TABS.map((tab) => (
-            <button
-              className={`profile-nav-item${activeTab === tab.id ? ' is-active' : ''}`}
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              type="button"
-            >
-              {tab.label}
-            </button>
+          {TAB_GROUPS.map((group) => (
+            <div className="profile-nav-group" key={group.label}>
+              <p className="profile-nav-group-title">{group.label}</p>
+              <div className="profile-nav-items">
+                {group.tabs.map((tab) => (
+                  <button
+                    aria-current={activeTab === tab.id ? 'page' : undefined}
+                    className={`profile-nav-item${activeTab === tab.id ? ' is-active' : ''}`}
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    type="button"
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </aside>
@@ -264,22 +350,36 @@ function DashboardPanel({
   const recent = nazrs.slice(0, 3);
   const firstName = summary.profile.fullName.trim().split(/\s+/)[0] || 'همراه عزیز';
   const [target, setTarget] = useState(summary.profile.motivationalTarget ?? '');
-  const [targetStatus, setTargetStatus] = useState('');
+  const [targetStatus, setTargetStatus] = useState<{
+    kind: 'error' | 'success';
+    text: string;
+  } | null>(null);
   const [savingTarget, setSavingTarget] = useState(false);
+  const [editingTarget, setEditingTarget] = useState(
+    !summary.profile.motivationalTarget?.trim(),
+  );
+  const savedTarget = summary.profile.motivationalTarget?.trim() ?? '';
 
   async function handleTargetSubmit(e: FormEvent) {
     e.preventDefault();
     setSavingTarget(true);
-    setTargetStatus('');
+    setTargetStatus(null);
     try {
       const updated = await updateProfileGoal({ motivationalTarget: target.trim() || null });
       onSummaryChange({
         ...summary,
         profile: { ...summary.profile, motivationalTarget: updated.motivationalTarget },
       });
-      setTargetStatus('هدف شخصی ذخیره شد.');
+      setTargetStatus({
+        kind: 'success',
+        text: updated.motivationalTarget ? 'هدف شخصی ذخیره شد.' : 'هدف شخصی حذف شد.',
+      });
+      setEditingTarget(!updated.motivationalTarget);
     } catch (err) {
-      setTargetStatus(err instanceof ApiRequestError ? err.message : 'ذخیره هدف انجام نشد.');
+      setTargetStatus({
+        kind: 'error',
+        text: err instanceof ApiRequestError ? err.message : 'ذخیره هدف انجام نشد.',
+      });
     } finally {
       setSavingTarget(false);
     }
@@ -287,6 +387,86 @@ function DashboardPanel({
 
   return (
     <div className="profile-stack dashboard-stack">
+      <section className={`dashboard-goal-banner${savedTarget ? ' has-goal' : ' is-empty'}`}>
+        <div className="dashboard-goal-banner-copy">
+          <p className="dashboard-goal-eyebrow">
+            {savedTarget ? 'هدف شخصی من' : 'یک قدم روشن برای خودت'}
+          </p>
+          {!editingTarget && savedTarget ? (
+            <>
+              <p className="dashboard-goal-statement">{savedTarget}</p>
+              <p className="dashboard-goal-support">هر بار که برمی‌گردی، یادت باشد برای چه شروع کردی.</p>
+            </>
+          ) : (
+            <>
+              <h2>{savedTarget ? 'هدفت را تازه کن' : 'بیا هدفت را مشخص کن'}</h2>
+              <p className="dashboard-goal-support">
+                یک جمله کوتاه بنویس که با دیدنش برای ادامه مسیر انگیزه بگیری.
+              </p>
+              <form className="dashboard-goal-form" onSubmit={handleTargetSubmit}>
+                <textarea
+                  aria-label="هدف شخصی"
+                  className="field-input profile-textarea dashboard-goal-input"
+                  maxLength={500}
+                  onChange={(e) => setTarget(e.target.value)}
+                  placeholder="مثلاً امسال در سه طرح نذر شرکت کنم."
+                  value={target}
+                />
+                <div className="dashboard-goal-form-footer">
+                  <span className="dashboard-character-count">{target.length.toLocaleString('fa-IR')}/۵۰۰</span>
+                  <div className="dashboard-goal-form-actions">
+                    {savedTarget && (
+                      <button
+                        className="dashboard-goal-cancel"
+                        onClick={() => {
+                          setTarget(savedTarget);
+                          setTargetStatus(null);
+                          setEditingTarget(false);
+                        }}
+                        type="button"
+                      >
+                        انصراف
+                      </button>
+                    )}
+                    <button
+                      className="btn-primary dashboard-goal-submit"
+                      disabled={savingTarget || (!target.trim() && !savedTarget)}
+                      type="submit"
+                    >
+                      {savingTarget
+                        ? 'در حال ذخیره...'
+                        : savedTarget && !target.trim()
+                          ? 'حذف هدف'
+                          : 'ذخیره هدف'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </>
+          )}
+          {targetStatus && (
+            <p
+              aria-live="polite"
+              className={targetStatus.kind === 'success' ? 'dashboard-goal-message is-success' : 'dashboard-goal-message is-error'}
+            >
+              {targetStatus.text}
+            </p>
+          )}
+        </div>
+        {!editingTarget && savedTarget && (
+          <button
+            className="dashboard-goal-edit"
+            onClick={() => {
+              setTargetStatus(null);
+              setEditingTarget(true);
+            }}
+            type="button"
+          >
+            ویرایش هدف
+          </button>
+        )}
+      </section>
+
       <section className="surface-card dashboard-welcome">
         <div className="dashboard-welcome-copy">
           <p className="dashboard-kicker">سلام {firstName}</p>
@@ -337,29 +517,6 @@ function DashboardPanel({
         />
 
         <div className="dashboard-side-column">
-          <section className="surface-card dashboard-goal-card">
-            <div className="dashboard-panel-heading">
-              <div>
-                <h2 className="card-title">هدف شخصی من</h2>
-                <p className="profile-muted">چیزی که می‌خواهید با همراهی در نذرها به آن برسید.</p>
-              </div>
-              <span className="dashboard-character-count">{target.length.toLocaleString('fa-IR')}/۵۰۰</span>
-            </div>
-            <form className="profile-goal-form" onSubmit={handleTargetSubmit}>
-              <textarea
-                className="field-input profile-textarea dashboard-goal-input"
-                maxLength={500}
-                onChange={(e) => setTarget(e.target.value)}
-                placeholder="مثلاً امسال در سه طرح نذر شرکت کنم."
-                value={target}
-              />
-              {targetStatus && <p aria-live="polite" className="profile-muted">{targetStatus}</p>}
-              <button className="btn-primary dashboard-goal-submit" disabled={savingTarget} type="submit">
-                {savingTarget ? 'در حال ذخیره...' : 'ذخیره هدف'}
-              </button>
-            </form>
-          </section>
-
           <section className="surface-card dashboard-shortcuts">
             <h2 className="card-title">دسترسی سریع</h2>
             <DashboardShortcut
@@ -568,32 +725,56 @@ function AccountPanel({
   }
 
   return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">اطلاعات حساب</h1>
-        <form className="field-stack" onSubmit={handleSave}>
-          <Field label="نام و نام خانوادگی" onChange={setFullName} value={fullName} />
-          <Field dir="ltr" label="شماره همراه" onChange={setMobile} value={mobile} />
-          <Field dir="ltr" label="شماره ایتا" onChange={setEitaNumber} required={false} value={eitaNumber} />
-          <div className="field-group">
-            <span className="field-label">پلتفرم‌های فعالیت</span>
-            <div className="profile-chip-grid">
-              {PLATFORM_OPTIONS.map((option) => (
-                <label className="profile-chip" key={option.id}>
-                  <input
-                    checked={platforms.includes(option.id)}
-                    onChange={() => togglePlatform(option.id)}
-                    type="checkbox"
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
+    <div className="profile-stack account-stack">
+      <section className="surface-card account-details-card">
+        <header className="account-heading">
+          <div className="account-identity">
+            <span className="profile-avatar" aria-hidden="true">{profile.fullName.trim().charAt(0)}</span>
+            <div>
+              <h1 className="card-title">اطلاعات حساب</h1>
+              <p className="profile-muted">عضویت از {formatDate(profile.createdAt)}</p>
             </div>
           </div>
-          {message && <p className="profile-muted">{message}</p>}
-          <button className="btn-primary" disabled={saving} type="submit">
-            {saving ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
-          </button>
+          <span className="badge-success">حساب فعال</span>
+        </header>
+
+        <form className="account-form" onSubmit={handleSave}>
+          <div className="account-form-grid">
+            <Field className="account-field-wide" label="نام و نام خانوادگی" onChange={setFullName} value={fullName} />
+            <Field dir="ltr" label="شماره همراه" onChange={setMobile} value={mobile} />
+            <Field dir="ltr" label="شماره ایتا" onChange={setEitaNumber} required={false} value={eitaNumber} />
+          </div>
+
+          <div className="account-platforms">
+            <div>
+              <span className="field-label">پلتفرم‌های فعالیت</span>
+              <p className="profile-muted">شبکه‌هایی را که در آن‌ها فعال هستید انتخاب کنید.</p>
+            </div>
+            <div className="profile-chip-grid">
+              {PLATFORM_OPTIONS.map((option) => {
+                const selected = platforms.includes(option.id);
+                return (
+                  <label className={`profile-chip account-platform-chip${selected ? ' is-selected' : ''}`} key={option.id}>
+                    <input
+                      checked={selected}
+                      onChange={() => togglePlatform(option.id)}
+                      type="checkbox"
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="account-form-actions">
+            {message && (
+              <p className={message.includes('ذخیره شد') ? 'field-success' : 'field-error'}>{message}</p>
+            )}
+            <button className="btn-primary" disabled={saving} type="submit">
+              {saving ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
+            </button>
+          </div>
         </form>
       </section>
       <ChangePasswordCard />
@@ -602,30 +783,57 @@ function AccountPanel({
 }
 
 function ContributionsPanel({ nazrs, summary }: { nazrs: NazrRequest[]; summary: UserProfileSummary }) {
-  const maxAmount = Math.max(...summary.contributions.byNazrType.map((item) => item.totalAmount.amount), 1);
   return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">مشارکت‌ها</h1>
-        <div className="profile-progress-list">
+    <div className="profile-stack contributions-stack">
+      <section className="surface-card contributions-overview">
+        <div className="contributions-heading">
+          <div>
+            <h1 className="card-title">مشارکت‌های من</h1>
+            <p className="profile-muted">خلاصه همراهی شما در همه طرح‌های نذر</p>
+          </div>
+          <Link className="btn-primary" href="/nazr/new">ثبت نذر جدید</Link>
+        </div>
+        <div className="contributions-summary-grid">
+          <DashboardStatCard label="کل مشارکت‌ها" tone="primary" value={summary.contributions.totalRequests.toLocaleString('fa-IR')} />
+          <DashboardStatCard label="مبلغ کل" tone="success" value={formatMoney(summary.contributions.totalAmount)} />
+          <DashboardStatCard label="تکمیل‌شده" tone="warm" value={summary.contributions.completedRequests.toLocaleString('fa-IR')} />
+          <DashboardStatCard label="منتظر پرداخت" tone="neutral" value={summary.contributions.awaitingPaymentRequests.toLocaleString('fa-IR')} />
+        </div>
+      </section>
+
+      <section className="surface-card contributions-plans">
+        <div className="contributions-section-heading">
+          <div>
+            <h2 className="card-title">سهم من در طرح‌ها</h2>
+            <p className="profile-muted">هر ردیف سهم مبلغی شما از کل مشارکت‌ها را نشان می‌دهد.</p>
+          </div>
+          <span>{summary.contributions.byNazrType.length.toLocaleString('fa-IR')} طرح</span>
+        </div>
+        <div className="profile-progress-list contributions-plan-list">
           {summary.contributions.byNazrType.length === 0 ? (
             <EmptyState title="هنوز مشارکتی ثبت نشده است" body="با ثبت نذر، سهم شما در هر طرح اینجا دیده می‌شود." />
           ) : (
-            summary.contributions.byNazrType.map((item) => (
-              <Link className="profile-progress-row" href="/nazr/new" key={item.nazrTypeId}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.count.toLocaleString('fa-IR')} مشارکت · {formatMoney(item.totalAmount)}</span>
-                </div>
-                <div className="profile-progress-track">
-                  <span style={{ inlineSize: `${Math.max(6, (item.totalAmount.amount / maxAmount) * 100)}%` }} />
-                </div>
-              </Link>
-            ))
+            summary.contributions.byNazrType.map((item) => {
+              const slug = nazrs.find((nazr) => nazr.nazrType.id === item.nazrTypeId)?.nazrType.slug;
+              return (
+                <Link className="profile-progress-row contribution-plan-row" href={slug ? `/nazr/new?type=${slug}` : '/nazr/new'} key={item.nazrTypeId}>
+                  <div className="contribution-plan-head">
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span>{item.count.toLocaleString('fa-IR')} مشارکت · {formatMoney(item.totalAmount)}</span>
+                    </div>
+                    <b>{item.sharePercent.toLocaleString('fa-IR')}٪</b>
+                  </div>
+                  <div className="profile-progress-track" aria-label={`${item.sharePercent.toLocaleString('fa-IR')} درصد از مشارکت‌ها`}>
+                    <span style={{ inlineSize: `${Math.max(6, item.sharePercent)}%` }} />
+                  </div>
+                </Link>
+              );
+            })
           )}
         </div>
       </section>
-      <RecentActivities items={nazrs} />
+      {nazrs.length > 0 && <RecentActivities items={nazrs} />}
     </div>
   );
 }
@@ -679,6 +887,7 @@ function PaymentsPanel() {
 
 function TicketsPanel() {
   const [tickets, setTickets] = useState<Paginated<Ticket> | null>(null);
+  const [view, setView] = useState<'list' | 'create'>('list');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [replyBody, setReplyBody] = useState<Record<string, string>>({});
@@ -701,6 +910,7 @@ function TicketsPanel() {
       setBody('');
       setMessage('تیکت ثبت شد.');
       await loadTickets();
+      setView('list');
     } catch (err) {
       setMessage(err instanceof ApiRequestError ? err.message : 'ثبت تیکت انجام نشد.');
     }
@@ -719,10 +929,16 @@ function TicketsPanel() {
     await loadTickets();
   }
 
-  return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">ثبت تیکت</h1>
+  if (view === 'create') {
+    return (
+      <section className="surface-card profile-ticket-create">
+        <div className="profile-section-heading profile-ticket-create-heading">
+          <div>
+            <h1 className="card-title">ثبت تیکت جدید</h1>
+            <p className="profile-muted">پیام شما مستقیماً برای پشتیبانی سایت ارسال می‌شود.</p>
+          </div>
+          <button className="btn-ghost" onClick={() => setView('list')} type="button">بازگشت به تیکت‌ها</button>
+        </div>
         <form className="field-stack" onSubmit={handleCreate}>
           <Field label="موضوع" onChange={setSubject} value={subject} />
           <textarea
@@ -733,65 +949,76 @@ function TicketsPanel() {
             value={body}
           />
           {message && <p className="profile-muted">{message}</p>}
-          <button className="btn-primary" type="submit">ارسال تیکت</button>
+          <button className="btn-primary profile-ticket-submit" type="submit">ارسال تیکت</button>
         </form>
       </section>
-      <section className="profile-ticket-section">
-        <div className="profile-section-heading">
-          <div>
-            <h2 className="card-title">تیکت‌های من</h2>
-            <p className="profile-muted">گفتگوهای شما با پشتیبانی</p>
-          </div>
+    );
+  }
+
+  return (
+    <section className="profile-ticket-section">
+      <div className="surface-card profile-ticket-list-header">
+        <div>
+          <h1 className="card-title">تیکت‌های من</h1>
+          <p className="profile-muted">گفتگوها و پاسخ‌های پشتیبانی را از اینجا پیگیری کنید.</p>
+        </div>
+        <div className="profile-ticket-list-actions">
           {tickets ? <span className="profile-ticket-count">{tickets.total.toLocaleString('fa-IR')} گفتگو</span> : null}
+          <button className="btn-primary" onClick={() => { setMessage(''); setView('create'); }} type="button">
+            ثبت تیکت جدید
+          </button>
         </div>
-        <div className="profile-ticket-list">
-          {!tickets || tickets.items.length === 0 ? (
-            <EmptyState title="تیکتی وجود ندارد" body="برای ارتباط با پشتیبانی سایت، از فرم بالا استفاده کنید." />
-          ) : (
-            tickets.items.map((ticket) => (
-              <article className="profile-ticket-card" key={ticket.id}>
-                <header className="profile-ticket-header">
-                  <div>
-                    <h3>{ticket.subject}</h3>
-                    <p>ایجاد شده در {formatDate(ticket.createdAt)}</p>
-                  </div>
-                  <span className={TICKET_STATUS_CLASS[ticket.status]}>{TICKET_STATUS_LABEL[ticket.status]}</span>
-                </header>
-
-                <div className="profile-ticket-thread">
-                  {ticket.messages.map((item) => (
-                    <div className={`profile-ticket-bubble-row ${item.authorType === 'user' ? 'is-own' : ''}`} key={item.id}>
-                      <div className="profile-ticket-bubble">
-                        <span>{item.authorType === 'support' ? 'پشتیبانی' : 'شما'}</span>
-                        <p>{item.body}</p>
-                        <time>{formatTicketDate(item.createdAt)}</time>
-                      </div>
-                    </div>
-                  ))}
+      </div>
+      {message && <p className="field-success">{message}</p>}
+      <div className="profile-ticket-list">
+        {!tickets || tickets.items.length === 0 ? (
+          <div className="surface-card">
+            <EmptyState title="تیکتی وجود ندارد" body="برای شروع گفتگو با پشتیبانی، تیکت جدیدی ثبت کنید." />
+          </div>
+        ) : (
+          tickets.items.map((ticket) => (
+            <article className="profile-ticket-card" key={ticket.id}>
+              <header className="profile-ticket-header">
+                <div>
+                  <h3>{ticket.subject}</h3>
+                  <p>ایجاد شده در {formatDate(ticket.createdAt)}</p>
                 </div>
+                <span className={TICKET_STATUS_CLASS[ticket.status]}>{TICKET_STATUS_LABEL[ticket.status]}</span>
+              </header>
 
-                {ticket.status !== 'closed' && (
-                  <div className="profile-ticket-reply">
-                    <textarea
-                      className="field-input profile-ticket-reply-input"
-                      onChange={(e) => setReplyBody((current) => ({ ...current, [ticket.id]: e.target.value }))}
-                      placeholder="پاسخ خود را بنویسید..."
-                      rows={2}
-                      value={replyBody[ticket.id] ?? ''}
-                    />
-                    <div>
-                      <button className="btn-ghost" onClick={() => handleClose(ticket.id)} type="button">بستن تیکت</button>
-                      <button className="btn-primary" disabled={!replyBody[ticket.id]?.trim()} onClick={() => handleReply(ticket.id)} type="button">ارسال پاسخ</button>
+              <div className="profile-ticket-thread">
+                {ticket.messages.map((item) => (
+                  <div className={`profile-ticket-bubble-row ${item.authorType === 'user' ? 'is-own' : ''}`} key={item.id}>
+                    <div className="profile-ticket-bubble">
+                      <span>{item.authorType === 'support' ? 'پشتیبانی' : 'شما'}</span>
+                      <p>{item.body}</p>
+                      <time>{formatTicketDate(item.createdAt)}</time>
                     </div>
                   </div>
-                )}
-                {ticket.status === 'closed' ? <p className="profile-ticket-closed">این گفتگو بسته شده است.</p> : null}
-              </article>
-            ))
-          )}
-        </div>
-      </section>
-    </div>
+                ))}
+              </div>
+
+              {ticket.status !== 'closed' && (
+                <div className="profile-ticket-reply">
+                  <textarea
+                    className="field-input profile-ticket-reply-input"
+                    onChange={(e) => setReplyBody((current) => ({ ...current, [ticket.id]: e.target.value }))}
+                    placeholder="پاسخ خود را بنویسید..."
+                    rows={2}
+                    value={replyBody[ticket.id] ?? ''}
+                  />
+                  <div>
+                    <button className="btn-ghost" onClick={() => handleClose(ticket.id)} type="button">بستن تیکت</button>
+                    <button className="btn-primary" disabled={!replyBody[ticket.id]?.trim()} onClick={() => handleReply(ticket.id)} type="button">ارسال پاسخ</button>
+                  </div>
+                </div>
+              )}
+              {ticket.status === 'closed' ? <p className="profile-ticket-closed">این گفتگو بسته شده است.</p> : null}
+            </article>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -844,83 +1071,277 @@ function WalletPanel() {
   const [charge, setCharge] = useState('');
   const [monthlyAmount, setMonthlyAmount] = useState('');
   const [monthlyEnabled, setMonthlyEnabled] = useState(false);
-  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [savingAction, setSavingAction] = useState<'charge' | 'settings' | null>(null);
+  const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+  const chargeAmount = useMemo(() => parseAmountInput(charge), [charge]);
+  const monthlyAmountValue = useMemo(
+    () => parseAmountInput(monthlyAmount),
+    [monthlyAmount],
+  );
+  const chargeInWords = useMemo(
+    () => amountToPersianWords(chargeAmount),
+    [chargeAmount],
+  );
+  const monthlyAmountInWords = useMemo(
+    () => amountToPersianWords(monthlyAmountValue),
+    [monthlyAmountValue],
+  );
 
   async function loadWallet() {
     const [walletData, transactionData] = await Promise.all([getProfileWallet(), getWalletTransactions()]);
     setWallet(walletData);
     setTransactions(transactionData);
     setMonthlyEnabled(walletData.isMonthlyDeductionEnabled);
-    setMonthlyAmount(walletData.monthlyDeductionAmount?.amount ? String(walletData.monthlyDeductionAmount.amount) : '');
+    setMonthlyAmount(
+      walletData.monthlyDeductionAmount?.amount
+        ? formatAmountInput(walletData.monthlyDeductionAmount.amount)
+        : '',
+    );
   }
 
   useEffect(() => {
-    loadWallet().catch(() => undefined);
+    const chargeStatus = new URLSearchParams(window.location.search).get('walletCharge');
+    if (chargeStatus === 'paid') {
+      setMessage({ kind: 'success', text: 'پرداخت تأیید شد و کیف پول شارژ شد.' });
+    } else if (chargeStatus === 'cancelled') {
+      setMessage({ kind: 'error', text: 'پرداخت توسط شما لغو شد و موجودی تغییری نکرد.' });
+    } else if (chargeStatus === 'failed') {
+      setMessage({ kind: 'error', text: 'پرداخت تأیید نشد و موجودی تغییری نکرد.' });
+    }
+    if (chargeStatus) {
+      window.history.replaceState(null, '', '/profile?tab=wallet');
+    }
+    loadWallet()
+      .catch(() => setError('اطلاعات کیف پول دریافت نشد. دوباره تلاش کنید.'))
+      .finally(() => setLoading(false));
   }, []);
 
   async function handleCharge(e: FormEvent) {
     e.preventDefault();
-    await createWalletCharge({ amount: { amount: Number(charge), currency: 'IRT' } });
-    setCharge('');
-    setMessage('شارژ کیف پول ثبت شد.');
-    await loadWallet();
+    if (!Number.isFinite(chargeAmount) || chargeAmount <= 0) return;
+    setSavingAction('charge');
+    setMessage(null);
+    try {
+      const started = await createWalletCharge({
+        amount: { amount: chargeAmount, currency: 'IRT' },
+      });
+      window.location.assign(started.paymentUrl);
+    } catch (err) {
+      setMessage({
+        kind: 'error',
+        text: err instanceof ApiRequestError ? err.message : 'شروع پرداخت شارژ انجام نشد.',
+      });
+    } finally {
+      setSavingAction(null);
+    }
   }
 
   async function handleSettings(e: FormEvent) {
     e.preventDefault();
-    const updated = await updateProfileWallet({
-      isMonthlyDeductionEnabled: monthlyEnabled,
-      monthlyDeductionAmount: monthlyEnabled
-        ? { amount: Number(monthlyAmount), currency: 'IRT' }
-        : null,
-    });
-    setWallet(updated);
-    setMessage('تنظیمات کیف پول ذخیره شد.');
+    if (
+      monthlyEnabled &&
+      (!Number.isFinite(monthlyAmountValue) || monthlyAmountValue <= 0)
+    ) return;
+    setSavingAction('settings');
+    setMessage(null);
+    try {
+      const updated = await updateProfileWallet({
+        isMonthlyDeductionEnabled: monthlyEnabled,
+        monthlyDeductionAmount: monthlyEnabled
+          ? { amount: monthlyAmountValue, currency: 'IRT' }
+          : null,
+      });
+      setWallet(updated);
+      setMonthlyAmount(
+        updated.monthlyDeductionAmount?.amount
+          ? formatAmountInput(updated.monthlyDeductionAmount.amount)
+          : '',
+      );
+      setMessage({ kind: 'success', text: 'تنظیمات پرداخت ماهانه ذخیره شد.' });
+    } catch (err) {
+      setMessage({
+        kind: 'error',
+        text: err instanceof ApiRequestError ? err.message : 'ذخیره تنظیمات انجام نشد.',
+      });
+    } finally {
+      setSavingAction(null);
+    }
+  }
+
+  async function handleRetry() {
+    setLoading(true);
+    setError('');
+    try {
+      await loadWallet();
+    } catch {
+      setError('اطلاعات کیف پول دریافت نشد. دوباره تلاش کنید.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="surface-card wallet-state">در حال دریافت اطلاعات کیف پول...</div>;
+  }
+
+  if (error || !wallet) {
+    return (
+      <section className="surface-card wallet-state">
+        <p className="field-error">{error || 'اطلاعات کیف پول در دسترس نیست.'}</p>
+        <button className="btn-ghost" onClick={handleRetry} type="button">تلاش دوباره</button>
+      </section>
+    );
   }
 
   return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">کیف پول</h1>
-        <div className="profile-stat-grid">
-          <StatCard label="موجودی" value={wallet ? formatMoney(wallet.balance) : '۰ تومان'} />
-          <StatCard label="برداشت ماهانه" value={monthlyEnabled ? 'فعال' : 'غیرفعال'} />
+    <div className="profile-stack wallet-stack">
+      <section className="surface-card wallet-overview">
+        <div className="wallet-overview-main">
+          <p className="wallet-eyebrow">کیف پول من</p>
+          <h1 className="wallet-balance">{formatMoney(wallet.balance)}</h1>
+          <p className="profile-muted">موجودی قابل استفاده برای مشارکت در طرح‌های نذر</p>
+        </div>
+        <div className={`wallet-monthly-status${wallet.isMonthlyDeductionEnabled ? ' is-active' : ''}`}>
+          <span aria-hidden="true" />
+          <div>
+            <strong>{wallet.isMonthlyDeductionEnabled ? 'پرداخت ماهانه فعال است' : 'پرداخت ماهانه غیرفعال است'}</strong>
+            <small>
+              {wallet.isMonthlyDeductionEnabled && wallet.monthlyDeductionAmount
+                ? `${formatMoney(wallet.monthlyDeductionAmount)} در هر ماه${
+                    wallet.nextMonthlyDeductionAt
+                      ? ` · سررسید بعدی ${formatDate(wallet.nextMonthlyDeductionAt)}`
+                      : ''
+                  }`
+                : 'در صورت نیاز از بخش تنظیمات فعال کنید'}
+            </small>
+          </div>
         </div>
       </section>
-      <section className="surface-card">
-        <h2 className="card-title">شارژ و تنظیمات</h2>
-        <form className="profile-wallet-grid" onSubmit={handleCharge}>
-          <Field label="مبلغ شارژ" onChange={setCharge} type="number" value={charge} />
-          <button className="btn-primary" type="submit">ثبت شارژ</button>
-        </form>
-        <form className="profile-wallet-grid" onSubmit={handleSettings}>
-          <label className="profile-chip">
-            <input checked={monthlyEnabled} onChange={(e) => setMonthlyEnabled(e.target.checked)} type="checkbox" />
-            <span>برداشت ماهانه فعال باشد</span>
-          </label>
-          <Field label="مبلغ برداشت ماهانه" onChange={setMonthlyAmount} required={monthlyEnabled} type="number" value={monthlyAmount} />
-          <button className="btn-ghost" type="submit">ذخیره تنظیمات</button>
-        </form>
-        {message && <p className="profile-muted">{message}</p>}
-      </section>
-      <section className="surface-card">
-        <h2 className="card-title">تراکنش‌های کیف پول</h2>
-        <div className="profile-list">
+
+      {message && (
+        <p aria-live="polite" className={message.kind === 'success' ? 'field-success' : 'field-error'}>
+          {message.text}
+        </p>
+      )}
+
+      <div className="wallet-action-grid">
+        <section className="surface-card wallet-action-card">
+          <div className="wallet-section-heading">
+            <h2 className="card-title">شارژ کیف پول</h2>
+            <p className="profile-muted">پس از پرداخت موفق در زرین‌پال، موجودی افزایش پیدا می‌کند.</p>
+          </div>
+          <form className="profile-wallet-grid" onSubmit={handleCharge}>
+            <label className="field-group">
+              <span className="field-label">مبلغ شارژ</span>
+              <span className="wallet-amount-field">
+                <input
+                  className="field-input"
+                  dir="ltr"
+                  inputMode="numeric"
+                  onChange={(e) => setCharge(formatAmountInput(e.target.value))}
+                  placeholder="300,000"
+                  required
+                  type="text"
+                  value={charge}
+                />
+                <span>تومان</span>
+              </span>
+              <small className="wallet-amount-words">{chargeInWords}</small>
+            </label>
+            <button className="btn-primary" disabled={savingAction !== null || chargeAmount <= 0} type="submit">
+              {savingAction === 'charge' ? 'در حال انتقال...' : 'پرداخت و شارژ'}
+            </button>
+          </form>
+        </section>
+
+        <section className="surface-card wallet-action-card">
+          <div className="wallet-section-heading">
+            <h2 className="card-title">پرداخت ماهانه</h2>
+            <p className="profile-muted">مبلغ ثابتی را برای مشارکت ماهانه تعیین کنید.</p>
+          </div>
+          <form className="profile-wallet-grid" onSubmit={handleSettings}>
+            <label className="wallet-toggle-row">
+              <span>
+                <strong>برداشت خودکار ماهانه</strong>
+                <small>{monthlyEnabled ? 'روشن' : 'خاموش'}</small>
+              </span>
+              <input
+                checked={monthlyEnabled}
+                onChange={(e) => setMonthlyEnabled(e.target.checked)}
+                type="checkbox"
+              />
+              <span aria-hidden="true" className="wallet-toggle-track"><span /></span>
+            </label>
+            <label className="field-group">
+              <span className="field-label">مبلغ برداشت ماهانه</span>
+              <span className="wallet-amount-field">
+                <input
+                  className="field-input"
+                  dir="ltr"
+                  disabled={!monthlyEnabled}
+                  inputMode="numeric"
+                  onChange={(e) => setMonthlyAmount(formatAmountInput(e.target.value))}
+                  placeholder="300,000"
+                  required={monthlyEnabled}
+                  type="text"
+                  value={monthlyAmount}
+                />
+                <span>تومان</span>
+              </span>
+              <small className="wallet-amount-words">{monthlyAmountInWords}</small>
+            </label>
+            <button
+              className="btn-ghost"
+              disabled={savingAction !== null || (monthlyEnabled && monthlyAmountValue <= 0)}
+              type="submit"
+            >
+              {savingAction === 'settings' ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
+            </button>
+          </form>
+        </section>
+      </div>
+
+      <section className="surface-card wallet-transactions">
+        <div className="wallet-transactions-heading">
+          <div>
+            <h2 className="card-title">تراکنش‌های کیف پول</h2>
+            <p className="profile-muted">ریز شارژها، پرداخت‌ها و برداشت‌های انجام‌شده</p>
+          </div>
+          <span>{transactions.length.toLocaleString('fa-IR')} تراکنش</span>
+        </div>
+        <div className="wallet-transaction-list">
           {transactions.length === 0 ? (
             <EmptyState title="تراکنشی وجود ندارد" body="شارژها و برداشت‌های کیف پول اینجا نمایش داده می‌شوند." />
           ) : (
-            transactions.map((item) => (
-              <div className="profile-list-row" key={item.id}>
-                <div className="profile-list-head">
-                  <p className="profile-list-title">{item.description}</p>
-                  <span className="badge-info">{item.type}</span>
-                </div>
-                <div className="profile-list-info">
-                  <ProfileRecentInfo label="مبلغ" value={formatMoney(item.amount)} />
-                  <ProfileRecentInfo label="تاریخ" value={formatDate(item.createdAt)} />
-                </div>
-              </div>
-            ))
+            transactions.map((item) => {
+              const completed = item.status === 'completed';
+              const incoming = completed && (item.type === 'charge' || item.type === 'refund');
+              const outgoing = completed && !incoming;
+              return (
+                <article className="wallet-transaction-row" key={item.id}>
+                  <span className={`wallet-transaction-sign${incoming ? ' is-incoming' : outgoing ? ' is-outgoing' : ' is-neutral'}`} aria-hidden="true">
+                    {incoming ? '+' : outgoing ? '−' : item.status === 'pending' ? '…' : '×'}
+                  </span>
+                  <div className="wallet-transaction-main">
+                    <p>{item.description}</p>
+                    <time>
+                      {formatDate(item.createdAt)}
+                      {item.transactionReference ? ` · پیگیری ${item.transactionReference}` : ''}
+                    </time>
+                  </div>
+                  <div className="wallet-transaction-meta">
+                    <strong className={incoming ? 'is-incoming' : outgoing ? 'is-outgoing' : ''}>
+                      {incoming ? '+' : outgoing ? '−' : ''} {formatMoney(item.amount)}
+                    </strong>
+                    <span className={WALLET_TRANSACTION_STATUS_COLOR[item.status]}>
+                      {WALLET_TRANSACTION_STATUS_LABEL[item.status]}
+                    </span>
+                  </div>
+                </article>
+              );
+            })
           )}
         </div>
       </section>
@@ -986,6 +1407,8 @@ function InvitePanel() {
   const [cards, setCards] = useState<InvitationCard[]>([]);
   const [friendName, setFriendName] = useState('');
   const [friendMobile, setFriendMobile] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
 
   async function loadCards() {
     setCards(await getInvitationCards());
@@ -997,40 +1420,76 @@ function InvitePanel() {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
-    await createInvitationCard({ friendName, friendMobile: friendMobile || null });
-    setFriendName('');
-    setFriendMobile('');
-    await loadCards();
+    setSaving(true);
+    setMessage(null);
+    try {
+      await createInvitationCard({ friendName, friendMobile: friendMobile || null });
+      setFriendName('');
+      setFriendMobile('');
+      setMessage({ kind: 'success', text: 'دعوت‌نامه با موفقیت ساخته شد.' });
+      await loadCards();
+    } catch (err) {
+      setMessage({
+        kind: 'error',
+        text: err instanceof ApiRequestError ? err.message : 'ساخت دعوت‌نامه انجام نشد.',
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">کارت دعوت</h1>
-        <form className="field-stack" onSubmit={handleCreate}>
-          <Field label="نام دوست" onChange={setFriendName} value={friendName} />
-          <Field dir="ltr" label="شماره همراه دوست" onChange={setFriendMobile} required={false} value={friendMobile} />
-          <button className="btn-primary" type="submit">ساخت کارت دعوت</button>
+    <div className="profile-stack invite-stack">
+      <section className="surface-card invite-builder">
+        <div className="invite-builder-copy">
+          <p className="invite-eyebrow">دعوت به یک کار خوب</p>
+          <h1 className="card-title">دعوت‌نامه شخصی بسازید</h1>
+          <p className="profile-muted">نام دوستتان را وارد کنید تا متن دعوت آماده دریافت شود.</p>
+        </div>
+        <form className="invite-form" onSubmit={handleCreate}>
+          <div className="invite-form-grid">
+            <Field label="نام دوست" onChange={setFriendName} value={friendName} />
+            <Field dir="ltr" label="شماره همراه دوست" onChange={setFriendMobile} required={false} value={friendMobile} />
+          </div>
+          {message && (
+            <p className={message.kind === 'success' ? 'field-success' : 'field-error'}>{message.text}</p>
+          )}
+          <button className="btn-primary" disabled={saving || !friendName.trim()} type="submit">
+            {saving ? 'در حال ساخت...' : 'ساخت دعوت‌نامه'}
+          </button>
         </form>
       </section>
-      <section className="surface-card">
-        <h2 className="card-title">دعوت‌نامه‌های ساخته‌شده</h2>
-        <div className="profile-list">
+
+      <section className="surface-card invite-archive">
+        <div className="invite-archive-heading">
+          <div>
+            <h2 className="card-title">دعوت‌نامه‌های ساخته‌شده</h2>
+            <p className="profile-muted">متن هر دعوت‌نامه را دریافت و برای دوستتان ارسال کنید.</p>
+          </div>
+          <span>{cards.length.toLocaleString('fa-IR')} دعوت‌نامه</span>
+        </div>
+        <div className="invite-list">
           {cards.length === 0 ? (
             <EmptyState title="هنوز کارت دعوتی ساخته نشده است" body="با وارد کردن نام دوست، متن دعوت آماده دریافت می‌شود." />
           ) : (
             cards.map((card) => (
-              <div className="profile-list-row" key={card.id}>
-                <p className="profile-list-title">{card.friendName}</p>
-                <p className="profile-muted">{card.downloadText}</p>
+              <article className="invite-card-row" key={card.id}>
+                <header>
+                  <div>
+                    <strong>{card.friendName}</strong>
+                    <time>{formatDate(card.createdAt)}</time>
+                  </div>
+                  <span className="badge-info">آماده ارسال</span>
+                </header>
+                <p>{card.downloadText}</p>
                 <a
-                  className="profile-pay-link"
+                  className="btn-ghost invite-download"
                   download={`nazr-invite-${card.friendName}.txt`}
                   href={`data:text/plain;charset=utf-8,${encodeURIComponent(card.downloadText)}`}
                 >
                   دریافت متن دعوت
                 </a>
-              </div>
+              </article>
             ))
           )}
         </div>
@@ -1068,28 +1527,33 @@ function ChangePasswordCard() {
   }
 
   return (
-    <section className="surface-card">
-      <h2 className="card-title">گذرواژه</h2>
-      <form className="field-stack" onSubmit={handleSubmit}>
-        <PasswordField
-          autoComplete="current-password"
-          label="گذرواژه فعلی"
-          onChange={setCurrentPassword}
-          value={currentPassword}
-        />
-        <PasswordField
-          autoComplete="new-password"
-          label="گذرواژه جدید"
-          onChange={setNewPassword}
-          value={newPassword}
-        />
-        <PasswordField
-          autoComplete="new-password"
-          label="تکرار گذرواژه جدید"
-          onChange={setConfirmPassword}
-          value={confirmPassword}
-        />
-        {message && <p className="profile-muted">{message}</p>}
+    <section className="surface-card account-password-card">
+      <div className="account-password-heading">
+        <h2 className="card-title">تغییر گذرواژه</h2>
+        <p className="profile-muted">برای امنیت حساب، گذرواژه جدید را در هر دو فیلد یکسان وارد کنید.</p>
+      </div>
+      <form className="account-password-form" onSubmit={handleSubmit}>
+        <div className="account-password-grid">
+          <PasswordField
+            autoComplete="current-password"
+            label="گذرواژه فعلی"
+            onChange={setCurrentPassword}
+            value={currentPassword}
+          />
+          <PasswordField
+            autoComplete="new-password"
+            label="گذرواژه جدید"
+            onChange={setNewPassword}
+            value={newPassword}
+          />
+          <PasswordField
+            autoComplete="new-password"
+            label="تکرار گذرواژه جدید"
+            onChange={setConfirmPassword}
+            value={confirmPassword}
+          />
+        </div>
+        {message && <p className={message.includes('موفقیت') ? 'field-success' : 'field-error'}>{message}</p>}
         <button className="btn-primary" disabled={saving} type="submit">
           {saving ? 'در حال ذخیره...' : 'تغییر گذرواژه'}
         </button>
@@ -1118,6 +1582,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 function Field({
   autoComplete,
+  className,
   dir,
   label,
   onChange,
@@ -1126,6 +1591,7 @@ function Field({
   value,
 }: {
   autoComplete?: string;
+  className?: string;
   dir?: 'ltr' | 'rtl';
   label: string;
   onChange: (value: string) => void;
@@ -1134,7 +1600,7 @@ function Field({
   value: string;
 }) {
   return (
-    <label className="field-group">
+    <label className={`field-group${className ? ` ${className}` : ''}`}>
       <span className="field-label">{label}</span>
       <input
         autoComplete={autoComplete}

@@ -30,6 +30,7 @@ import type {
   RequestOtpRequest,
   ResetPasswordRequest,
   StartOnlinePaymentResponse,
+  StartWalletChargeResponse,
   Ticket,
   TicketMessage,
   UpdateMotivationalTargetRequest,
@@ -284,7 +285,10 @@ export function updateProfileWallet(payload: UpdateWalletSettingsRequest) {
 }
 
 export function createWalletCharge(payload: CreateWalletChargeRequest) {
-  return post<WalletTransaction, CreateWalletChargeRequest>('/profile/wallet/charges', payload);
+  return post<StartWalletChargeResponse, CreateWalletChargeRequest>(
+    '/profile/wallet/charges',
+    payload,
+  );
 }
 
 export function getWalletTransactions() {

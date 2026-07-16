@@ -10,7 +10,6 @@ import { ACCESS_TOKEN_COOKIE } from '../auth/auth.service';
 import type { AuthenticatedRequest } from '../auth/auth.types';
 import {
   CreateInvitationCardDto,
-  CreateWalletChargeDto,
   UpdateMotivationalTargetDto,
   UpdateUserProfileDetailsDto,
   UpdateWalletSettingsDto,
@@ -105,15 +104,6 @@ export class ProfileController {
     @Body() body: UpdateWalletSettingsDto,
   ) {
     return this.service.updateWalletSettings(request.user!.id, body);
-  }
-
-  @ApiOperation({ summary: 'ثبت شارژ کیف پول' })
-  @Post('wallet/charges')
-  createWalletCharge(
-    @Req() request: AuthenticatedRequest,
-    @Body() body: CreateWalletChargeDto,
-  ) {
-    return this.service.createWalletCharge(request.user!.id, body);
   }
 
   @ApiOperation({ summary: 'تراکنش‌های کیف پول کاربر' })

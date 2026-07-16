@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type {
   CreateInvitationCardRequest,
-  CreateWalletChargeRequest,
   Money,
   UpdateMotivationalTargetRequest,
   UpdateUserProfileDetailsRequest,
@@ -45,11 +44,6 @@ export class UpdateWalletSettingsDto implements UpdateWalletSettingsRequest {
 
   @ApiPropertyOptional({ type: MoneyDto, nullable: true })
   monthlyDeductionAmount?: Money | null;
-}
-
-export class CreateWalletChargeDto implements CreateWalletChargeRequest {
-  @ApiProperty({ type: MoneyDto })
-  amount!: Money;
 }
 
 export class CreateInvitationCardDto implements CreateInvitationCardRequest {
