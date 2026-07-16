@@ -1792,15 +1792,25 @@ input {
 }
 
 .wallet-amount-field .field-input {
-  padding-inline-end: 62px;
+  appearance: textfield;
+  padding-left: 72px;
+  padding-right: 12px;
+  text-align: right;
+}
+
+.wallet-amount-field .field-input::-webkit-inner-spin-button,
+.wallet-amount-field .field-input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
 }
 
 .wallet-amount-field > span {
   color: var(--muted);
   font-size: var(--profile-font-caption);
-  inset-inline-end: 12px;
+  left: 14px;
   pointer-events: none;
   position: absolute;
+  right: auto;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -1981,6 +1991,301 @@ input {
 .wallet-state .btn-ghost {
   min-height: 38px;
   padding: 8px 14px;
+}
+
+.account-stack,
+.contributions-stack,
+.invite-stack {
+  gap: 14px;
+}
+
+.account-details-card,
+.account-password-card,
+.contributions-overview,
+.contributions-plans,
+.invite-builder,
+.invite-archive {
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.account-heading,
+.account-identity,
+.contributions-heading,
+.contributions-section-heading,
+.invite-archive-heading {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.account-heading {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+}
+
+.account-identity {
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.account-identity > div {
+  min-width: 0;
+}
+
+.account-heading .card-title,
+.account-password-heading .card-title,
+.contributions-heading .card-title,
+.contributions-section-heading .card-title,
+.invite-builder .card-title,
+.invite-archive-heading .card-title {
+  font-size: var(--profile-font-heading);
+  margin: 0 0 3px;
+}
+
+.account-form {
+  display: grid;
+  gap: 18px;
+  padding-top: 18px;
+}
+
+.account-form-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-field-wide {
+  grid-column: 1 / -1;
+}
+
+.account-platforms {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.account-platform-chip {
+  background: var(--surface);
+  min-height: 36px;
+  padding: 7px 11px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.account-platform-chip.is-selected {
+  background: var(--primary-soft);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.account-form-actions {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.account-form-actions .field-success,
+.account-form-actions .field-error {
+  flex: 1 1 auto;
+}
+
+.account-form-actions .btn-primary,
+.account-password-form > .btn-primary {
+  flex: 0 0 auto;
+  min-height: 38px;
+  min-width: 124px;
+  padding: 8px 16px;
+}
+
+.account-password-heading {
+  margin-bottom: 16px;
+}
+
+.account-password-form {
+  display: grid;
+  gap: 14px;
+}
+
+.account-password-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.account-password-form > .btn-primary {
+  justify-self: start;
+}
+
+.contributions-heading {
+  align-items: flex-start;
+}
+
+.contributions-heading .btn-primary {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.contributions-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.contributions-section-heading {
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.contributions-section-heading > span,
+.invite-archive-heading > span {
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-size: var(--profile-font-caption);
+  padding-top: 3px;
+}
+
+.contributions-plan-list {
+  gap: 8px;
+}
+
+.contribution-plan-row {
+  gap: 12px;
+  padding: 12px;
+}
+
+.contribution-plan-head {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.contribution-plan-head > div {
+  min-width: 0;
+}
+
+.contribution-plan-head strong {
+  font-size: var(--profile-font-body);
+  margin-bottom: 2px;
+}
+
+.contribution-plan-head span {
+  font-size: var(--profile-font-caption);
+}
+
+.contribution-plan-head b {
+  color: var(--primary);
+  flex: 0 0 auto;
+  font-size: var(--profile-font-body);
+}
+
+.invite-builder {
+  align-items: start;
+  background: color-mix(in srgb, var(--primary-soft) 38%, var(--surface));
+  border-inline-start: 4px solid var(--primary);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(200px, 0.75fr) minmax(0, 1.25fr);
+}
+
+.invite-builder-copy {
+  align-content: start;
+  display: grid;
+  padding-top: 2px;
+}
+
+.invite-eyebrow {
+  color: var(--primary) !important;
+  font-size: var(--profile-font-supporting) !important;
+  font-weight: 700;
+  margin: 0 0 3px !important;
+}
+
+.invite-form {
+  display: grid;
+  gap: 12px;
+}
+
+.invite-form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.invite-form > .btn-primary {
+  justify-self: start;
+  min-height: 38px;
+  min-width: 128px;
+  padding: 8px 16px;
+}
+
+.invite-archive-heading {
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.invite-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.invite-list > .profile-empty {
+  grid-column: 1 / -1;
+}
+
+.invite-card-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px;
+}
+
+.invite-card-row header {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.invite-card-row header > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.invite-card-row header strong {
+  color: var(--heading, var(--foreground));
+  font-size: var(--profile-font-body);
+}
+
+.invite-card-row time {
+  color: var(--muted);
+  font-size: var(--profile-font-caption);
+}
+
+.invite-card-row > p {
+  color: var(--foreground);
+  font-size: var(--profile-font-supporting);
+  line-height: 1.9;
+  margin: 0;
+  max-height: 92px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.invite-download {
+  justify-self: start;
+  min-height: 36px;
+  padding: 7px 12px;
 }
 
 .profile-textarea {
@@ -2503,6 +2808,18 @@ input {
     grid-template-columns: 1fr;
   }
 
+  .account-password-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contributions-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .invite-builder {
+    grid-template-columns: 1fr;
+  }
+
   .profile-gallery-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2593,6 +2910,55 @@ input {
 
   .wallet-transaction-meta strong {
     white-space: normal;
+  }
+
+  .account-heading,
+  .contributions-heading,
+  .contributions-section-heading,
+  .invite-archive-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .account-form-grid,
+  .invite-form-grid,
+  .invite-list {
+    grid-template-columns: 1fr;
+  }
+
+  .account-field-wide {
+    grid-column: auto;
+  }
+
+  .account-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .account-form-actions .btn-primary,
+  .account-password-form > .btn-primary,
+  .contributions-heading .btn-primary,
+  .invite-form > .btn-primary {
+    justify-self: stretch;
+    text-align: center;
+    width: 100%;
+  }
+
+  .account-platforms .profile-chip-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contributions-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .invite-builder {
+    padding: 16px;
+  }
+
+  .invite-list > .profile-empty {
+    grid-column: auto;
   }
 
   .dashboard-panel-heading {

@@ -644,32 +644,56 @@ function AccountPanel({
   }
 
   return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">اطلاعات حساب</h1>
-        <form className="field-stack" onSubmit={handleSave}>
-          <Field label="نام و نام خانوادگی" onChange={setFullName} value={fullName} />
-          <Field dir="ltr" label="شماره همراه" onChange={setMobile} value={mobile} />
-          <Field dir="ltr" label="شماره ایتا" onChange={setEitaNumber} required={false} value={eitaNumber} />
-          <div className="field-group">
-            <span className="field-label">پلتفرم‌های فعالیت</span>
-            <div className="profile-chip-grid">
-              {PLATFORM_OPTIONS.map((option) => (
-                <label className="profile-chip" key={option.id}>
-                  <input
-                    checked={platforms.includes(option.id)}
-                    onChange={() => togglePlatform(option.id)}
-                    type="checkbox"
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
+    <div className="profile-stack account-stack">
+      <section className="surface-card account-details-card">
+        <header className="account-heading">
+          <div className="account-identity">
+            <span className="profile-avatar" aria-hidden="true">{profile.fullName.trim().charAt(0)}</span>
+            <div>
+              <h1 className="card-title">اطلاعات حساب</h1>
+              <p className="profile-muted">عضویت از {formatDate(profile.createdAt)}</p>
             </div>
           </div>
-          {message && <p className="profile-muted">{message}</p>}
-          <button className="btn-primary" disabled={saving} type="submit">
-            {saving ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
-          </button>
+          <span className="badge-success">حساب فعال</span>
+        </header>
+
+        <form className="account-form" onSubmit={handleSave}>
+          <div className="account-form-grid">
+            <Field className="account-field-wide" label="نام و نام خانوادگی" onChange={setFullName} value={fullName} />
+            <Field dir="ltr" label="شماره همراه" onChange={setMobile} value={mobile} />
+            <Field dir="ltr" label="شماره ایتا" onChange={setEitaNumber} required={false} value={eitaNumber} />
+          </div>
+
+          <div className="account-platforms">
+            <div>
+              <span className="field-label">پلتفرم‌های فعالیت</span>
+              <p className="profile-muted">شبکه‌هایی را که در آن‌ها فعال هستید انتخاب کنید.</p>
+            </div>
+            <div className="profile-chip-grid">
+              {PLATFORM_OPTIONS.map((option) => {
+                const selected = platforms.includes(option.id);
+                return (
+                  <label className={`profile-chip account-platform-chip${selected ? ' is-selected' : ''}`} key={option.id}>
+                    <input
+                      checked={selected}
+                      onChange={() => togglePlatform(option.id)}
+                      type="checkbox"
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="account-form-actions">
+            {message && (
+              <p className={message.includes('ذخیره شد') ? 'field-success' : 'field-error'}>{message}</p>
+            )}
+            <button className="btn-primary" disabled={saving} type="submit">
+              {saving ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
+            </button>
+          </div>
         </form>
       </section>
       <ChangePasswordCard />
@@ -678,30 +702,57 @@ function AccountPanel({
 }
 
 function ContributionsPanel({ nazrs, summary }: { nazrs: NazrRequest[]; summary: UserProfileSummary }) {
-  const maxAmount = Math.max(...summary.contributions.byNazrType.map((item) => item.totalAmount.amount), 1);
   return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">مشارکت‌ها</h1>
-        <div className="profile-progress-list">
+    <div className="profile-stack contributions-stack">
+      <section className="surface-card contributions-overview">
+        <div className="contributions-heading">
+          <div>
+            <h1 className="card-title">مشارکت‌های من</h1>
+            <p className="profile-muted">خلاصه همراهی شما در همه طرح‌های نذر</p>
+          </div>
+          <Link className="btn-primary" href="/nazr/new">ثبت نذر جدید</Link>
+        </div>
+        <div className="contributions-summary-grid">
+          <DashboardStatCard label="کل مشارکت‌ها" tone="primary" value={summary.contributions.totalRequests.toLocaleString('fa-IR')} />
+          <DashboardStatCard label="مبلغ کل" tone="success" value={formatMoney(summary.contributions.totalAmount)} />
+          <DashboardStatCard label="تکمیل‌شده" tone="warm" value={summary.contributions.completedRequests.toLocaleString('fa-IR')} />
+          <DashboardStatCard label="منتظر پرداخت" tone="neutral" value={summary.contributions.awaitingPaymentRequests.toLocaleString('fa-IR')} />
+        </div>
+      </section>
+
+      <section className="surface-card contributions-plans">
+        <div className="contributions-section-heading">
+          <div>
+            <h2 className="card-title">سهم من در طرح‌ها</h2>
+            <p className="profile-muted">هر ردیف سهم مبلغی شما از کل مشارکت‌ها را نشان می‌دهد.</p>
+          </div>
+          <span>{summary.contributions.byNazrType.length.toLocaleString('fa-IR')} طرح</span>
+        </div>
+        <div className="profile-progress-list contributions-plan-list">
           {summary.contributions.byNazrType.length === 0 ? (
             <EmptyState title="هنوز مشارکتی ثبت نشده است" body="با ثبت نذر، سهم شما در هر طرح اینجا دیده می‌شود." />
           ) : (
-            summary.contributions.byNazrType.map((item) => (
-              <Link className="profile-progress-row" href="/nazr/new" key={item.nazrTypeId}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.count.toLocaleString('fa-IR')} مشارکت · {formatMoney(item.totalAmount)}</span>
-                </div>
-                <div className="profile-progress-track">
-                  <span style={{ inlineSize: `${Math.max(6, (item.totalAmount.amount / maxAmount) * 100)}%` }} />
-                </div>
-              </Link>
-            ))
+            summary.contributions.byNazrType.map((item) => {
+              const slug = nazrs.find((nazr) => nazr.nazrType.id === item.nazrTypeId)?.nazrType.slug;
+              return (
+                <Link className="profile-progress-row contribution-plan-row" href={slug ? `/nazr/new?type=${slug}` : '/nazr/new'} key={item.nazrTypeId}>
+                  <div className="contribution-plan-head">
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span>{item.count.toLocaleString('fa-IR')} مشارکت · {formatMoney(item.totalAmount)}</span>
+                    </div>
+                    <b>{item.sharePercent.toLocaleString('fa-IR')}٪</b>
+                  </div>
+                  <div className="profile-progress-track" aria-label={`${item.sharePercent.toLocaleString('fa-IR')} درصد از مشارکت‌ها`}>
+                    <span style={{ inlineSize: `${Math.max(6, item.sharePercent)}%` }} />
+                  </div>
+                </Link>
+              );
+            })
           )}
         </div>
       </section>
-      <RecentActivities items={nazrs} />
+      {nazrs.length > 0 && <RecentActivities items={nazrs} />}
     </div>
   );
 }
@@ -1230,6 +1281,8 @@ function InvitePanel() {
   const [cards, setCards] = useState<InvitationCard[]>([]);
   const [friendName, setFriendName] = useState('');
   const [friendMobile, setFriendMobile] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
 
   async function loadCards() {
     setCards(await getInvitationCards());
@@ -1241,40 +1294,76 @@ function InvitePanel() {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
-    await createInvitationCard({ friendName, friendMobile: friendMobile || null });
-    setFriendName('');
-    setFriendMobile('');
-    await loadCards();
+    setSaving(true);
+    setMessage(null);
+    try {
+      await createInvitationCard({ friendName, friendMobile: friendMobile || null });
+      setFriendName('');
+      setFriendMobile('');
+      setMessage({ kind: 'success', text: 'دعوت‌نامه با موفقیت ساخته شد.' });
+      await loadCards();
+    } catch (err) {
+      setMessage({
+        kind: 'error',
+        text: err instanceof ApiRequestError ? err.message : 'ساخت دعوت‌نامه انجام نشد.',
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="profile-stack">
-      <section className="surface-card">
-        <h1 className="card-title">کارت دعوت</h1>
-        <form className="field-stack" onSubmit={handleCreate}>
-          <Field label="نام دوست" onChange={setFriendName} value={friendName} />
-          <Field dir="ltr" label="شماره همراه دوست" onChange={setFriendMobile} required={false} value={friendMobile} />
-          <button className="btn-primary" type="submit">ساخت کارت دعوت</button>
+    <div className="profile-stack invite-stack">
+      <section className="surface-card invite-builder">
+        <div className="invite-builder-copy">
+          <p className="invite-eyebrow">دعوت به یک کار خوب</p>
+          <h1 className="card-title">دعوت‌نامه شخصی بسازید</h1>
+          <p className="profile-muted">نام دوستتان را وارد کنید تا متن دعوت آماده دریافت شود.</p>
+        </div>
+        <form className="invite-form" onSubmit={handleCreate}>
+          <div className="invite-form-grid">
+            <Field label="نام دوست" onChange={setFriendName} value={friendName} />
+            <Field dir="ltr" label="شماره همراه دوست" onChange={setFriendMobile} required={false} value={friendMobile} />
+          </div>
+          {message && (
+            <p className={message.kind === 'success' ? 'field-success' : 'field-error'}>{message.text}</p>
+          )}
+          <button className="btn-primary" disabled={saving || !friendName.trim()} type="submit">
+            {saving ? 'در حال ساخت...' : 'ساخت دعوت‌نامه'}
+          </button>
         </form>
       </section>
-      <section className="surface-card">
-        <h2 className="card-title">دعوت‌نامه‌های ساخته‌شده</h2>
-        <div className="profile-list">
+
+      <section className="surface-card invite-archive">
+        <div className="invite-archive-heading">
+          <div>
+            <h2 className="card-title">دعوت‌نامه‌های ساخته‌شده</h2>
+            <p className="profile-muted">متن هر دعوت‌نامه را دریافت و برای دوستتان ارسال کنید.</p>
+          </div>
+          <span>{cards.length.toLocaleString('fa-IR')} دعوت‌نامه</span>
+        </div>
+        <div className="invite-list">
           {cards.length === 0 ? (
             <EmptyState title="هنوز کارت دعوتی ساخته نشده است" body="با وارد کردن نام دوست، متن دعوت آماده دریافت می‌شود." />
           ) : (
             cards.map((card) => (
-              <div className="profile-list-row" key={card.id}>
-                <p className="profile-list-title">{card.friendName}</p>
-                <p className="profile-muted">{card.downloadText}</p>
+              <article className="invite-card-row" key={card.id}>
+                <header>
+                  <div>
+                    <strong>{card.friendName}</strong>
+                    <time>{formatDate(card.createdAt)}</time>
+                  </div>
+                  <span className="badge-info">آماده ارسال</span>
+                </header>
+                <p>{card.downloadText}</p>
                 <a
-                  className="profile-pay-link"
+                  className="btn-ghost invite-download"
                   download={`nazr-invite-${card.friendName}.txt`}
                   href={`data:text/plain;charset=utf-8,${encodeURIComponent(card.downloadText)}`}
                 >
                   دریافت متن دعوت
                 </a>
-              </div>
+              </article>
             ))
           )}
         </div>
@@ -1312,28 +1401,33 @@ function ChangePasswordCard() {
   }
 
   return (
-    <section className="surface-card">
-      <h2 className="card-title">گذرواژه</h2>
-      <form className="field-stack" onSubmit={handleSubmit}>
-        <PasswordField
-          autoComplete="current-password"
-          label="گذرواژه فعلی"
-          onChange={setCurrentPassword}
-          value={currentPassword}
-        />
-        <PasswordField
-          autoComplete="new-password"
-          label="گذرواژه جدید"
-          onChange={setNewPassword}
-          value={newPassword}
-        />
-        <PasswordField
-          autoComplete="new-password"
-          label="تکرار گذرواژه جدید"
-          onChange={setConfirmPassword}
-          value={confirmPassword}
-        />
-        {message && <p className="profile-muted">{message}</p>}
+    <section className="surface-card account-password-card">
+      <div className="account-password-heading">
+        <h2 className="card-title">تغییر گذرواژه</h2>
+        <p className="profile-muted">برای امنیت حساب، گذرواژه جدید را در هر دو فیلد یکسان وارد کنید.</p>
+      </div>
+      <form className="account-password-form" onSubmit={handleSubmit}>
+        <div className="account-password-grid">
+          <PasswordField
+            autoComplete="current-password"
+            label="گذرواژه فعلی"
+            onChange={setCurrentPassword}
+            value={currentPassword}
+          />
+          <PasswordField
+            autoComplete="new-password"
+            label="گذرواژه جدید"
+            onChange={setNewPassword}
+            value={newPassword}
+          />
+          <PasswordField
+            autoComplete="new-password"
+            label="تکرار گذرواژه جدید"
+            onChange={setConfirmPassword}
+            value={confirmPassword}
+          />
+        </div>
+        {message && <p className={message.includes('موفقیت') ? 'field-success' : 'field-error'}>{message}</p>}
         <button className="btn-primary" disabled={saving} type="submit">
           {saving ? 'در حال ذخیره...' : 'تغییر گذرواژه'}
         </button>
@@ -1362,6 +1456,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 function Field({
   autoComplete,
+  className,
   dir,
   label,
   onChange,
@@ -1370,6 +1465,7 @@ function Field({
   value,
 }: {
   autoComplete?: string;
+  className?: string;
   dir?: 'ltr' | 'rtl';
   label: string;
   onChange: (value: string) => void;
@@ -1378,7 +1474,7 @@ function Field({
   value: string;
 }) {
   return (
-    <label className="field-group">
+    <label className={`field-group${className ? ` ${className}` : ''}`}>
       <span className="field-label">{label}</span>
       <input
         autoComplete={autoComplete}
