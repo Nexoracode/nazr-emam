@@ -12,6 +12,8 @@ import type {
   NotificationItem,
   Paginated,
   Payment,
+  PaymentMethod,
+  PaymentStatus,
   Ticket,
   UserPlatform,
   UserProfileDetails,
@@ -100,6 +102,26 @@ const STATUS_COLOR: Record<NazrRequestStatus, string> = {
   completed: 'badge-success',
   cancelled: 'badge-neutral',
   rejected: 'badge-danger',
+};
+
+const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
+  pending: 'در انتظار بررسی',
+  paid: 'پرداخت موفق',
+  rejected: 'رد شده',
+  refunded: 'بازگشت داده شده',
+};
+
+const PAYMENT_STATUS_COLOR: Record<PaymentStatus, string> = {
+  pending: 'badge-warning',
+  paid: 'badge-success',
+  rejected: 'badge-danger',
+  refunded: 'badge-neutral',
+};
+
+const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  online: 'پرداخت آنلاین',
+  card_to_card: 'کارت به کارت',
+  cash: 'نقدی',
 };
 
 export function ProfileView() {
@@ -478,10 +500,12 @@ function PaymentsPanel() {
             <div className="profile-list-row" key={payment.id}>
               <div className="profile-list-head">
                 <p className="profile-list-title">{formatMoney(payment.amount)}</p>
-                <span className={payment.status === 'paid' ? 'badge-success' : 'badge-warning'}>{payment.status}</span>
+                <span className={PAYMENT_STATUS_COLOR[payment.status]}>
+                  {PAYMENT_STATUS_LABEL[payment.status]}
+                </span>
               </div>
               <div className="profile-list-info">
-                <ProfileRecentInfo label="روش" value={payment.method} />
+                <ProfileRecentInfo label="روش" value={PAYMENT_METHOD_LABEL[payment.method]} />
                 <ProfileRecentInfo label="تاریخ" value={formatDate(payment.createdAt)} />
                 {payment.transactionReference && <ProfileRecentInfo label="کد تراکنش" value={payment.transactionReference} />}
               </div>
