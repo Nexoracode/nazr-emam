@@ -226,6 +226,7 @@ export function ProfileView() {
         {activeTab === 'dashboard' && (
           <DashboardPanel
             nazrs={nazrs?.items ?? []}
+            onNavigate={setActiveTab}
             onSummaryChange={setSummary}
             summary={summary}
           />
@@ -251,14 +252,17 @@ export function ProfileView() {
 
 function DashboardPanel({
   nazrs,
+  onNavigate,
   onSummaryChange,
   summary,
 }: {
   nazrs: NazrRequest[];
+  onNavigate: (tab: ProfileTab) => void;
   onSummaryChange: (summary: UserProfileSummary) => void;
   summary: UserProfileSummary;
 }) {
   const recent = nazrs.slice(0, 3);
+  const firstName = summary.profile.fullName.trim().split(/\s+/)[0] || 'همراه عزیز';
   const [target, setTarget] = useState(summary.profile.motivationalTarget ?? '');
   const [targetStatus, setTargetStatus] = useState('');
   const [savingTarget, setSavingTarget] = useState(false);
@@ -282,49 +286,113 @@ function DashboardPanel({
   }
 
   return (
-    <div className="profile-stack">
-      <section className="surface-card profile-hero">
-        <div>
-          <h1 className="profile-hero-title">هر نذر کوچک، یک چراغ روشن‌تر.</h1>
-          <p className="profile-muted">خلاصه همراهی، پرداخت‌ها و مسیر شخصی شما در این پنل جمع شده است.</p>
+    <div className="profile-stack dashboard-stack">
+      <section className="surface-card dashboard-welcome">
+        <div className="dashboard-welcome-copy">
+          <p className="dashboard-kicker">سلام {firstName}</p>
+          <h1 className="dashboard-title">نمای کلی حساب شما</h1>
+          <p className="dashboard-subtitle">هر نذر کوچک، یک چراغ روشن‌تر.</p>
+          <div className="dashboard-welcome-actions">
+            <Link className="btn-primary" href="/nazr/new">
+              ثبت نذر جدید
+            </Link>
+            <button className="btn-ghost" onClick={() => onNavigate('contributions')} type="button">
+              مشاهده مشارکت‌ها
+            </button>
+          </div>
         </div>
-        <Link className="btn-primary" href="/nazr/new">
-          مشارکت دوباره
-        </Link>
-      </section>
 
-      <section className="surface-card">
-        <div className="profile-stat-grid">
-          <StatCard label="تعداد مشارکت" value={String(summary.contributions.totalRequests)} />
-          <StatCard label="مبلغ مشارکت" value={formatMoney(summary.contributions.totalAmount)} />
-          <StatCard label="امتیاز باشگاه" value={summary.club.points.toLocaleString('fa-IR')} />
-          <StatCard label="اعلان خوانده‌نشده" value={String(summary.unreadNotifications)} />
-        </div>
-      </section>
-
-      <section className="surface-card">
-        <h2 className="card-title">هدف شخصی من</h2>
-        <form className="profile-goal-form" onSubmit={handleTargetSubmit}>
-          <textarea
-            className="field-input profile-textarea"
-            maxLength={500}
-            onChange={(e) => setTarget(e.target.value)}
-            placeholder="مثلاً امسال در سه طرح نذر شرکت کنم."
-            value={target}
+        <div className="dashboard-attention" aria-label="موارد نیازمند پیگیری">
+          <p className="dashboard-attention-title">نیازمند پیگیری</p>
+          <DashboardAttentionItem
+            count={summary.contributions.awaitingPaymentRequests}
+            label="پرداخت ناتمام"
+            onClick={() => onNavigate('contributions')}
           />
-          {targetStatus && <p className="profile-muted">{targetStatus}</p>}
-          <button className="btn-primary" disabled={savingTarget} type="submit">
-            {savingTarget ? 'در حال ذخیره...' : 'ذخیره هدف'}
-          </button>
-        </form>
+          <DashboardAttentionItem
+            count={summary.openTickets}
+            label="تیکت باز"
+            onClick={() => onNavigate('tickets')}
+          />
+          <DashboardAttentionItem
+            count={summary.unreadNotifications}
+            label="اعلان خوانده‌نشده"
+            onClick={() => onNavigate('notifications')}
+          />
+        </div>
       </section>
 
-      <RecentActivities items={recent} />
+      <section className="dashboard-stat-grid" aria-label="خلاصه حساب">
+        <DashboardStatCard label="کل مشارکت‌ها" tone="primary" value={summary.contributions.totalRequests.toLocaleString('fa-IR')} />
+        <DashboardStatCard label="مبلغ پرداخت‌شده" tone="success" value={formatMoney(summary.payments.totalPaidAmount)} />
+        <DashboardStatCard label="نذرهای تکمیل‌شده" tone="warm" value={summary.contributions.completedRequests.toLocaleString('fa-IR')} />
+        <DashboardStatCard label="امتیاز باشگاه" tone="neutral" value={summary.club.points.toLocaleString('fa-IR')} />
+      </section>
+
+      <div className="dashboard-content-grid">
+        <RecentActivities
+          hasMore={nazrs.length > recent.length}
+          items={recent}
+          onViewAll={() => onNavigate('contributions')}
+        />
+
+        <div className="dashboard-side-column">
+          <section className="surface-card dashboard-goal-card">
+            <div className="dashboard-panel-heading">
+              <div>
+                <h2 className="card-title">هدف شخصی من</h2>
+                <p className="profile-muted">چیزی که می‌خواهید با همراهی در نذرها به آن برسید.</p>
+              </div>
+              <span className="dashboard-character-count">{target.length.toLocaleString('fa-IR')}/۵۰۰</span>
+            </div>
+            <form className="profile-goal-form" onSubmit={handleTargetSubmit}>
+              <textarea
+                className="field-input profile-textarea dashboard-goal-input"
+                maxLength={500}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="مثلاً امسال در سه طرح نذر شرکت کنم."
+                value={target}
+              />
+              {targetStatus && <p aria-live="polite" className="profile-muted">{targetStatus}</p>}
+              <button className="btn-primary dashboard-goal-submit" disabled={savingTarget} type="submit">
+                {savingTarget ? 'در حال ذخیره...' : 'ذخیره هدف'}
+              </button>
+            </form>
+          </section>
+
+          <section className="surface-card dashboard-shortcuts">
+            <h2 className="card-title">دسترسی سریع</h2>
+            <DashboardShortcut
+              detail={`${summary.payments.totalPayments.toLocaleString('fa-IR')} واریز ثبت‌شده`}
+              label="واریزهای من"
+              onClick={() => onNavigate('payments')}
+            />
+            <DashboardShortcut
+              detail={`${summary.openTickets.toLocaleString('fa-IR')} تیکت باز`}
+              label="پشتیبانی و تیکت‌ها"
+              onClick={() => onNavigate('tickets')}
+            />
+            <DashboardShortcut
+              detail={`${summary.club.points.toLocaleString('fa-IR')} امتیاز · سطح ${summary.club.level}`}
+              label="باشگاه همراهان"
+              onClick={() => onNavigate('club')}
+            />
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
 
-function RecentActivities({ items }: { items: NazrRequest[] }) {
+function RecentActivities({
+  hasMore = false,
+  items,
+  onViewAll,
+}: {
+  hasMore?: boolean;
+  items: NazrRequest[];
+  onViewAll?: () => void;
+}) {
   const [paymentError, setPaymentError] = useState('');
   const [startingPaymentId, setStartingPaymentId] = useState<string | null>(null);
 
@@ -341,14 +409,27 @@ function RecentActivities({ items }: { items: NazrRequest[] }) {
   }
 
   return (
-    <section className="surface-card">
-      <h2 className="card-title">فعالیت‌های اخیر</h2>
+    <section className="surface-card dashboard-activities">
+      <div className="dashboard-panel-heading dashboard-activities-heading">
+        <div>
+          <h2 className="card-title">فعالیت‌های اخیر</h2>
+          <p className="profile-muted">آخرین نذرها و وضعیت پیگیری آن‌ها</p>
+        </div>
+        {onViewAll && (items.length > 0 || hasMore) && (
+          <button className="dashboard-text-button" onClick={onViewAll} type="button">
+            مشاهده همه
+          </button>
+        )}
+      </div>
       {items.length === 0 ? (
-        <EmptyState title="هنوز مشارکتی ثبت نشده است" body="بعد از ثبت اولین نذر، فعالیت‌های اخیر اینجا نمایش داده می‌شود." />
+        <div className="dashboard-empty-activity">
+          <EmptyState title="هنوز مشارکتی ثبت نشده است" body="بعد از ثبت اولین نذر، وضعیت آن را از همین بخش پیگیری می‌کنید." />
+          <Link className="btn-primary" href="/nazr/new">ثبت اولین نذر</Link>
+        </div>
       ) : (
-        <div className="profile-list">
+        <div className="profile-list dashboard-activity-list">
           {items.map((item) => (
-            <div className="profile-list-row" key={item.id}>
+            <article className="profile-list-row dashboard-activity-row" key={item.id}>
               <div className="profile-list-head">
                 <div className="profile-list-main">
                   <p className="profile-list-title">{item.nazrType.title}</p>
@@ -381,12 +462,66 @@ function RecentActivities({ items }: { items: NazrRequest[] }) {
                   </Link>
                 </div>
               )}
-            </div>
+            </article>
           ))}
           {paymentError && <p className="field-error">{paymentError}</p>}
         </div>
       )}
     </section>
+  );
+}
+
+function DashboardAttentionItem({
+  count,
+  label,
+  onClick,
+}: {
+  count: number;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button className="dashboard-attention-item" onClick={onClick} type="button">
+      <span>{label}</span>
+      <strong>{count.toLocaleString('fa-IR')}</strong>
+    </button>
+  );
+}
+
+function DashboardStatCard({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone: 'neutral' | 'primary' | 'success' | 'warm';
+  value: string;
+}) {
+  return (
+    <div className={`dashboard-stat-card is-${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function DashboardShortcut({
+  detail,
+  label,
+  onClick,
+}: {
+  detail: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button className="dashboard-shortcut" onClick={onClick} type="button">
+      <span>
+        <strong>{label}</strong>
+        <small>{detail}</small>
+      </span>
+      <span aria-hidden="true" className="dashboard-shortcut-arrow">←</span>
+    </button>
   );
 }
 
