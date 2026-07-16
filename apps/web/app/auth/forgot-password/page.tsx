@@ -49,6 +49,46 @@ function MessageBox({ children, tone }: { children: React.ReactNode; tone: Messa
   );
 }
 
+function PasswordField({
+  error,
+  label,
+  onChange,
+  value,
+}: {
+  error?: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+      <span>{label}</span>
+      <span className="relative block">
+        <input
+          autoComplete="new-password"
+          className={`${fieldCls(Boolean(error))} pl-10`}
+          dir="ltr"
+          minLength={8}
+          onChange={(e) => onChange(e.target.value)}
+          type={visible ? 'text' : 'password'}
+          value={value}
+        />
+        <button
+          aria-label={visible ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
+          className="absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-auth-muted transition hover:bg-auth-link-surface hover:text-auth-text"
+          onClick={() => setVisible((current) => !current)}
+          type="button"
+        >
+          {visible ? <EyeOffIcon /> : <EyeIcon />}
+        </button>
+      </span>
+      {error && <small className="text-[10px] text-danger">{error}</small>}
+    </label>
+  );
+}
+
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('phone');
@@ -264,37 +304,19 @@ export default function ForgotPasswordPage() {
 
         {step === 'password' && (
           <form className="grid gap-4" onSubmit={handlePasswordSubmit} noValidate>
-            <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-              <span>رمز عبور جدید</span>
-              <input
-                autoComplete="new-password"
-                className={fieldCls(Boolean(fieldErrors.newPassword))}
-                dir="ltr"
-                minLength={8}
-                onChange={(e) => setNewPassword(e.target.value)}
-                type="password"
-                value={newPassword}
-              />
-              {fieldErrors.newPassword && (
-                <small className="text-[10px] text-danger">{fieldErrors.newPassword}</small>
-              )}
-            </label>
+            <PasswordField
+              error={fieldErrors.newPassword}
+              label="رمز عبور جدید"
+              onChange={setNewPassword}
+              value={newPassword}
+            />
 
-            <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-              <span>تکرار رمز عبور</span>
-              <input
-                autoComplete="new-password"
-                className={fieldCls(Boolean(fieldErrors.confirmPassword))}
-                dir="ltr"
-                minLength={8}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                type="password"
-                value={confirmPassword}
-              />
-              {fieldErrors.confirmPassword && (
-                <small className="text-[10px] text-danger">{fieldErrors.confirmPassword}</small>
-              )}
-            </label>
+            <PasswordField
+              error={fieldErrors.confirmPassword}
+              label="تکرار رمز عبور"
+              onChange={setConfirmPassword}
+              value={confirmPassword}
+            />
 
             {message && <MessageBox tone={messageTone}>{message}</MessageBox>}
 
@@ -319,5 +341,24 @@ export default function ForgotPasswordPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
+      <path d="m3 3 18 18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M10.7 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.8 18.8 0 0 1-3.1 4.1M6.6 6.6C3.7 8.6 2 12 2 12s3.5 7 10 7c1.5 0 2.8-.3 4-.8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <path d="M9.9 9.9A3 3 0 0 0 14.1 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
   );
 }

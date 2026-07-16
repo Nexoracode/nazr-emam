@@ -296,20 +296,13 @@ function LoginForm({ initialRedirect }: { initialRedirect?: string }) {
 
       {step === 'password' && (
         <form className="grid gap-4" onSubmit={handlePasswordSubmit} noValidate>
-          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-            <span>رمز عبور</span>
-            <input
-              autoComplete="current-password"
-              className={fieldCls(Boolean(fieldErrors.password))}
-              dir="ltr"
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              value={password}
-            />
-            {fieldErrors.password && (
-              <small className="text-[10px] text-danger">{fieldErrors.password}</small>
-            )}
-          </label>
+          <PasswordField
+            autoComplete="current-password"
+            error={fieldErrors.password}
+            label="رمز عبور"
+            onChange={setPassword}
+            value={password}
+          />
 
           <div className="flex items-center justify-between text-[11px]">
             <label className="flex cursor-pointer items-center gap-1.5 text-auth-text">
@@ -474,36 +467,20 @@ function RegisterForm({ initialRedirect }: { initialRedirect?: string }) {
         </label>
 
         <div className="grid grid-cols-2 gap-3">
-          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-            <span>رمز عبور</span>
-            <input
-              autoComplete="new-password"
-              className={fieldCls(Boolean(fieldErrors.password))}
-              dir="ltr"
-              minLength={8}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              value={password}
-            />
-            {fieldErrors.password && (
-              <small className="text-[10px] text-danger">{fieldErrors.password}</small>
-            )}
-          </label>
-          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
-            <span>تکرار رمز</span>
-            <input
-              autoComplete="new-password"
-              className={fieldCls(Boolean(fieldErrors.confirmPassword))}
-              dir="ltr"
-              minLength={8}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              type="password"
-              value={confirmPassword}
-            />
-            {fieldErrors.confirmPassword && (
-              <small className="text-[10px] text-danger">{fieldErrors.confirmPassword}</small>
-            )}
-          </label>
+          <PasswordField
+            autoComplete="new-password"
+            error={fieldErrors.password}
+            label="رمز عبور"
+            onChange={setPassword}
+            value={password}
+          />
+          <PasswordField
+            autoComplete="new-password"
+            error={fieldErrors.confirmPassword}
+            label="تکرار رمز"
+            onChange={setConfirmPassword}
+            value={confirmPassword}
+          />
         </div>
 
         <label className="flex cursor-pointer items-center gap-2 text-[11px] text-auth-text">
@@ -587,6 +564,48 @@ function MessageBox({
   );
 }
 
+function PasswordField({
+  autoComplete,
+  error,
+  label,
+  onChange,
+  value,
+}: {
+  autoComplete: string;
+  error?: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+      <span>{label}</span>
+      <span className="relative block">
+        <input
+          autoComplete={autoComplete}
+          className={`${fieldCls(Boolean(error))} pl-10`}
+          dir="ltr"
+          minLength={8}
+          onChange={(e) => onChange(e.target.value)}
+          type={visible ? 'text' : 'password'}
+          value={value}
+        />
+        <button
+          aria-label={visible ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
+          className="absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-auth-muted transition hover:bg-auth-link-surface hover:text-auth-text"
+          onClick={() => setVisible((current) => !current)}
+          type="button"
+        >
+          {visible ? <EyeOffIcon /> : <EyeIcon />}
+        </button>
+      </span>
+      {error && <small className="text-[10px] text-danger">{error}</small>}
+    </label>
+  );
+}
+
 function RobotLogo() {
   return (
     <svg
@@ -607,6 +626,25 @@ function RobotLogo() {
       <rect x="35" y="16" width="6" height="9" rx="3" fill="#ffb703" />
       <rect x="13" y="31" width="6" height="8" rx="3" fill="#ffb703" />
       <rect x="25" y="31" width="6" height="8" rx="3" fill="#ffb703" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
+      <path d="m3 3 18 18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M10.7 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.8 18.8 0 0 1-3.1 4.1M6.6 6.6C3.7 8.6 2 12 2 12s3.5 7 10 7c1.5 0 2.8-.3 4-.8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <path d="M9.9 9.9A3 3 0 0 0 14.1 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
     </svg>
   );
 }

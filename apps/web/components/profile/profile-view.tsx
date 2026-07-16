@@ -903,9 +903,24 @@ function ChangePasswordCard() {
     <section className="surface-card">
       <h2 className="card-title">گذرواژه</h2>
       <form className="field-stack" onSubmit={handleSubmit}>
-        <Field autoComplete="current-password" label="گذرواژه فعلی" onChange={setCurrentPassword} type="password" value={currentPassword} />
-        <Field autoComplete="new-password" label="گذرواژه جدید" onChange={setNewPassword} type="password" value={newPassword} />
-        <Field autoComplete="new-password" label="تکرار گذرواژه جدید" onChange={setConfirmPassword} type="password" value={confirmPassword} />
+        <PasswordField
+          autoComplete="current-password"
+          label="گذرواژه فعلی"
+          onChange={setCurrentPassword}
+          value={currentPassword}
+        />
+        <PasswordField
+          autoComplete="new-password"
+          label="گذرواژه جدید"
+          onChange={setNewPassword}
+          value={newPassword}
+        />
+        <PasswordField
+          autoComplete="new-password"
+          label="تکرار گذرواژه جدید"
+          onChange={setConfirmPassword}
+          value={confirmPassword}
+        />
         {message && <p className="profile-muted">{message}</p>}
         <button className="btn-primary" disabled={saving} type="submit">
           {saving ? 'در حال ذخیره...' : 'تغییر گذرواژه'}
@@ -966,12 +981,69 @@ function Field({
   );
 }
 
+function PasswordField({
+  autoComplete,
+  label,
+  onChange,
+  value,
+}: {
+  autoComplete: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className="field-group">
+      <span className="field-label">{label}</span>
+      <span className="relative block">
+        <input
+          autoComplete={autoComplete}
+          className="field-input pl-10"
+          dir="ltr"
+          onChange={(e) => onChange(e.target.value)}
+          type={visible ? 'text' : 'password'}
+          value={value}
+        />
+        <button
+          aria-label={visible ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
+          className="absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[var(--muted)] transition hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]"
+          onClick={() => setVisible((current) => !current)}
+          type="button"
+        >
+          {visible ? <EyeOffIcon /> : <EyeIcon />}
+        </button>
+      </span>
+    </label>
+  );
+}
+
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <div className="profile-empty">
       <p className="profile-empty-title">{title}</p>
       <p className="profile-muted">{body}</p>
     </div>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="15" viewBox="0 0 24 24" width="15">
+      <path d="m3 3 18 18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M10.7 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.8 18.8 0 0 1-3.1 4.1M6.6 6.6C3.7 8.6 2 12 2 12s3.5 7 10 7c1.5 0 2.8-.3 4-.8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <path d="M9.9 9.9A3 3 0 0 0 14.1 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
   );
 }
 
