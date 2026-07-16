@@ -32,6 +32,12 @@ export class WalletEntity {
   @Column({ name: 'monthly_deduction_amount', type: 'json', nullable: true })
   monthlyDeductionAmount!: Money | null;
 
+  @Column({ name: 'next_monthly_deduction_at', type: 'datetime', nullable: true })
+  nextMonthlyDeductionAt!: Date | null;
+
+  @Column({ name: 'last_monthly_deduction_at', type: 'datetime', nullable: true })
+  lastMonthlyDeductionAt!: Date | null;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 

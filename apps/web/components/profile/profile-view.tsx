@@ -46,6 +46,11 @@ import {
   updateProfileGoal,
   updateProfileWallet,
 } from '../../lib/api';
+import {
+  amountToPersianWords,
+  formatAmountInput,
+  parseAmountInput,
+} from '../../lib/amount';
 
 type ProfileTab =
   | 'dashboard'
@@ -166,18 +171,16 @@ const MISSION_STATUS_COLOR: Record<UserMissionStatus, string> = {
   locked: 'badge-neutral',
 };
 
-const WALLET_TRANSACTION_LABEL: Record<WalletTransaction['type'], string> = {
-  charge: 'شارژ کیف پول',
-  deduction: 'برداشت ماهانه',
-  payment: 'پرداخت نذر',
-  refund: 'بازگشت وجه',
+const WALLET_TRANSACTION_STATUS_LABEL: Record<WalletTransaction['status'], string> = {
+  pending: 'در انتظار پرداخت',
+  completed: 'انجام‌شده',
+  failed: 'ناموفق',
 };
 
-const WALLET_TRANSACTION_COLOR: Record<WalletTransaction['type'], string> = {
-  charge: 'badge-success',
-  deduction: 'badge-warning',
-  payment: 'badge-info',
-  refund: 'badge-neutral',
+const WALLET_TRANSACTION_STATUS_COLOR: Record<WalletTransaction['status'], string> = {
+  pending: 'badge-warning',
+  completed: 'badge-success',
+  failed: 'badge-danger',
 };
 
 export function ProfileView() {
@@ -188,6 +191,13 @@ export function ProfileView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    if (TABS.some((tab) => tab.id === requestedTab)) {
+      setActiveTab(requestedTab as ProfileTab);
+    }
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -994,16 +1004,44 @@ function WalletPanel() {
   const [error, setError] = useState('');
   const [savingAction, setSavingAction] = useState<'charge' | 'settings' | null>(null);
   const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+  const chargeAmount = useMemo(() => parseAmountInput(charge), [charge]);
+  const monthlyAmountValue = useMemo(
+    () => parseAmountInput(monthlyAmount),
+    [monthlyAmount],
+  );
+  const chargeInWords = useMemo(
+    () => amountToPersianWords(chargeAmount),
+    [chargeAmount],
+  );
+  const monthlyAmountInWords = useMemo(
+    () => amountToPersianWords(monthlyAmountValue),
+    [monthlyAmountValue],
+  );
 
   async function loadWallet() {
     const [walletData, transactionData] = await Promise.all([getProfileWallet(), getWalletTransactions()]);
     setWallet(walletData);
     setTransactions(transactionData);
     setMonthlyEnabled(walletData.isMonthlyDeductionEnabled);
-    setMonthlyAmount(walletData.monthlyDeductionAmount?.amount ? String(walletData.monthlyDeductionAmount.amount) : '');
+    setMonthlyAmount(
+      walletData.monthlyDeductionAmount?.amount
+        ? formatAmountInput(walletData.monthlyDeductionAmount.amount)
+        : '',
+    );
   }
 
   useEffect(() => {
+    const chargeStatus = new URLSearchParams(window.location.search).get('walletCharge');
+    if (chargeStatus === 'paid') {
+      setMessage({ kind: 'success', text: 'پرداخت تأیید شد و کیف پول شارژ شد.' });
+    } else if (chargeStatus === 'cancelled') {
+      setMessage({ kind: 'error', text: 'پرداخت توسط شما لغو شد و موجودی تغییری نکرد.' });
+    } else if (chargeStatus === 'failed') {
+      setMessage({ kind: 'error', text: 'پرداخت تأیید نشد و موجودی تغییری نکرد.' });
+    }
+    if (chargeStatus) {
+      window.history.replaceState(null, '', '/profile?tab=wallet');
+    }
     loadWallet()
       .catch(() => setError('اطلاعات کیف پول دریافت نشد. دوباره تلاش کنید.'))
       .finally(() => setLoading(false));
@@ -1011,19 +1049,18 @@ function WalletPanel() {
 
   async function handleCharge(e: FormEvent) {
     e.preventDefault();
-    const amount = Number(charge);
-    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (!Number.isFinite(chargeAmount) || chargeAmount <= 0) return;
     setSavingAction('charge');
     setMessage(null);
     try {
-      await createWalletCharge({ amount: { amount, currency: 'IRT' } });
-      setCharge('');
-      setMessage({ kind: 'success', text: 'شارژ کیف پول با موفقیت ثبت شد.' });
-      await loadWallet();
+      const started = await createWalletCharge({
+        amount: { amount: chargeAmount, currency: 'IRT' },
+      });
+      window.location.assign(started.paymentUrl);
     } catch (err) {
       setMessage({
         kind: 'error',
-        text: err instanceof ApiRequestError ? err.message : 'ثبت شارژ انجام نشد.',
+        text: err instanceof ApiRequestError ? err.message : 'شروع پرداخت شارژ انجام نشد.',
       });
     } finally {
       setSavingAction(null);
@@ -1032,18 +1069,25 @@ function WalletPanel() {
 
   async function handleSettings(e: FormEvent) {
     e.preventDefault();
-    const amount = Number(monthlyAmount);
-    if (monthlyEnabled && (!Number.isFinite(amount) || amount <= 0)) return;
+    if (
+      monthlyEnabled &&
+      (!Number.isFinite(monthlyAmountValue) || monthlyAmountValue <= 0)
+    ) return;
     setSavingAction('settings');
     setMessage(null);
     try {
       const updated = await updateProfileWallet({
         isMonthlyDeductionEnabled: monthlyEnabled,
         monthlyDeductionAmount: monthlyEnabled
-          ? { amount, currency: 'IRT' }
+          ? { amount: monthlyAmountValue, currency: 'IRT' }
           : null,
       });
       setWallet(updated);
+      setMonthlyAmount(
+        updated.monthlyDeductionAmount?.amount
+          ? formatAmountInput(updated.monthlyDeductionAmount.amount)
+          : '',
+      );
       setMessage({ kind: 'success', text: 'تنظیمات پرداخت ماهانه ذخیره شد.' });
     } catch (err) {
       setMessage({
@@ -1088,13 +1132,17 @@ function WalletPanel() {
           <h1 className="wallet-balance">{formatMoney(wallet.balance)}</h1>
           <p className="profile-muted">موجودی قابل استفاده برای مشارکت در طرح‌های نذر</p>
         </div>
-        <div className={`wallet-monthly-status${monthlyEnabled ? ' is-active' : ''}`}>
+        <div className={`wallet-monthly-status${wallet.isMonthlyDeductionEnabled ? ' is-active' : ''}`}>
           <span aria-hidden="true" />
           <div>
-            <strong>{monthlyEnabled ? 'پرداخت ماهانه فعال است' : 'پرداخت ماهانه غیرفعال است'}</strong>
+            <strong>{wallet.isMonthlyDeductionEnabled ? 'پرداخت ماهانه فعال است' : 'پرداخت ماهانه غیرفعال است'}</strong>
             <small>
-              {monthlyEnabled && wallet.monthlyDeductionAmount
-                ? `${formatMoney(wallet.monthlyDeductionAmount)} در هر ماه`
+              {wallet.isMonthlyDeductionEnabled && wallet.monthlyDeductionAmount
+                ? `${formatMoney(wallet.monthlyDeductionAmount)} در هر ماه${
+                    wallet.nextMonthlyDeductionAt
+                      ? ` · سررسید بعدی ${formatDate(wallet.nextMonthlyDeductionAt)}`
+                      : ''
+                  }`
                 : 'در صورت نیاز از بخش تنظیمات فعال کنید'}
             </small>
           </div>
@@ -1111,7 +1159,7 @@ function WalletPanel() {
         <section className="surface-card wallet-action-card">
           <div className="wallet-section-heading">
             <h2 className="card-title">شارژ کیف پول</h2>
-            <p className="profile-muted">مبلغ موردنظر را به موجودی کیف پول اضافه کنید.</p>
+            <p className="profile-muted">پس از پرداخت موفق در زرین‌پال، موجودی افزایش پیدا می‌کند.</p>
           </div>
           <form className="profile-wallet-grid" onSubmit={handleCharge}>
             <label className="field-group">
@@ -1121,18 +1169,18 @@ function WalletPanel() {
                   className="field-input"
                   dir="ltr"
                   inputMode="numeric"
-                  min="1"
-                  onChange={(e) => setCharge(e.target.value)}
+                  onChange={(e) => setCharge(formatAmountInput(e.target.value))}
                   placeholder="300,000"
                   required
-                  type="number"
+                  type="text"
                   value={charge}
                 />
                 <span>تومان</span>
               </span>
+              <small className="wallet-amount-words">{chargeInWords}</small>
             </label>
-            <button className="btn-primary" disabled={savingAction !== null || Number(charge) <= 0} type="submit">
-              {savingAction === 'charge' ? 'در حال ثبت...' : 'ثبت شارژ'}
+            <button className="btn-primary" disabled={savingAction !== null || chargeAmount <= 0} type="submit">
+              {savingAction === 'charge' ? 'در حال انتقال...' : 'پرداخت و شارژ'}
             </button>
           </form>
         </section>
@@ -1163,19 +1211,19 @@ function WalletPanel() {
                   dir="ltr"
                   disabled={!monthlyEnabled}
                   inputMode="numeric"
-                  min="1"
-                  onChange={(e) => setMonthlyAmount(e.target.value)}
+                  onChange={(e) => setMonthlyAmount(formatAmountInput(e.target.value))}
                   placeholder="300,000"
                   required={monthlyEnabled}
-                  type="number"
+                  type="text"
                   value={monthlyAmount}
                 />
                 <span>تومان</span>
               </span>
+              <small className="wallet-amount-words">{monthlyAmountInWords}</small>
             </label>
             <button
               className="btn-ghost"
-              disabled={savingAction !== null || (monthlyEnabled && Number(monthlyAmount) <= 0)}
+              disabled={savingAction !== null || (monthlyEnabled && monthlyAmountValue <= 0)}
               type="submit"
             >
               {savingAction === 'settings' ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
@@ -1197,21 +1245,28 @@ function WalletPanel() {
             <EmptyState title="تراکنشی وجود ندارد" body="شارژها و برداشت‌های کیف پول اینجا نمایش داده می‌شوند." />
           ) : (
             transactions.map((item) => {
-              const incoming = item.type === 'charge' || item.type === 'refund';
+              const completed = item.status === 'completed';
+              const incoming = completed && (item.type === 'charge' || item.type === 'refund');
+              const outgoing = completed && !incoming;
               return (
                 <article className="wallet-transaction-row" key={item.id}>
-                  <span className={`wallet-transaction-sign${incoming ? ' is-incoming' : ' is-outgoing'}`} aria-hidden="true">
-                    {incoming ? '+' : '−'}
+                  <span className={`wallet-transaction-sign${incoming ? ' is-incoming' : outgoing ? ' is-outgoing' : ' is-neutral'}`} aria-hidden="true">
+                    {incoming ? '+' : outgoing ? '−' : item.status === 'pending' ? '…' : '×'}
                   </span>
                   <div className="wallet-transaction-main">
                     <p>{item.description}</p>
-                    <time>{formatDate(item.createdAt)}</time>
+                    <time>
+                      {formatDate(item.createdAt)}
+                      {item.transactionReference ? ` · پیگیری ${item.transactionReference}` : ''}
+                    </time>
                   </div>
                   <div className="wallet-transaction-meta">
-                    <strong className={incoming ? 'is-incoming' : 'is-outgoing'}>
-                      {incoming ? '+' : '−'} {formatMoney(item.amount)}
+                    <strong className={incoming ? 'is-incoming' : outgoing ? 'is-outgoing' : ''}>
+                      {incoming ? '+' : outgoing ? '−' : ''} {formatMoney(item.amount)}
                     </strong>
-                    <span className={WALLET_TRANSACTION_COLOR[item.type]}>{WALLET_TRANSACTION_LABEL[item.type]}</span>
+                    <span className={WALLET_TRANSACTION_STATUS_COLOR[item.status]}>
+                      {WALLET_TRANSACTION_STATUS_LABEL[item.status]}
+                    </span>
                   </div>
                 </article>
               );

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, Redirect, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Redirect, Req } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCookieAuth,
@@ -9,7 +9,11 @@ import {
 import { Public } from '../../common/decorators/public.decorator';
 import type { AuthenticatedRequest } from '../auth/auth.types';
 import { ACCESS_TOKEN_COOKIE } from '../auth/auth.service';
-import { StartOnlinePaymentResponseDto } from './dto/payment.dto';
+import {
+  StartOnlinePaymentResponseDto,
+  StartWalletChargeDto,
+  StartWalletChargeResponseDto,
+} from './dto/payment.dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('payments')
@@ -27,6 +31,18 @@ export class PaymentsController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.service.startOnlinePayment(requestId, request.user!);
+  }
+
+  @ApiBearerAuth()
+  @ApiCookieAuth(ACCESS_TOKEN_COOKIE)
+  @ApiOperation({ summary: 'شروع پرداخت آنلاین برای شارژ کیف پول' })
+  @ApiCreatedResponse({ type: StartWalletChargeResponseDto })
+  @Post('profile/wallet/charges')
+  startWalletCharge(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: StartWalletChargeDto,
+  ) {
+    return this.service.startWalletCharge(request.user!, body);
   }
 
   @Public()

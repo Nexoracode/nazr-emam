@@ -1815,6 +1815,30 @@ input {
   transform: translateY(-50%);
 }
 
+.wallet-amount-words {
+  display: block;
+  min-height: 20px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.8;
+}
+
+.admin-amount-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-amount-field small {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.7;
+}
+
 .wallet-amount-field .field-input:disabled {
   background: color-mix(in srgb, var(--border) 22%, var(--surface));
   cursor: not-allowed;
@@ -1945,6 +1969,12 @@ input {
 .wallet-transaction-sign.is-outgoing,
 .wallet-transaction-meta strong.is-outgoing {
   color: var(--danger);
+}
+
+.wallet-transaction-sign.is-neutral {
+  color: var(--muted);
+  background: var(--surface-soft);
+  border-color: var(--border);
 }
 
 .wallet-transaction-main {

@@ -80,6 +80,7 @@ export interface GalleryAsset {
 }
 
 export type WalletTransactionType = 'charge' | 'deduction' | 'payment' | 'refund';
+export type WalletTransactionStatus = 'pending' | 'completed' | 'failed';
 
 export interface Wallet {
   id: ID;
@@ -87,6 +88,8 @@ export interface Wallet {
   balance: Money;
   isMonthlyDeductionEnabled: boolean;
   monthlyDeductionAmount: Money | null;
+  nextMonthlyDeductionAt: ISODate | null;
+  lastMonthlyDeductionAt: ISODate | null;
   updatedAt: ISODate;
 }
 
@@ -99,12 +102,20 @@ export interface CreateWalletChargeRequest {
   amount: Money;
 }
 
+export interface StartWalletChargeResponse {
+  transactionId: ID;
+  paymentUrl: string;
+  authority: string;
+}
+
 export interface WalletTransaction {
   id: ID;
   walletId: ID;
   type: WalletTransactionType;
+  status: WalletTransactionStatus;
   amount: Money;
   description: string;
+  transactionReference: string | null;
   createdAt: ISODate;
 }
 

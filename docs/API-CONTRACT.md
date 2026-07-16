@@ -715,12 +715,18 @@ const designColors = {
 - **Auth:** کاربر لاگین‌شده
 - **بدنه:** `UpdateWalletSettingsRequest`
 - **پاسخ:** `200 Wallet`
+- با فعال‌شدن برداشت ماهانه، اولین سررسید یک ماه بعد ثبت می‌شود.
+- پردازش سررسیدها به‌صورت دوره‌ای انجام می‌شود؛ برداشت موفق فقط یک‌بار ثبت شده و سررسید بعدی یک ماه جلو می‌رود.
+- اگر موجودی کافی نباشد هیچ تراکنش یا کاهش موجودی ثبت نمی‌شود و سررسید برای تلاش بعدی باز می‌ماند.
 
 ### `POST /profile/wallet/charges`
 
 - **Auth:** کاربر لاگین‌شده
 - **بدنه:** `CreateWalletChargeRequest`
-- **پاسخ:** `201 WalletTransaction`
+- **پاسخ:** `201 StartWalletChargeResponse`
+- این endpoint فقط یک تراکنش `pending` می‌سازد و لینک درگاه را برمی‌گرداند؛ موجودی کیف پول در این مرحله تغییر نمی‌کند.
+- موجودی فقط پس از callback موفق زرین‌پال و verify شدن پرداخت افزایش می‌یابد.
+- callback کاربر را با یکی از وضعیت‌های `paid | cancelled | failed` به `/profile?tab=wallet&walletCharge=...` برمی‌گرداند.
 
 ### `GET /profile/wallet/transactions`
 
@@ -824,6 +830,8 @@ interface Wallet {
   balance: Money;
   isMonthlyDeductionEnabled: boolean;
   monthlyDeductionAmount: Money | null;
+  nextMonthlyDeductionAt: ISODate | null;
+  lastMonthlyDeductionAt: ISODate | null;
   updatedAt: ISODate;
 }
 
@@ -836,12 +844,20 @@ interface CreateWalletChargeRequest {
   amount: Money;
 }
 
+interface StartWalletChargeResponse {
+  transactionId: ID;
+  paymentUrl: string;
+  authority: string;
+}
+
 interface WalletTransaction {
   id: ID;
   walletId: ID;
   type: "charge" | "deduction" | "payment" | "refund";
+  status: "pending" | "completed" | "failed";
   amount: Money;
   description: string;
+  transactionReference: string | null;
   createdAt: ISODate;
 }
 

@@ -8,7 +8,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Like, Repository } from 'typeorm';
 import type {
   CreateInvitationCardRequest,
-  CreateWalletChargeRequest,
   GalleryAsset,
   InvitationCard,
   Money,
@@ -274,36 +273,26 @@ export class ProfileService {
   ): Promise<Wallet> {
     const wallet = await this.ensureWallet(userId);
     const amount = payload.monthlyDeductionAmount ?? null;
-    if (payload.isMonthlyDeductionEnabled && !this.isValidAmount(amount)) {
+    if (
+      payload.isMonthlyDeductionEnabled &&
+      (!this.isValidAmount(amount) || amount.currency !== wallet.balance.currency)
+    ) {
       this.throwValidation({
         monthlyDeductionAmount: 'مبلغ برداشت ماهانه معتبر نیست',
       });
     }
+    const monthlyAmountChanged = !this.isSameMoney(
+      wallet.monthlyDeductionAmount,
+      amount,
+    );
     wallet.isMonthlyDeductionEnabled = Boolean(payload.isMonthlyDeductionEnabled);
     wallet.monthlyDeductionAmount = payload.isMonthlyDeductionEnabled ? amount : null;
-    return this.toWalletDto(await this.walletsRepo.save(wallet));
-  }
-
-  async createWalletCharge(
-    userId: string,
-    payload: CreateWalletChargeRequest,
-  ): Promise<WalletTransaction> {
-    if (!this.isValidAmount(payload.amount)) {
-      this.throwValidation({ amount: 'مبلغ شارژ کیف پول معتبر نیست' });
+    if (!payload.isMonthlyDeductionEnabled) {
+      wallet.nextMonthlyDeductionAt = null;
+    } else if (!wallet.nextMonthlyDeductionAt || monthlyAmountChanged) {
+      wallet.nextMonthlyDeductionAt = this.addOneMonth(new Date());
     }
-    const wallet = await this.ensureWallet(userId);
-    wallet.balance = this.addMoney(wallet.balance, payload.amount);
-    await this.walletsRepo.save(wallet);
-    const transaction = await this.walletTransactionsRepo.save(
-      this.walletTransactionsRepo.create({
-        walletId: wallet.id,
-        wallet,
-        type: 'charge',
-        amount: payload.amount,
-        description: 'شارژ کیف پول',
-      }),
-    );
-    return this.toWalletTransactionDto(transaction);
+    return this.toWalletDto(await this.walletsRepo.save(wallet));
   }
 
   async getWalletTransactions(userId: string): Promise<WalletTransaction[]> {
@@ -399,6 +388,8 @@ export class ProfileService {
         balance: { amount: 0, currency: 'IRT' },
         isMonthlyDeductionEnabled: false,
         monthlyDeductionAmount: null,
+        nextMonthlyDeductionAt: null,
+        lastMonthlyDeductionAt: null,
       }),
     );
   }
@@ -436,6 +427,8 @@ export class ProfileService {
       balance: wallet.balance,
       isMonthlyDeductionEnabled: wallet.isMonthlyDeductionEnabled,
       monthlyDeductionAmount: wallet.monthlyDeductionAmount,
+      nextMonthlyDeductionAt: wallet.nextMonthlyDeductionAt?.toISOString() ?? null,
+      lastMonthlyDeductionAt: wallet.lastMonthlyDeductionAt?.toISOString() ?? null,
       updatedAt: wallet.updatedAt.toISOString(),
     };
   }
@@ -447,8 +440,10 @@ export class ProfileService {
       id: transaction.id,
       walletId: transaction.walletId,
       type: transaction.type,
+      status: transaction.status,
       amount: transaction.amount,
       description: transaction.description,
+      transactionReference: transaction.transactionReference,
       createdAt: transaction.createdAt.toISOString(),
     };
   }
@@ -525,6 +520,24 @@ export class ProfileService {
       amount!.amount > 0 &&
       ['IRR', 'IRT'].includes(amount!.currency)
     );
+  }
+
+  private isSameMoney(left?: Money | null, right?: Money | null): boolean {
+    return Boolean(
+      left && right && left.amount === right.amount && left.currency === right.currency,
+    );
+  }
+
+  private addOneMonth(value: Date): Date {
+    const result = new Date(value);
+    const day = result.getUTCDate();
+    result.setUTCDate(1);
+    result.setUTCMonth(result.getUTCMonth() + 1);
+    const lastDay = new Date(
+      Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    result.setUTCDate(Math.min(day, lastDay));
+    return result;
   }
 
   private normalizePage(page?: number): number {
