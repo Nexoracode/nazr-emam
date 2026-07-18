@@ -259,18 +259,23 @@ export function ProfileView() {
             <small>{activeTabLabel}</small>
           </div>
         </div>
-        <button
-          aria-controls="profile-navigation"
-          aria-expanded={mobileMenuOpen}
-          aria-label={mobileMenuOpen ? 'بستن منوی پروفایل' : 'باز کردن منوی پروفایل'}
-          className={`profile-menu-toggle${mobileMenuOpen ? ' is-open' : ''}`}
-          onClick={() => setMobileMenuOpen((current) => !current)}
-          type="button"
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+        <div className="profile-mobile-actions">
+          <Link className="profile-mobile-home" href="/">
+            صفحه اصلی
+          </Link>
+          <button
+            aria-controls="profile-navigation"
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? 'بستن منوی پروفایل' : 'باز کردن منوی پروفایل'}
+            className={`profile-menu-toggle${mobileMenuOpen ? ' is-open' : ''}`}
+            onClick={() => setMobileMenuOpen((current) => !current)}
+            type="button"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
       </div>
 
       <aside
@@ -306,6 +311,10 @@ export function ProfileView() {
             </div>
           ))}
         </nav>
+
+        <Link className="profile-home-link" href="/">
+          بازگشت به صفحه اصلی
+        </Link>
       </aside>
 
       <section className="profile-content">

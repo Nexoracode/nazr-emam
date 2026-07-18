@@ -2723,6 +2723,50 @@ input {
   width: 3px;
 }
 
+.profile-home-link {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  color: var(--foreground);
+  display: flex;
+  font-size: var(--profile-font-supporting);
+  font-weight: 700;
+  min-height: 44px;
+  padding: 10px 14px;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.profile-home-link:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.profile-mobile-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.profile-mobile-home {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  display: inline-flex;
+  font-size: var(--profile-font-caption);
+  font-weight: 700;
+  min-height: 36px;
+  padding: 7px 10px;
+  text-decoration: none;
+}
+
+.profile-mobile-home:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .profile-menu-toggle {
   align-content: center;
   background: transparent;
