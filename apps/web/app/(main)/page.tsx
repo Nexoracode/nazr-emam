@@ -1,8 +1,10 @@
-import type { NazrType } from '@nazr-emam/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import {
+  formatNazrTypeAmount,
+  getPublicNazrTypes,
+  planLandingContent,
+} from '../../lib/public-nazr-types';
 
 /* ── محتوای واقعی صفحه اصلی (برگرفته از سند طرح نذر امام) ── */
 
@@ -126,95 +128,12 @@ const faqItems = [
   },
 ];
 
-/* ── متادیتای بصری هر طرح بر اساس slug ── */
-const planMeta: Record<string, { tagline: string; accent: 'green' | 'gold' | 'teal' | 'plum' | 'sand' }> = {
-  international: { tagline: 'بیداریِ امت‌ها با کلامِ امیرالمؤمنین (ع)', accent: 'green' },
-  'circulating-waqf': { tagline: 'روشن‌کردنِ چرخه‌ی بی‌نهایتِ اثرگذاری در ذهن‌ها', accent: 'gold' },
-  'nahj-lesson': { tagline: 'درس‌نامه‌ی نهج‌البلاغه برای نسلِ نوجوان', accent: 'teal' },
-  'free-box': { tagline: 'مسیر و مبلغ را خودت انتخاب کن', accent: 'sand' },
-  'support-team': { tagline: 'پاسخگویی و پیگیریِ نذرها کنارِ توست', accent: 'plum' },
-};
-
 const galleryTiles = [
   { label: 'پخشِ کتاب در مناطق محروم', tone: 'green' },
   { label: 'محتوای نهج‌البلاغه در کشورهای دیگر', tone: 'gold' },
   { label: 'لیگ و مسابقه‌ی کتاب‌خوانی', tone: 'gold' },
   { label: 'کارگاه‌های فرهنگیِ نوجوانان', tone: 'green' },
 ];
-
-const fallbackNazrTypes: NazrType[] = [
-  {
-    id: 'fallback-international',
-    slug: 'international',
-    title: 'بین‌الملل',
-    description: 'مشارکت در نشرِ کلام امیرالمؤمنین و نهج‌البلاغه برای مخاطبانِ کشورهای دیگر.',
-    suggestedAmount: { amount: 500000, currency: 'IRT' },
-    isActive: true,
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'fallback-waqf',
-    slug: 'circulating-waqf',
-    title: 'وقف در گردش',
-    description: 'چاپ و گردشِ کتاب‌های نهج‌البلاغه میانِ نوجوانانِ مناطقِ محروم.',
-    suggestedAmount: { amount: 300000, currency: 'IRT' },
-    isActive: true,
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'fallback-nahj',
-    slug: 'nahj-lesson',
-    title: 'درس‌نامه نهج‌البلاغه نوجوان',
-    description: 'تولیدِ درس‌نامه‌ی نهج‌البلاغه برای تدریس در محافل و مدارس.',
-    suggestedAmount: { amount: 250000, currency: 'IRT' },
-    isActive: true,
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'fallback-freebox',
-    slug: 'free-box',
-    title: 'باکس آزاد',
-    description: 'مبلغ و مسیرِ نذر با انتخابِ توست؛ تیم آن را در اولویت‌ها هزینه می‌کند.',
-    suggestedAmount: null,
-    isActive: true,
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'fallback-support',
-    slug: 'support-team',
-    title: 'تیم پاسخگویی',
-    description: 'حمایت از تیمِ پاسخگویی و پیگیریِ نذرها و ارتباط با مخاطبان.',
-    suggestedAmount: { amount: 200000, currency: 'IRT' },
-    isActive: true,
-    createdAt: '',
-    updatedAt: '',
-  },
-];
-
-async function fetchPublicApi<T>(path: string): Promise<T | null> {
-  try {
-    const response = await fetch(`${apiUrl}${path}`, { cache: 'no-store' });
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as T;
-  } catch {
-    return null;
-  }
-}
-
-function formatMoney(type: NazrType): string {
-  if (!type.suggestedAmount) {
-    return 'مبلغ آزاد';
-  }
-  const amount = new Intl.NumberFormat('fa-IR').format(type.suggestedAmount.amount);
-  const unit = type.suggestedAmount.currency === 'IRT' ? 'تومان' : 'ریال';
-  return `${amount} ${unit}`;
-}
 
 function getPlanProgress(index: number): number {
   const progress = [68, 46, 82, 0, 57];
@@ -224,10 +143,7 @@ function getPlanProgress(index: number): number {
 const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(n);
 
 export default async function Home() {
-  const nazrTypesResponse = await fetchPublicApi<NazrType[]>('/nazr-types');
-
-  const nazrTypes =
-    nazrTypesResponse && nazrTypesResponse.length > 0 ? nazrTypesResponse : fallbackNazrTypes;
+  const nazrTypes = await getPublicNazrTypes();
   const activePlans = nazrTypes.filter((t) => t.isActive).length;
 
   return (
@@ -379,13 +295,13 @@ export default async function Home() {
             {nazrTypes.map((type, index) => {
               const isActive = type.isActive;
               const progress = getPlanProgress(index);
-              const meta = planMeta[type.slug];
+              const meta = planLandingContent[type.slug];
               const accent = meta?.accent ?? 'green';
 
               return (
                 <Link
                   className={`home-plan-card accent-${accent}${isActive ? '' : ' is-complete'}`}
-                  href={isActive ? `/nazr/new?nazrTypeId=${encodeURIComponent(type.id)}` : '/#plans'}
+                  href={`/plans/${encodeURIComponent(type.slug)}`}
                   key={type.id}
                 >
                   <div className="home-plan-cover" aria-hidden="true">
@@ -405,8 +321,8 @@ export default async function Home() {
                       </div>
                     ) : null}
                     <div className="home-plan-foot">
-                      <strong className="home-plan-amount">{formatMoney(type)}</strong>
-                      <span className="home-plan-link">{isActive ? 'شرکت در طرح ←' : 'تکمیل‌شده'}</span>
+                      <strong className="home-plan-amount">{formatNazrTypeAmount(type)}</strong>
+                      <span className="home-plan-link">{isActive ? 'مشاهده طرح ←' : 'مشاهده گزارش ←'}</span>
                     </div>
                   </div>
                 </Link>
