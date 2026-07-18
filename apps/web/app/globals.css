@@ -4414,10 +4414,11 @@ input {
     grid-template-rows: auto minmax(0, 1fr) auto;
     height: 100dvh;
     inset-block: 0;
-    inset-inline-end: 0;
+    left: auto;
     overflow: hidden;
     pointer-events: none;
     position: fixed;
+    right: 0;
     top: 0;
     transform: translateX(105%);
     transition: transform 0.22s ease, visibility 0s linear 0.22s;
