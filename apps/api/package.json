@@ -17,6 +17,7 @@
     "@nestjs/platform-express": "^11.0.12",
     "@nestjs/swagger": "^11.4.5",
     "@nestjs/typeorm": "^11.0.3",
+    "basic-ftp": "^5.0.5",
     "cookie-parser": "^1.4.7",
     "mysql2": "^3.22.6",
     "reflect-metadata": "^0.2.2",

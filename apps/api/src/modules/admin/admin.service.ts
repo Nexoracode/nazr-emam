@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Client, FTPError } from 'basic-ftp';
 import { randomUUID } from 'node:crypto';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { Readable } from 'node:stream';
 import {
   Brackets,
   In,
@@ -436,6 +438,25 @@ export class AdminService implements OnModuleInit {
   }
 
   private async removeStoredFile(url: string): Promise<void> {
+    const storage = this.configService.get<'local' | 'ftp'>('media.storage', 'local');
+    if (storage === 'ftp') {
+      const publicBaseUrl = this.configService
+        .getOrThrow<string>('media.ftp.publicBaseUrl')
+        .replace(/\/$/, '');
+      const prefix = `${publicBaseUrl}/`;
+      if (!url.startsWith(prefix)) return;
+
+      const filename = decodeURIComponent(url.slice(prefix.length));
+      if (!filename || basename(filename) !== filename) return;
+      await this.withFtp(async (client) => {
+        await client.ensureDir(this.configService.getOrThrow<string>('media.ftp.uploadDir'));
+        await client.remove(filename).catch((error: unknown) => {
+          if (!(error instanceof FTPError) || error.code !== 550) throw error;
+        });
+      });
+      return;
+    }
+
     const publicBaseUrl = this.configService
       .getOrThrow<string>('media.publicBaseUrl')
       .replace(/\/$/, '');
@@ -477,8 +498,21 @@ export class AdminService implements OnModuleInit {
       });
     }
 
-    const uploadDir = this.configService.getOrThrow<string>('media.uploadDir');
     const filename = `${Date.now()}-${randomUUID()}${extension}`;
+    const storage = this.configService.get<'local' | 'ftp'>('media.storage', 'local');
+
+    if (storage === 'ftp') {
+      await this.withFtp(async (client) => {
+        await client.ensureDir(this.configService.getOrThrow<string>('media.ftp.uploadDir'));
+        await client.uploadFrom(Readable.from([file!.buffer]), filename);
+      });
+      const publicBaseUrl = this.configService
+        .getOrThrow<string>('media.ftp.publicBaseUrl')
+        .replace(/\/$/, '');
+      return { url: `${publicBaseUrl}/${filename}` };
+    }
+
+    const uploadDir = this.configService.getOrThrow<string>('media.uploadDir');
     await mkdir(uploadDir, { recursive: true });
     await writeFile(join(uploadDir, filename), file!.buffer, { flag: 'wx' });
 
@@ -486,6 +520,22 @@ export class AdminService implements OnModuleInit {
       .getOrThrow<string>('media.publicBaseUrl')
       .replace(/\/$/, '');
     return { url: `${publicBaseUrl}/uploads/${filename}` };
+  }
+
+  private async withFtp<T>(action: (client: Client) => Promise<T>): Promise<T> {
+    const client = new Client(30_000);
+    try {
+      await client.access({
+        host: this.configService.getOrThrow<string>('media.ftp.host'),
+        port: this.configService.get<number>('media.ftp.port', 21),
+        user: this.configService.getOrThrow<string>('media.ftp.user'),
+        password: this.configService.getOrThrow<string>('media.ftp.password'),
+        secure: this.configService.get<boolean>('media.ftp.secure', false),
+      });
+      return await action(client);
+    } finally {
+      client.close();
+    }
   }
 
   private validateNazrType(payload: CreateNazrTypeRequest): CreateNazrTypeRequest {
