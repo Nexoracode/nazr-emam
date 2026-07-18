@@ -224,6 +224,23 @@ export function ProfileView() {
     };
   }, [router]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [mobileMenuOpen]);
+
   if (loading) {
     return (
       <main className="page-shell">
@@ -278,6 +295,14 @@ export function ProfileView() {
         </div>
       </div>
 
+      <button
+        aria-label="بستن منوی پروفایل"
+        className={`profile-drawer-backdrop${mobileMenuOpen ? ' is-open' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+        tabIndex={mobileMenuOpen ? 0 : -1}
+        type="button"
+      />
+
       <aside
         className={`profile-sidebar surface-card${mobileMenuOpen ? ' is-open' : ''}`}
         id="profile-navigation"
@@ -289,6 +314,14 @@ export function ProfileView() {
             <p className="profile-sidebar-title">{summary.profile.fullName}</p>
             <p className="profile-sidebar-subtitle" dir="ltr">{summary.profile.mobile}</p>
           </div>
+          <button
+            aria-label="بستن منوی پروفایل"
+            className="profile-drawer-close"
+            onClick={() => setMobileMenuOpen(false)}
+            type="button"
+          >
+            ×
+          </button>
         </div>
 
         <nav className="profile-nav">
