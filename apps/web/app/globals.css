@@ -3960,9 +3960,9 @@ input {
   .admin-sidebar { height: auto; min-height: 0; padding: 12px; position: static; }
   .admin-brand { padding-bottom: 10px; }
   .admin-nav { display: flex; gap: 6px; overflow-x: auto; }
-  .admin-nav-group { display: flex; gap: 5px; }
+  .admin-nav-group { display: flex; flex: 0 0 auto; gap: 5px; }
   .admin-nav-group > p, .admin-exit, .admin-nav button > span, .admin-nav button b { display: none; }
-  .admin-nav button { border: 1px solid #344a42; flex: 0 0 auto; min-height: 34px; padding: 6px 10px; width: auto; }
+  .admin-nav button { border: 1px solid #344a42; flex: 0 0 auto; min-height: 34px; padding: 6px 10px; white-space: nowrap; width: auto; }
   .admin-workspace { padding: 0 14px 28px; }
   .admin-two-column { grid-template-columns: 1fr; }
   .admin-ticket-layout { grid-template-columns: 1fr; }
