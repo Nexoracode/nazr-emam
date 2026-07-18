@@ -9,6 +9,7 @@ import { IsNull, Like, Repository } from 'typeorm';
 import type {
   CreateInvitationCardRequest,
   GalleryAsset,
+  GalleryAssetPlacement,
   InvitationCard,
   Money,
   Paginated,
@@ -321,9 +322,18 @@ export class ProfileService {
     };
   }
 
-  async getGallery(nazrTypeId?: string): Promise<GalleryAsset[]> {
+  async getGallery(
+    nazrTypeId?: string,
+    placement?: GalleryAssetPlacement,
+  ): Promise<GalleryAsset[]> {
+    if (placement && !['intro', 'gallery'].includes(placement)) {
+      this.throwValidation({ placement: 'محل نمایش رسانه معتبر نیست' });
+    }
     const assets = await this.galleryRepo.find({
-      where: nazrTypeId ? { nazrTypeId } : {},
+      where: {
+        ...(nazrTypeId ? { nazrTypeId } : {}),
+        ...(placement ? { placement } : {}),
+      },
       order: { createdAt: 'DESC' },
     });
     return assets.map((item) => this.toGalleryAssetDto(item));
@@ -454,6 +464,7 @@ export class ProfileService {
       nazrTypeId: asset.nazrTypeId,
       title: asset.title,
       type: asset.type,
+      placement: asset.placement,
       fileUrl: asset.fileUrl,
       thumbnailUrl: asset.thumbnailUrl,
       createdAt: asset.createdAt.toISOString(),

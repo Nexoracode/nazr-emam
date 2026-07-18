@@ -12,6 +12,7 @@ import type {
   CrmActivityType,
   CrmStage,
   GalleryAsset,
+  GalleryAssetPlacement,
   NazrRequest,
   NazrRequestStatus,
   NazrType,
@@ -394,9 +395,12 @@ function NotificationsSection({ items, users, run, working }: { items: AdminNoti
 }
 
 function GallerySection({ items, nazrTypes, run, working }: { items: GalleryAsset[]; nazrTypes: NazrType[]; run: Runner; working: boolean }) {
+  const [placement, setPlacement] = useState<GalleryAssetPlacement>('gallery');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [mediaFileName, setMediaFileName] = useState('');
   const [thumbnailFileName, setThumbnailFileName] = useState('');
+  const introItems = items.filter((item) => item.placement === 'intro');
+  const galleryItems = items.filter((item) => item.placement === 'gallery');
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -414,19 +418,40 @@ function GallerySection({ items, nazrTypes, run, working }: { items: GalleryAsse
       return createAdminGallery({
         title: String(data.get('title')),
         type: mediaType,
+        placement,
         fileUrl: uploadedMedia.url,
         thumbnailUrl: uploadedThumbnail?.url ?? null,
-        nazrTypeId: String(data.get('nazrTypeId')) || null,
+        nazrTypeId: placement === 'gallery' ? String(data.get('nazrTypeId')) || null : null,
       });
-    }, 'رسانه به گالری اضافه شد');
+    }, placement === 'intro' ? 'ویدیوی معرفی صفحه اصلی ثبت شد' : 'گزارش اجرا به گالری اضافه شد');
 
     if (succeeded) {
       form.reset();
+      setPlacement('gallery');
       setMediaType('image');
       setMediaFileName('');
       setThumbnailFileName('');
     }
   };
+
+  const mediaCards = (mediaItems: GalleryAsset[], emptyText: string) => (
+    <div className="admin-gallery-grid">
+      {mediaItems.map((item) => (
+        <article key={item.id}>
+          <div className="admin-gallery-preview">
+            {item.thumbnailUrl ? <img alt={item.title} src={item.thumbnailUrl} /> : item.type === 'image' ? <img alt={item.title} src={item.fileUrl} /> : <div className="admin-media-placeholder">ویدئو بدون تصویر</div>}
+            <span>{item.placement === 'intro' ? 'معرفی صفحه اصلی' : item.type === 'video' ? 'گزارش ویدیویی' : 'تصویر گالری'}</span>
+          </div>
+          <div className="admin-gallery-info">
+            <h3>{item.title}</h3>
+            <a href={item.fileUrl} rel="noreferrer" target="_blank">مشاهده فایل</a>
+            <button className="is-danger-text" onClick={() => void run(() => deleteAdminGallery(item.id), 'رسانه حذف شد')} type="button">حذف</button>
+          </div>
+        </article>
+      ))}
+      {!mediaItems.length ? <Empty text={emptyText} /> : null}
+    </div>
+  );
 
   return (
     <div className="admin-stack">
@@ -434,26 +459,50 @@ function GallerySection({ items, nazrTypes, run, working }: { items: GalleryAsse
         <div className="admin-panel-head">
           <div>
             <h2>افزودن رسانه</h2>
-            <p>فایل تصویر یا ویدئو را مستقیماً از دستگاه انتخاب کنید.</p>
+            <p>ابتدا مشخص کنید رسانه برای معرفی کلی صفحه اصلی است یا گزارش اجرای طرح‌ها.</p>
           </div>
         </div>
         <form className="admin-form-grid admin-gallery-form" onSubmit={submit}>
+          <label>
+            محل نمایش
+            <select
+              name="placement"
+              onChange={(event) => {
+                const nextPlacement = event.target.value as GalleryAssetPlacement;
+                setPlacement(nextPlacement);
+                if (nextPlacement === 'intro') setMediaType('video');
+                setMediaFileName('');
+                setThumbnailFileName('');
+              }}
+              value={placement}
+            >
+              <option value="gallery">گزارش اجرا در گالری</option>
+              <option value="intro">ویدیوی معرفی بالای صفحه</option>
+            </select>
+          </label>
           <input name="title" placeholder="عنوان رسانه" required />
-          <select
-            name="type"
-            onChange={(event) => {
-              setMediaType(event.target.value as 'image' | 'video');
-              setMediaFileName('');
-            }}
-            value={mediaType}
-          >
-            <option value="image">تصویر</option>
-            <option value="video">ویدئو</option>
-          </select>
-          <select name="nazrTypeId">
-            <option value="">بدون طرح مشخص</option>
-            {nazrTypes.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-          </select>
+          <label>
+            نوع رسانه
+            <select
+              disabled={placement === 'intro'}
+              name="type"
+              onChange={(event) => {
+                setMediaType(event.target.value as 'image' | 'video');
+                setMediaFileName('');
+              }}
+              value={mediaType}
+            >
+              <option value="image">تصویر</option>
+              <option value="video">ویدئو</option>
+            </select>
+          </label>
+          <label>
+            طرح مرتبط
+            <select disabled={placement === 'intro'} name="nazrTypeId">
+              <option value="">بدون طرح مشخص</option>
+              {nazrTypes.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+            </select>
+          </label>
           <label className="admin-upload-field">
             <span>{mediaType === 'video' ? 'فایل ویدئو' : 'فایل تصویر'}</span>
             <small>{mediaType === 'video' ? 'MP4، WebM یا MOV تا ۱۵۰ مگابایت' : 'JPEG، PNG، WebP، GIF یا AVIF تا ۱۰ مگابایت'}</small>
@@ -480,27 +529,27 @@ function GallerySection({ items, nazrTypes, run, working }: { items: GalleryAsse
             <span className="admin-upload-control"><b>انتخاب تصویر</b><em>{thumbnailFileName || 'فایلی انتخاب نشده'}</em></span>
           </label>
           <button className="admin-primary" disabled={working}>
-            {working ? 'در حال آپلود...' : 'آپلود و افزودن'}
+            {working ? 'در حال آپلود...' : placement === 'intro' ? 'ثبت ویدیوی معرفی' : 'افزودن به گالری اجراها'}
           </button>
         </form>
       </section>
       <section className="admin-panel">
-        <div className="admin-gallery-grid">
-          {items.map((item) => (
-            <article key={item.id}>
-              <div className="admin-gallery-preview">
-                {item.thumbnailUrl ? <img alt={item.title} src={item.thumbnailUrl} /> : item.type === 'image' ? <img alt={item.title} src={item.fileUrl} /> : <div className="admin-media-placeholder">ویدئو بدون تصویر</div>}
-                <span>{item.type === 'video' ? 'ویدئو' : 'تصویر'}</span>
-              </div>
-              <div className="admin-gallery-info">
-                <h3>{item.title}</h3>
-                <a href={item.fileUrl} rel="noreferrer" target="_blank">مشاهده فایل</a>
-                <button className="is-danger-text" onClick={() => void run(() => deleteAdminGallery(item.id), 'رسانه حذف شد')} type="button">حذف</button>
-              </div>
-            </article>
-          ))}
-          {!items.length ? <Empty /> : null}
+        <div className="admin-panel-head">
+          <div>
+            <h2>ویدیوی معرفی صفحه اصلی</h2>
+            <p>این کلیپ فقط بالای صفحه اصلی نمایش داده می‌شود و با گزارش اجراها مشترک نیست.</p>
+          </div>
         </div>
+        {mediaCards(introItems, 'هنوز ویدیوی معرفی صفحه اصلی ثبت نشده است.')}
+      </section>
+      <section className="admin-panel">
+        <div className="admin-panel-head">
+          <div>
+            <h2>گزارش‌های اجرای طرح‌ها</h2>
+            <p>تصاویر و ویدیوهای این بخش فقط در گالری و گزارش‌های قابل دریافت نمایش داده می‌شوند.</p>
+          </div>
+        </div>
+        {mediaCards(galleryItems, 'هنوز گزارشی برای گالری ثبت نشده است.')}
       </section>
     </div>
   );

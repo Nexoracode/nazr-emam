@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
+import type { GalleryAssetPlacement } from '@nazr-emam/shared';
 import { ProfileService } from './profile.service';
 
 @ApiTags('gallery')
@@ -12,7 +13,10 @@ export class GalleryController {
   @ApiOperation({ summary: 'گالری عمومی تصاویر و ویدئوها' })
   @ApiOkResponse({ description: 'رسانه‌های عمومی از جدیدترین به قدیمی‌ترین' })
   @Get()
-  getGallery(@Query('nazrTypeId') nazrTypeId?: string) {
-    return this.service.getGallery(nazrTypeId);
+  getGallery(
+    @Query('nazrTypeId') nazrTypeId?: string,
+    @Query('placement') placement?: GalleryAssetPlacement,
+  ) {
+    return this.service.getGallery(nazrTypeId, placement);
   }
 }

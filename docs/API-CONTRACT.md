@@ -286,9 +286,10 @@ type UpdateNazrTypeRequest = Partial<CreateNazrTypeRequest>;
 رسانه‌های قابل نمایش در صفحه اصلی و بخش گزارش‌های عمومی.
 
 - **Auth:** عمومی
-- **Query:** `nazrTypeId?`
+- **Query:** `nazrTypeId?` و `placement?` با مقادیر `intro | gallery`
 - **پاسخ:** `200 GalleryAsset[]`
 - ترتیب پاسخ از جدیدترین رسانه به قدیمی‌ترین است.
+- `intro` فقط برای ویدیوی معرفی کلی نذر امام در بالای صفحه اصلی است؛ `gallery` برای تصاویر و ویدیوهای گزارش اجرا استفاده می‌شود.
 - برای رسانه با `type: "video"` مقدار `thumbnailUrl` هنگام ثبت در مدیریت الزامی است.
 
 ---
@@ -823,12 +824,14 @@ interface UserProfileSummary {
 }
 
 type GalleryAssetType = "image" | "video";
+type GalleryAssetPlacement = "intro" | "gallery";
 
 interface GalleryAsset {
   id: ID;
   nazrTypeId: ID | null;
   title: string;
   type: GalleryAssetType;
+  placement: GalleryAssetPlacement;
   fileUrl: string;
   thumbnailUrl: string | null;
   createdAt: ISODate;
@@ -956,6 +959,8 @@ interface GalleryUploadResponse {
 - فرمت‌های ویدئو مجاز: `MP4`، `WebM` و `MOV` تا سقف ۱۵۰ مگابایت.
 - با `MEDIA_STORAGE=ftp` فایل‌ها در FTP ذخیره می‌شوند؛ مشخصات اتصال فقط از متغیرهای محیطی `FTP_*` و مسیر عمومی از `MEDIA_FTP_*` خوانده می‌شود.
 - در ساخت یا تبدیل رسانه به نوع `video`، ارسال `thumbnailUrl` معتبر الزامی است.
+- رسانه با `placement: "intro"` باید ویدئو باشد و فقط در جایگاه معرفی بالای صفحه اصلی نمایش داده می‌شود.
+- در هر لحظه فقط یک رسانه معرفی فعال است؛ ثبت معرفی جدید، معرفی قبلی را جایگزین می‌کند. رسانه‌های `gallery` فقط در گزارش اجرا و گالری کاربر نمایش داده می‌شوند.
 
 ### کال‌سنتر و پیگیری ماهانه
 

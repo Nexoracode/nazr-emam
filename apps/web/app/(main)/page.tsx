@@ -138,17 +138,19 @@ function HomeVideo({
   asset,
   className,
   emptyTitle,
+  emptyDescription,
 }: {
   asset: GalleryAsset | null;
   className: string;
   emptyTitle: string;
+  emptyDescription: string;
 }) {
   if (!asset?.thumbnailUrl) {
     return (
       <div className={`${className} home-media-empty`}>
         <span className="home-media-empty-icon" aria-hidden="true" />
         <strong>{emptyTitle}</strong>
-        <small>ویدئو و تصویر بندانگشتی را از مدیریت گالری اضافه کنید.</small>
+        <small>{emptyDescription}</small>
       </div>
     );
   }
@@ -189,17 +191,20 @@ function GalleryImage({ asset, index }: { asset: GalleryAsset | null; index: num
 }
 
 export default async function Home() {
-  const [nazrTypes, galleryAssets] = await Promise.all([
+  const [nazrTypes, introAssets, galleryAssets] = await Promise.all([
     getPublicNazrTypes(),
-    getPublicGalleryAssets(),
+    getPublicGalleryAssets('intro'),
+    getPublicGalleryAssets('gallery'),
   ]);
   const activePlans = nazrTypes.filter((t) => t.isActive).length;
   const videos = galleryAssets.filter(
     (asset) => asset.type === 'video' && Boolean(asset.thumbnailUrl),
   );
   const images = galleryAssets.filter((asset) => asset.type === 'image').slice(0, 4);
-  const heroVideo = videos[0] ?? null;
-  const galleryVideo = videos[1] ?? videos[0] ?? null;
+  const heroVideo = introAssets.find(
+    (asset) => asset.type === 'video' && Boolean(asset.thumbnailUrl),
+  ) ?? null;
+  const galleryVideo = videos[0] ?? null;
   const galleryImageSlots = Array.from(
     { length: 4 },
     (_, index) => images[index] ?? null,
@@ -252,6 +257,7 @@ export default async function Home() {
             asset={heroVideo}
             className="home-video-card"
             emptyTitle="ویدئوی معرفی نذر امام"
+            emptyDescription="کلیپ توضیح کلی ایده از بخش مدیریت رسانه‌ها ثبت می‌شود."
           />
         </div>
       </section>
@@ -401,6 +407,7 @@ export default async function Home() {
               asset={galleryVideo}
               className="home-gallery-main"
               emptyTitle="ویدئوی گزارش اجرای طرح‌ها"
+              emptyDescription="ویدئوهای اجرای طرح‌ها از بخش گالری مدیریت ثبت می‌شوند."
             />
             <div className="home-gallery-list" aria-label="تصاویر گالری">
               {galleryImageSlots.map((asset, index) => (

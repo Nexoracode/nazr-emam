@@ -6,7 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import type { GalleryAssetType } from '@nazr-emam/shared';
+import type { GalleryAssetPlacement, GalleryAssetType } from '@nazr-emam/shared';
 import { NazrTypeEntity } from '../../nazr-types/entities/nazr-type.entity';
 
 @Entity('gallery_assets')
@@ -26,6 +26,9 @@ export class GalleryAssetEntity {
 
   @Column({ type: 'enum', enum: ['image', 'video'] })
   type!: GalleryAssetType;
+
+  @Column({ type: 'enum', enum: ['intro', 'gallery'], default: 'gallery' })
+  placement!: GalleryAssetPlacement;
 
   @Column({ name: 'file_url', type: 'varchar', length: 500 })
   fileUrl!: string;

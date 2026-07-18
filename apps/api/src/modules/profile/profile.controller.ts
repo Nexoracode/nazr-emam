@@ -115,7 +115,7 @@ export class ProfileController {
   @ApiOperation({ summary: 'گالری عکس و ویدئوهای قابل دریافت' })
   @Get('gallery')
   getGallery(@Query('nazrTypeId') nazrTypeId?: string) {
-    return this.service.getGallery(nazrTypeId);
+    return this.service.getGallery(nazrTypeId, 'gallery');
   }
 
   @ApiOperation({ summary: 'کارت‌های دعوت ساخته‌شده کاربر' })

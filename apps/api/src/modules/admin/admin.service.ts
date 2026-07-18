@@ -29,6 +29,7 @@ import type {
   CrmProfile,
   CrmStage,
   GalleryAsset,
+  GalleryAssetPlacement,
   GalleryAssetType,
   GalleryUploadResponse,
   Money,
@@ -308,6 +309,23 @@ export class AdminService implements OnModuleInit {
 
   async createGallery(payload: CreateGalleryAssetRequest): Promise<GalleryAsset> {
     const body = this.validateGallery(payload);
+    if (body.placement === 'intro') {
+      const current = await this.galleryRepo.findOne({
+        where: { placement: 'intro' },
+        order: { createdAt: 'DESC' },
+      });
+      if (current) {
+        const previousUrls = [current.fileUrl, current.thumbnailUrl];
+        Object.assign(current, body);
+        const saved = await this.galleryRepo.save(current);
+        await Promise.all(
+          previousUrls
+            .filter((url): url is string => Boolean(url) && ![saved.fileUrl, saved.thumbnailUrl].includes(url))
+            .map((url) => this.removeStoredFile(url)),
+        );
+        return this.toGallery(saved);
+      }
+    }
     const item = await this.galleryRepo.save(this.galleryRepo.create(body));
     return this.toGallery(item);
   }
@@ -315,7 +333,14 @@ export class AdminService implements OnModuleInit {
   async updateGallery(id: string, payload: UpdateGalleryAssetRequest): Promise<GalleryAsset> {
     const item = await this.galleryRepo.findOne({ where: { id } });
     if (!item) this.notFound('GALLERY_ASSET_NOT_FOUND', 'رسانه پیدا نشد');
-    const merged = this.validateGallery({ nazrTypeId: payload.nazrTypeId !== undefined ? payload.nazrTypeId : item!.nazrTypeId, title: payload.title ?? item!.title, type: payload.type ?? item!.type, fileUrl: payload.fileUrl ?? item!.fileUrl, thumbnailUrl: payload.thumbnailUrl !== undefined ? payload.thumbnailUrl : item!.thumbnailUrl });
+    const merged = this.validateGallery({ nazrTypeId: payload.nazrTypeId !== undefined ? payload.nazrTypeId : item!.nazrTypeId, title: payload.title ?? item!.title, type: payload.type ?? item!.type, placement: payload.placement ?? item!.placement, fileUrl: payload.fileUrl ?? item!.fileUrl, thumbnailUrl: payload.thumbnailUrl !== undefined ? payload.thumbnailUrl : item!.thumbnailUrl });
+    if (merged.placement === 'intro' && await this.galleryRepo.exists({ where: { placement: 'intro' } }) && item!.placement !== 'intro') {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'INTRO_VIDEO_EXISTS',
+        message: 'ویدیوی معرفی قبلاً ثبت شده است؛ معرفی جدید را از فرم آپلود جایگزین کنید',
+      });
+    }
     Object.assign(item!, merged);
     return this.toGallery(await this.galleryRepo.save(item!));
   }
@@ -418,7 +443,7 @@ export class AdminService implements OnModuleInit {
   }
 
   private toGallery(item: GalleryAssetEntity): GalleryAsset {
-    return { id: item.id, nazrTypeId: item.nazrTypeId, title: item.title, type: item.type, fileUrl: item.fileUrl, thumbnailUrl: item.thumbnailUrl, createdAt: item.createdAt.toISOString() };
+    return { id: item.id, nazrTypeId: item.nazrTypeId, title: item.title, type: item.type, placement: item.placement, fileUrl: item.fileUrl, thumbnailUrl: item.thumbnailUrl, createdAt: item.createdAt.toISOString() };
   }
 
   private toCallTask(item: CallTaskEntity): CallTask {
@@ -429,12 +454,15 @@ export class AdminService implements OnModuleInit {
     const title = payload.title?.trim();
     const fileUrl = payload.fileUrl?.trim();
     const thumbnailUrl = payload.thumbnailUrl?.trim() || null;
+    const placement: GalleryAssetPlacement = payload.placement;
     if (!title || title.length > 180) this.validation({ title: 'عنوان رسانه معتبر نیست' });
     if (!fileUrl || !/^https?:\/\//i.test(fileUrl)) this.validation({ fileUrl: 'نشانی فایل معتبر نیست' });
     if (!['image', 'video'].includes(payload.type)) this.validation({ type: 'نوع رسانه معتبر نیست' });
+    if (!['intro', 'gallery'].includes(placement)) this.validation({ placement: 'محل نمایش رسانه معتبر نیست' });
     if (thumbnailUrl && !/^https?:\/\//i.test(thumbnailUrl)) this.validation({ thumbnailUrl: 'نشانی تصویر بندانگشتی معتبر نیست' });
     if (payload.type === 'video' && !thumbnailUrl) this.validation({ thumbnailUrl: 'تصویر بندانگشتی ویدئو الزامی است' });
-    return { nazrTypeId: payload.nazrTypeId ?? null, title, type: payload.type, fileUrl, thumbnailUrl };
+    if (placement === 'intro' && payload.type !== 'video') this.validation({ type: 'رسانه معرفی باید ویدئو باشد' });
+    return { nazrTypeId: placement === 'intro' ? null : payload.nazrTypeId ?? null, title, type: payload.type, placement, fileUrl, thumbnailUrl };
   }
 
   private async removeStoredFile(url: string): Promise<void> {

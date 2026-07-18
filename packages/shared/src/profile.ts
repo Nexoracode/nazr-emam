@@ -68,12 +68,14 @@ export interface UserPaymentHistoryQuery {
 }
 
 export type GalleryAssetType = 'image' | 'video';
+export type GalleryAssetPlacement = 'intro' | 'gallery';
 
 export interface GalleryAsset {
   id: ID;
   nazrTypeId: ID | null;
   title: string;
   type: GalleryAssetType;
+  placement: GalleryAssetPlacement;
   fileUrl: string;
   thumbnailUrl: string | null;
   createdAt: ISODate;

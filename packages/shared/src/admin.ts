@@ -1,5 +1,10 @@
 import type { ID, ISODate, Money, Paginated } from './api';
-import type { UserPlatform, GalleryAsset, GalleryAssetType } from './profile';
+import type {
+  UserPlatform,
+  GalleryAsset,
+  GalleryAssetPlacement,
+  GalleryAssetType,
+} from './profile';
 import type { NazrRequest, NazrRequestStatus } from './nazr';
 import type { Payment, PaymentStatus } from './payments';
 import type { Ticket } from './support';
@@ -127,6 +132,7 @@ export interface CreateGalleryAssetRequest {
   nazrTypeId?: ID | null;
   title: string;
   type: GalleryAssetType;
+  placement: GalleryAssetPlacement;
   fileUrl: string;
   thumbnailUrl?: string | null;
 }
