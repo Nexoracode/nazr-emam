@@ -1992,16 +1992,9 @@ input {
   display: none;
 }
 
-.home-video-card figcaption,
-.home-gallery-main figcaption {
-  background: var(--h-panel);
-  color: #f3f7f5;
-  font-size: 13.5px;
-  font-weight: 800;
-  padding: 14px 16px;
-  position: relative;
-  width: 100%;
-  z-index: 2;
+.home-video-card.has-media,
+.home-gallery-main.has-media {
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .home-video-player {
@@ -2216,7 +2209,7 @@ input {
 .home-gallery-main {
   font-size: 14.5px;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   margin: 0;
   min-height: 360px;
   padding: 0;

@@ -167,7 +167,6 @@ function HomeVideo({
         <source src={asset.fileUrl} />
         مرورگر شما امکان پخش این ویدئو را ندارد.
       </video>
-      <figcaption>{asset.title}</figcaption>
     </figure>
   );
 }
