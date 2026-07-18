@@ -269,17 +269,7 @@ export function ProfileView() {
   return (
     <main className="page-shell profile-page-shell profile-standalone-shell">
       <div className="profile-mobile-bar">
-        <div className="profile-mobile-account">
-          <span className="profile-avatar" aria-hidden="true">{summary.profile.fullName.trim().charAt(0)}</span>
-          <div>
-            <strong>{summary.profile.fullName}</strong>
-            <small>{activeTabLabel}</small>
-          </div>
-        </div>
         <div className="profile-mobile-actions">
-          <Link className="profile-mobile-home" href="/">
-            صفحه اصلی
-          </Link>
           <button
             aria-controls="profile-navigation"
             aria-expanded={mobileMenuOpen}
@@ -292,6 +282,16 @@ export function ProfileView() {
             <span />
             <span />
           </button>
+          <Link className="profile-mobile-home" href="/">
+            صفحه اصلی
+          </Link>
+        </div>
+        <div className="profile-mobile-account">
+          <span className="profile-avatar" aria-hidden="true">{summary.profile.fullName.trim().charAt(0)}</span>
+          <div>
+            <strong>{summary.profile.fullName}</strong>
+            <small>{activeTabLabel}</small>
+          </div>
         </div>
       </div>
 
