@@ -1,11 +1,17 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const configService = app.get(ConfigService);
   app.use(cookieParser());
+  app.useStaticAssets(configService.getOrThrow<string>('media.uploadDir'), {
+    prefix: '/uploads/',
+  });
   app.enableCors({
     origin: process.env.WEB_ORIGIN ?? true,
     credentials: true,

@@ -45,6 +45,7 @@ import {
   updateAdminCrm,
   updateAdminNazrStatus,
   updateAdminNazrType,
+  uploadAdminGalleryFile,
 } from '../../lib/api';
 import {
   amountToPersianWords,
@@ -394,8 +395,115 @@ function NotificationsSection({ items, users, run, working }: { items: AdminNoti
 
 function GallerySection({ items, nazrTypes, run, working }: { items: GalleryAsset[]; nazrTypes: NazrType[]; run: Runner; working: boolean }) {
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
-  const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); if (await run(() => createAdminGallery({ title: String(data.get('title')), type: String(data.get('type')) as 'image' | 'video', fileUrl: String(data.get('fileUrl')), thumbnailUrl: String(data.get('thumbnailUrl')) || null, nazrTypeId: String(data.get('nazrTypeId')) || null }), 'رسانه به گالری اضافه شد')) { form.reset(); setMediaType('image'); } };
-  return <div className="admin-stack"><section className="admin-panel"><div className="admin-panel-head"><div><h2>افزودن رسانه</h2><p>تصاویر گالری و ویدئوهای دارای تصویر بندانگشتی</p></div></div><form className="admin-form-grid" onSubmit={submit}><input name="title" placeholder="عنوان رسانه" required /><select name="type" onChange={(event) => setMediaType(event.target.value as 'image' | 'video')} value={mediaType}><option value="image">تصویر</option><option value="video">ویدئو</option></select><select name="nazrTypeId"><option value="">بدون طرح مشخص</option>{nazrTypes.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select><input dir="ltr" name="fileUrl" placeholder={mediaType === 'video' ? 'نشانی فایل ویدئو' : 'نشانی فایل تصویر'} required /><input dir="ltr" name="thumbnailUrl" placeholder={mediaType === 'video' ? 'نشانی تصویر بندانگشتی ویدئو' : 'نشانی تصویر بندانگشتی (اختیاری)'} required={mediaType === 'video'} /><button className="admin-primary" disabled={working}>افزودن</button></form></section><section className="admin-panel"><div className="admin-gallery-grid">{items.map((item) => <article key={item.id}>{item.thumbnailUrl ? <img alt={item.title} src={item.thumbnailUrl} /> : item.type === 'image' ? <img alt={item.title} src={item.fileUrl} /> : <div className="admin-media-placeholder">ویدئو بدون تصویر</div>}<div><h3>{item.title}</h3><a href={item.fileUrl} rel="noreferrer" target="_blank">مشاهده فایل</a><button className="is-danger-text" onClick={() => void run(() => deleteAdminGallery(item.id), 'رسانه حذف شد')} type="button">حذف</button></div></article>)}{!items.length ? <Empty /> : null}</div></section></div>;
+  const [mediaFileName, setMediaFileName] = useState('');
+  const [thumbnailFileName, setThumbnailFileName] = useState('');
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const mediaFile = data.get('mediaFile');
+    const thumbnailFile = data.get('thumbnailFile');
+    if (!(mediaFile instanceof File) || !mediaFile.size) return;
+
+    const succeeded = await run(async () => {
+      const uploadedMedia = await uploadAdminGalleryFile(mediaFile, mediaType);
+      const uploadedThumbnail =
+        thumbnailFile instanceof File && thumbnailFile.size
+          ? await uploadAdminGalleryFile(thumbnailFile, 'image')
+          : null;
+      return createAdminGallery({
+        title: String(data.get('title')),
+        type: mediaType,
+        fileUrl: uploadedMedia.url,
+        thumbnailUrl: uploadedThumbnail?.url ?? null,
+        nazrTypeId: String(data.get('nazrTypeId')) || null,
+      });
+    }, 'رسانه به گالری اضافه شد');
+
+    if (succeeded) {
+      form.reset();
+      setMediaType('image');
+      setMediaFileName('');
+      setThumbnailFileName('');
+    }
+  };
+
+  return (
+    <div className="admin-stack">
+      <section className="admin-panel">
+        <div className="admin-panel-head">
+          <div>
+            <h2>افزودن رسانه</h2>
+            <p>فایل تصویر یا ویدئو را مستقیماً از دستگاه انتخاب کنید.</p>
+          </div>
+        </div>
+        <form className="admin-form-grid admin-gallery-form" onSubmit={submit}>
+          <input name="title" placeholder="عنوان رسانه" required />
+          <select
+            name="type"
+            onChange={(event) => {
+              setMediaType(event.target.value as 'image' | 'video');
+              setMediaFileName('');
+            }}
+            value={mediaType}
+          >
+            <option value="image">تصویر</option>
+            <option value="video">ویدئو</option>
+          </select>
+          <select name="nazrTypeId">
+            <option value="">بدون طرح مشخص</option>
+            {nazrTypes.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+          </select>
+          <label className="admin-upload-field">
+            <span>{mediaType === 'video' ? 'فایل ویدئو' : 'فایل تصویر'}</span>
+            <small>{mediaType === 'video' ? 'MP4، WebM یا MOV تا ۱۵۰ مگابایت' : 'JPEG، PNG، WebP، GIF یا AVIF تا ۱۰ مگابایت'}</small>
+            <input
+              accept={mediaType === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg,image/png,image/webp,image/gif,image/avif'}
+              key={mediaType}
+              name="mediaFile"
+              onChange={(event) => setMediaFileName(event.target.files?.[0]?.name ?? '')}
+              required
+              type="file"
+            />
+            <span className="admin-upload-control"><b>انتخاب فایل</b><em>{mediaFileName || 'فایلی انتخاب نشده'}</em></span>
+          </label>
+          <label className="admin-upload-field">
+            <span>تصویر بندانگشتی {mediaType === 'video' ? '' : '(اختیاری)'}</span>
+            <small>تصویری که پیش از پخش ویدئو نمایش داده می‌شود.</small>
+            <input
+              accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+              name="thumbnailFile"
+              onChange={(event) => setThumbnailFileName(event.target.files?.[0]?.name ?? '')}
+              required={mediaType === 'video'}
+              type="file"
+            />
+            <span className="admin-upload-control"><b>انتخاب تصویر</b><em>{thumbnailFileName || 'فایلی انتخاب نشده'}</em></span>
+          </label>
+          <button className="admin-primary" disabled={working}>
+            {working ? 'در حال آپلود...' : 'آپلود و افزودن'}
+          </button>
+        </form>
+      </section>
+      <section className="admin-panel">
+        <div className="admin-gallery-grid">
+          {items.map((item) => (
+            <article key={item.id}>
+              <div className="admin-gallery-preview">
+                {item.thumbnailUrl ? <img alt={item.title} src={item.thumbnailUrl} /> : item.type === 'image' ? <img alt={item.title} src={item.fileUrl} /> : <div className="admin-media-placeholder">ویدئو بدون تصویر</div>}
+                <span>{item.type === 'video' ? 'ویدئو' : 'تصویر'}</span>
+              </div>
+              <div className="admin-gallery-info">
+                <h3>{item.title}</h3>
+                <a href={item.fileUrl} rel="noreferrer" target="_blank">مشاهده فایل</a>
+                <button className="is-danger-text" onClick={() => void run(() => deleteAdminGallery(item.id), 'رسانه حذف شد')} type="button">حذف</button>
+              </div>
+            </article>
+          ))}
+          {!items.length ? <Empty /> : null}
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function CallsSection({ items, run, working }: { items: CallTask[]; run: Runner; working: boolean }) {

@@ -941,11 +941,20 @@ interface InvitationCard {
 - `GET /admin/notifications?page&pageSize` → `200 Paginated<AdminNotificationItem>`
 - `POST /admin/notifications` با `CreateNotificationRequest` → `201 AdminNotificationItem`
 - `GET /admin/gallery` → `200 GalleryAsset[]`
+- `POST /admin/gallery/upload?kind=image|video` با بدنه `multipart/form-data` و فیلد `file` → `201 GalleryUploadResponse`
 - `POST /admin/gallery` با `CreateGalleryAssetRequest` → `201 GalleryAsset`
 - `PATCH /admin/gallery/:id` با `UpdateGalleryAssetRequest` → `200 GalleryAsset`
 - `DELETE /admin/gallery/:id` → `204`
 
-در ساخت یا تبدیل رسانه به نوع `video`، ارسال `thumbnailUrl` معتبر الزامی است.
+```ts
+interface GalleryUploadResponse {
+  url: string;
+}
+```
+
+- فرمت‌های تصویر مجاز: `JPEG`، `PNG`، `WebP`، `GIF` و `AVIF` تا سقف ۱۰ مگابایت.
+- فرمت‌های ویدئو مجاز: `MP4`، `WebM` و `MOV` تا سقف ۱۵۰ مگابایت.
+- در ساخت یا تبدیل رسانه به نوع `video`، ارسال `thumbnailUrl` معتبر الزامی است.
 
 ### کال‌سنتر و پیگیری ماهانه
 

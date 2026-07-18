@@ -131,6 +131,10 @@ export interface CreateGalleryAssetRequest {
   thumbnailUrl?: string | null;
 }
 
+export interface GalleryUploadResponse {
+  url: string;
+}
+
 export type UpdateGalleryAssetRequest = Partial<CreateGalleryAssetRequest>;
 
 export interface AdminNotificationItem {

@@ -18,6 +18,8 @@ import type {
   CreateTicketRequest,
   CreateWalletChargeRequest,
   GalleryAsset,
+  GalleryAssetType,
+  GalleryUploadResponse,
   InvitationCard,
   LoginRequest,
   NazrRequest,
@@ -409,6 +411,32 @@ export function createAdminNotification(payload: CreateNotificationRequest) {
 
 export function getAdminGallery() {
   return get<GalleryAsset[]>('/admin/gallery');
+}
+
+export async function uploadAdminGalleryFile(file: File, kind: GalleryAssetType) {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetch(`${apiUrl}/admin/gallery/upload?kind=${kind}`, {
+    method: 'POST',
+    credentials: 'include',
+    body,
+  });
+  const data = (await response.json().catch(() => null)) as
+    | GalleryUploadResponse
+    | ApiError
+    | null;
+  if (!response.ok) {
+    throw new ApiRequestError(
+      isApiError(data)
+        ? data
+        : {
+            statusCode: response.status,
+            code: 'UPLOAD_FAILED',
+            message: 'آپلود فایل انجام نشد. دوباره تلاش کنید.',
+          },
+    );
+  }
+  return data as GalleryUploadResponse;
 }
 
 export function createAdminGallery(payload: CreateGalleryAssetRequest) {

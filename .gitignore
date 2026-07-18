@@ -10,4 +10,5 @@ coverage
 .env.production
 npm-debug.log*
 *.log
+apps/api/uploads/
 Dockerfile.local

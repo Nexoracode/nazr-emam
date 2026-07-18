@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   CallTaskStatus,
   CreateCallTaskRequest,
@@ -8,6 +9,7 @@ import type {
   CreateNotificationRequest,
   CreateNazrTypeRequest,
   GenerateMonthlyCallTasksRequest,
+  GalleryAssetType,
   NazrRequestStatus,
   PaymentStatus,
   UpdateCallTaskRequest,
@@ -18,7 +20,7 @@ import type {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ACCESS_TOKEN_COOKIE } from '../auth/auth.service';
 import type { AuthenticatedRequest } from '../auth/auth.types';
-import { AdminService } from './admin.service';
+import { AdminService, type UploadedGalleryFile } from './admin.service';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -135,6 +137,24 @@ export class AdminController {
   @Get('gallery')
   gallery() {
     return this.service.gallery();
+  }
+
+  @ApiOperation({ summary: 'آپلود فایل تصویر یا ویدئوی گالری' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 150 * 1024 * 1024 } }))
+  @Post('gallery/upload')
+  uploadGallery(
+    @UploadedFile() file: UploadedGalleryFile | undefined,
+    @Query('kind') kind: GalleryAssetType,
+  ) {
+    return this.service.uploadGallery(file, kind);
   }
 
   @ApiOperation({ summary: 'افزودن رسانه به گالری' })

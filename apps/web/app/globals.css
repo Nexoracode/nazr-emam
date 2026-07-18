@@ -4826,12 +4826,22 @@ input {
 .admin-notification-list small { color: var(--admin-muted); font-size: 8px; }
 .admin-gallery-grid { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .admin-gallery-grid article { border: 1px solid var(--admin-border); border-radius: 7px; overflow: hidden; }
-.admin-gallery-grid img, .admin-media-placeholder { aspect-ratio: 16 / 10; object-fit: cover; width: 100%; }
+.admin-gallery-grid img, .admin-media-placeholder { height: 100%; object-fit: cover; width: 100%; }
 .admin-media-placeholder { align-items: center; background: #edf0ee; color: var(--admin-muted); display: flex; font-size: 11px; justify-content: center; }
-.admin-gallery-grid article > div:not(.admin-media-placeholder) { display: grid; gap: 5px; padding: 10px; }
+.admin-gallery-info { display: grid; gap: 5px; padding: 10px; }
 .admin-gallery-grid h3 { font-size: 11px; margin: 0; }
 .admin-gallery-grid a { color: var(--admin-primary); font-size: 9px; }
 .admin-gallery-grid button { justify-self: start; }
+.admin-gallery-preview { aspect-ratio: 16 / 10; background: #edf0ee; overflow: hidden; position: relative; }
+.admin-gallery-preview > span { background: rgb(15 31 25 / 78%); border-radius: 4px; color: #fff; font-size: 8px; inset-block-start: 8px; inset-inline-start: 8px; padding: 3px 7px; position: absolute; }
+.admin-upload-field { align-content: start; background: #fafcfb; border: 1px dashed var(--admin-border-strong); border-radius: 7px; cursor: pointer; display: grid; gap: 4px; min-height: 104px; padding: 10px; position: relative; }
+.admin-upload-field > span { color: var(--admin-ink); font-size: 10px; font-weight: 700; }
+.admin-upload-field > small { color: var(--admin-muted); font-size: 8px; line-height: 1.7; }
+.admin-upload-field input[type="file"] { height: 1px; opacity: 0; overflow: hidden; padding: 0; position: absolute; width: 1px; }
+.admin-upload-control { align-items: center; display: flex; gap: 8px; margin-top: 5px; min-width: 0; }
+.admin-upload-control b { background: var(--admin-primary-soft); border-radius: 5px; color: var(--admin-primary-dark); flex: 0 0 auto; font-size: 9px; padding: 7px 10px; }
+.admin-upload-control em { color: var(--admin-muted); font-size: 8px; font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-gallery-form .admin-primary { min-height: 42px; }
 .admin-call-header { align-items: center; background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 8px; display: flex; justify-content: space-between; padding: 18px; }
 .admin-call-header > div:last-child { align-items: center; display: flex; gap: 8px; }
 .admin-empty { color: var(--admin-muted); font-size: 11px; margin: 20px 0; text-align: center; }

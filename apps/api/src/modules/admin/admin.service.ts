@@ -1,6 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { randomUUID } from 'node:crypto';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
 import {
   Brackets,
   In,
@@ -24,6 +27,8 @@ import type {
   CrmProfile,
   CrmStage,
   GalleryAsset,
+  GalleryAssetType,
+  GalleryUploadResponse,
   Money,
   NazrRequest,
   NazrRequestStatus,
@@ -55,6 +60,27 @@ import { CrmProfileEntity } from './entities/crm-profile.entity';
 const CRM_STAGES: CrmStage[] = ['new', 'engaged', 'recurring', 'at_risk', 'inactive'];
 const CALL_STATUSES: CallTaskStatus[] = ['pending', 'contacted', 'promised', 'paid', 'unreachable', 'cancelled'];
 const REQUEST_STATUSES: NazrRequestStatus[] = ['draft', 'submitted', 'awaiting_payment', 'payment_pending_review', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected'];
+const IMAGE_MAX_SIZE = 10 * 1024 * 1024;
+const VIDEO_MAX_SIZE = 150 * 1024 * 1024;
+const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
+  'image/avif': '.avif',
+  'image/gif': '.gif',
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+};
+const VIDEO_MIME_EXTENSIONS: Record<string, string> = {
+  'video/mp4': '.mp4',
+  'video/quicktime': '.mov',
+  'video/webm': '.webm',
+};
+
+export interface UploadedGalleryFile {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+  size: number;
+}
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -293,8 +319,13 @@ export class AdminService implements OnModuleInit {
   }
 
   async deleteGallery(id: string): Promise<void> {
-    const result = await this.galleryRepo.delete(id);
-    if (!result.affected) this.notFound('GALLERY_ASSET_NOT_FOUND', 'رسانه پیدا نشد');
+    const item = await this.galleryRepo.findOne({ where: { id } });
+    if (!item) this.notFound('GALLERY_ASSET_NOT_FOUND', 'رسانه پیدا نشد');
+    await this.galleryRepo.delete(id);
+    await Promise.all([
+      this.removeStoredFile(item!.fileUrl),
+      item!.thumbnailUrl ? this.removeStoredFile(item!.thumbnailUrl) : Promise.resolve(),
+    ]);
   }
 
   async callTasks(page = 1, pageSize = 30, status?: CallTaskStatus): Promise<Paginated<CallTask>> {
@@ -402,6 +433,59 @@ export class AdminService implements OnModuleInit {
     if (thumbnailUrl && !/^https?:\/\//i.test(thumbnailUrl)) this.validation({ thumbnailUrl: 'نشانی تصویر بندانگشتی معتبر نیست' });
     if (payload.type === 'video' && !thumbnailUrl) this.validation({ thumbnailUrl: 'تصویر بندانگشتی ویدئو الزامی است' });
     return { nazrTypeId: payload.nazrTypeId ?? null, title, type: payload.type, fileUrl, thumbnailUrl };
+  }
+
+  private async removeStoredFile(url: string): Promise<void> {
+    const publicBaseUrl = this.configService
+      .getOrThrow<string>('media.publicBaseUrl')
+      .replace(/\/$/, '');
+    const prefix = `${publicBaseUrl}/uploads/`;
+    if (!url.startsWith(prefix)) return;
+
+    const filename = decodeURIComponent(url.slice(prefix.length));
+    if (!filename || basename(filename) !== filename) return;
+    const uploadDir = this.configService.getOrThrow<string>('media.uploadDir');
+    await unlink(join(uploadDir, filename)).catch((error: unknown) => {
+      if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+    });
+  }
+
+  async uploadGallery(
+    file: UploadedGalleryFile | undefined,
+    kind: GalleryAssetType,
+  ): Promise<GalleryUploadResponse> {
+    if (!['image', 'video'].includes(kind)) {
+      this.validation({ kind: 'نوع فایل باید تصویر یا ویدئو باشد' });
+    }
+    if (!file) this.validation({ file: 'فایل را انتخاب کنید' });
+
+    const extensions = kind === 'video' ? VIDEO_MIME_EXTENSIONS : IMAGE_MIME_EXTENSIONS;
+    const extension = extensions[file!.mimetype];
+    if (!extension) {
+      this.validation({
+        file:
+          kind === 'video'
+            ? 'فرمت ویدئو باید MP4، WebM یا MOV باشد'
+            : 'فرمت تصویر باید JPEG، PNG، WebP، GIF یا AVIF باشد',
+      });
+    }
+
+    const maxSize = kind === 'video' ? VIDEO_MAX_SIZE : IMAGE_MAX_SIZE;
+    if (file!.size > maxSize) {
+      this.validation({
+        file: kind === 'video' ? 'حجم ویدئو نباید بیشتر از ۱۵۰ مگابایت باشد' : 'حجم تصویر نباید بیشتر از ۱۰ مگابایت باشد',
+      });
+    }
+
+    const uploadDir = this.configService.getOrThrow<string>('media.uploadDir');
+    const filename = `${Date.now()}-${randomUUID()}${extension}`;
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(join(uploadDir, filename), file!.buffer, { flag: 'wx' });
+
+    const publicBaseUrl = this.configService
+      .getOrThrow<string>('media.publicBaseUrl')
+      .replace(/\/$/, '');
+    return { url: `${publicBaseUrl}/uploads/${filename}` };
   }
 
   private validateNazrType(payload: CreateNazrTypeRequest): CreateNazrTypeRequest {
