@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
-  formatNazrTypeAmount,
   getPlanContent,
   getPublicNazrTypes,
 } from '../../../../lib/public-nazr-types';
@@ -77,10 +76,6 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
               <span className="plan-summary-mark" aria-hidden="true">
                 {plan.title.slice(0, 1)}
               </span>
-              <div>
-                <span>مبلغ پیشنهادی مشارکت</span>
-                <strong>{formatNazrTypeAmount(plan)}</strong>
-              </div>
               <div>
                 <span>امکان پیگیری</span>
                 <strong>کد رهگیری و گزارش اجرا</strong>

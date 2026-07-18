@@ -1180,15 +1180,9 @@ input {
   align-items: center;
   border-top: 1px solid var(--h-border);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-top: 6px;
   padding-top: 14px;
-}
-
-.home-plan-amount {
-  color: var(--h-heading);
-  font-size: 15px;
-  font-weight: 900;
 }
 
 .home-plan-link {

@@ -173,11 +173,3 @@ export function getPlanContent(slug: string, type: NazrType): PlanLandingContent
     }
   );
 }
-
-export function formatNazrTypeAmount(type: NazrType): string {
-  if (!type.suggestedAmount) return 'مبلغ آزاد';
-
-  const amount = new Intl.NumberFormat('fa-IR').format(type.suggestedAmount.amount);
-  const unit = type.suggestedAmount.currency === 'IRT' ? 'تومان' : 'ریال';
-  return `${amount} ${unit}`;
-}

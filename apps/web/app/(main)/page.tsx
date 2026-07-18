@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import {
-  formatNazrTypeAmount,
   getPublicNazrTypes,
   planLandingContent,
 } from '../../lib/public-nazr-types';
@@ -321,7 +320,6 @@ export default async function Home() {
                       </div>
                     ) : null}
                     <div className="home-plan-foot">
-                      <strong className="home-plan-amount">{formatNazrTypeAmount(type)}</strong>
                       <span className="home-plan-link">{isActive ? 'مشاهده طرح ←' : 'مشاهده گزارش ←'}</span>
                     </div>
                   </div>
