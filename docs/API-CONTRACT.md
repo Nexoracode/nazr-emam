@@ -281,6 +281,16 @@ interface CreateNazrTypeRequest {
 type UpdateNazrTypeRequest = Partial<CreateNazrTypeRequest>;
 ```
 
+### `GET /gallery`
+
+رسانه‌های قابل نمایش در صفحه اصلی و بخش گزارش‌های عمومی.
+
+- **Auth:** عمومی
+- **Query:** `nazrTypeId?`
+- **پاسخ:** `200 GalleryAsset[]`
+- ترتیب پاسخ از جدیدترین رسانه به قدیمی‌ترین است.
+- برای رسانه با `type: "video"` مقدار `thumbnailUrl` هنگام ثبت در مدیریت الزامی است.
+
 ---
 
 # بخش ۴ — درخواست نذر
@@ -934,6 +944,8 @@ interface InvitationCard {
 - `POST /admin/gallery` با `CreateGalleryAssetRequest` → `201 GalleryAsset`
 - `PATCH /admin/gallery/:id` با `UpdateGalleryAssetRequest` → `200 GalleryAsset`
 - `DELETE /admin/gallery/:id` → `204`
+
+در ساخت یا تبدیل رسانه به نوع `video`، ارسال `thumbnailUrl` معتبر الزامی است.
 
 ### کال‌سنتر و پیگیری ماهانه
 

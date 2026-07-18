@@ -1,5 +1,7 @@
+import type { GalleryAsset } from '@nazr-emam/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { getPublicGalleryAssets } from '../../lib/public-gallery';
 import {
   getPublicNazrTypes,
   planLandingContent,
@@ -11,8 +13,6 @@ const percents = ['۱٪', '۳٪', '۵٪'];
 
 const heroLead =
   'در نذر امام، درصدی از درآمدت را به مسیرهای فرهنگیِ مشخص می‌سپاری؛ از انتخاب طرح تا پرداخت، کد رهگیری و گزارشِ اجرا، همه‌چیز شفاف و قابل پیگیری است.';
-
-const heroSteps = ['انتخاب طرح', 'ثبت نذر', 'پرداخت', 'کد رهگیری'];
 
 const steps: { title: string; text: string }[] = [
   { title: 'انتخاب طرح', text: 'از میان طرح‌های فعال، مسیری را که به دلت نزدیک‌تر است انتخاب کن.' },
@@ -127,13 +127,6 @@ const faqItems = [
   },
 ];
 
-const galleryTiles = [
-  { label: 'پخشِ کتاب در مناطق محروم', tone: 'green' },
-  { label: 'محتوای نهج‌البلاغه در کشورهای دیگر', tone: 'gold' },
-  { label: 'لیگ و مسابقه‌ی کتاب‌خوانی', tone: 'gold' },
-  { label: 'کارگاه‌های فرهنگیِ نوجوانان', tone: 'green' },
-];
-
 function getPlanProgress(index: number): number {
   const progress = [68, 46, 82, 0, 57];
   return progress[index % progress.length];
@@ -141,9 +134,76 @@ function getPlanProgress(index: number): number {
 
 const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(n);
 
+function HomeVideo({
+  asset,
+  className,
+  emptyTitle,
+}: {
+  asset: GalleryAsset | null;
+  className: string;
+  emptyTitle: string;
+}) {
+  if (!asset?.thumbnailUrl) {
+    return (
+      <div className={`${className} home-media-empty`}>
+        <span className="home-media-empty-icon" aria-hidden="true" />
+        <strong>{emptyTitle}</strong>
+        <small>ویدئو و تصویر بندانگشتی را از مدیریت گالری اضافه کنید.</small>
+      </div>
+    );
+  }
+
+  return (
+    <figure className={`${className} has-media`}>
+      <video
+        className="home-video-player"
+        controls
+        playsInline
+        poster={asset.thumbnailUrl}
+        preload="metadata"
+      >
+        <source src={asset.fileUrl} />
+        مرورگر شما امکان پخش این ویدئو را ندارد.
+      </video>
+      <figcaption>{asset.title}</figcaption>
+    </figure>
+  );
+}
+
+function GalleryImage({ asset, index }: { asset: GalleryAsset | null; index: number }) {
+  if (!asset) {
+    return (
+      <div className="home-gallery-item is-empty">
+        <span>جای تصویر {faNumber(index + 1)}</span>
+        <small>تصویر را از مدیریت گالری اضافه کنید.</small>
+      </div>
+    );
+  }
+
+  return (
+    <figure className="home-gallery-item">
+      <img alt={asset.title} loading="lazy" src={asset.fileUrl} />
+      <figcaption>{asset.title}</figcaption>
+    </figure>
+  );
+}
+
 export default async function Home() {
-  const nazrTypes = await getPublicNazrTypes();
+  const [nazrTypes, galleryAssets] = await Promise.all([
+    getPublicNazrTypes(),
+    getPublicGalleryAssets(),
+  ]);
   const activePlans = nazrTypes.filter((t) => t.isActive).length;
+  const videos = galleryAssets.filter(
+    (asset) => asset.type === 'video' && Boolean(asset.thumbnailUrl),
+  );
+  const images = galleryAssets.filter((asset) => asset.type === 'image').slice(0, 4);
+  const heroVideo = videos[0] ?? null;
+  const galleryVideo = videos[1] ?? videos[0] ?? null;
+  const galleryImageSlots = Array.from(
+    { length: 4 },
+    (_, index) => images[index] ?? null,
+  );
 
   return (
     <main className="home-page">
@@ -188,17 +248,11 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="home-video-card" aria-label="ویدئوی معرفی نذر امام">
-            <div className="home-play-button" aria-hidden="true">
-              <span />
-            </div>
-            <p>معرفیِ نذر امام در یک نگاه</p>
-            <div className="home-video-steps" aria-hidden="true">
-              {heroSteps.map((w) => (
-                <span key={w}>{w}</span>
-              ))}
-            </div>
-          </div>
+          <HomeVideo
+            asset={heroVideo}
+            className="home-video-card"
+            emptyTitle="ویدئوی معرفی نذر امام"
+          />
         </div>
       </section>
 
@@ -342,18 +396,17 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="home-gallery-main">
-            <div className="home-play-button home-play-button-sm" aria-hidden="true">
-              <span />
+          <div className="home-gallery-media-layout">
+            <HomeVideo
+              asset={galleryVideo}
+              className="home-gallery-main"
+              emptyTitle="ویدئوی گزارش اجرای طرح‌ها"
+            />
+            <div className="home-gallery-list" aria-label="تصاویر گالری">
+              {galleryImageSlots.map((asset, index) => (
+                <GalleryImage asset={asset} index={index} key={asset?.id ?? index} />
+              ))}
             </div>
-            <span>گزارشِ تصویریِ اجرای طرح‌ها</span>
-          </div>
-          <div className="home-gallery-list" aria-label="نمونه تصاویر گالری">
-            {galleryTiles.map((tile) => (
-              <span className={`home-gallery-item tone-${tile.tone}`} key={tile.label}>
-                {tile.label}
-              </span>
-            ))}
           </div>
         </div>
       </section>

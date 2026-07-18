@@ -395,10 +395,13 @@ export class AdminService implements OnModuleInit {
   private validateGallery(payload: CreateGalleryAssetRequest) {
     const title = payload.title?.trim();
     const fileUrl = payload.fileUrl?.trim();
+    const thumbnailUrl = payload.thumbnailUrl?.trim() || null;
     if (!title || title.length > 180) this.validation({ title: 'عنوان رسانه معتبر نیست' });
     if (!fileUrl || !/^https?:\/\//i.test(fileUrl)) this.validation({ fileUrl: 'نشانی فایل معتبر نیست' });
     if (!['image', 'video'].includes(payload.type)) this.validation({ type: 'نوع رسانه معتبر نیست' });
-    return { nazrTypeId: payload.nazrTypeId ?? null, title, type: payload.type, fileUrl, thumbnailUrl: payload.thumbnailUrl?.trim() || null };
+    if (thumbnailUrl && !/^https?:\/\//i.test(thumbnailUrl)) this.validation({ thumbnailUrl: 'نشانی تصویر بندانگشتی معتبر نیست' });
+    if (payload.type === 'video' && !thumbnailUrl) this.validation({ thumbnailUrl: 'تصویر بندانگشتی ویدئو الزامی است' });
+    return { nazrTypeId: payload.nazrTypeId ?? null, title, type: payload.type, fileUrl, thumbnailUrl };
   }
 
   private validateNazrType(payload: CreateNazrTypeRequest): CreateNazrTypeRequest {

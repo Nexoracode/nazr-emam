@@ -9,6 +9,7 @@ import { GalleryAssetEntity } from './entities/gallery-asset.entity';
 import { InvitationCardEntity } from './entities/invitation-card.entity';
 import { WalletTransactionEntity } from './entities/wallet-transaction.entity';
 import { WalletEntity } from './entities/wallet.entity';
+import { GalleryController } from './gallery.controller';
 import { ProfileController } from './profile.controller';
 import { ProfileService } from './profile.service';
 import { WalletMonthlyService } from './wallet-monthly.service';
@@ -27,7 +28,7 @@ import { WalletMonthlyService } from './wallet-monthly.service';
       InvitationCardEntity,
     ]),
   ],
-  controllers: [ProfileController],
+  controllers: [ProfileController, GalleryController],
   providers: [ProfileService, WalletMonthlyService],
 })
 export class ProfileModule {}
