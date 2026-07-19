@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Client, FTPError } from 'basic-ftp';
@@ -87,6 +87,8 @@ export interface UploadedGalleryFile {
 
 @Injectable()
 export class AdminService implements OnModuleInit {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
@@ -321,7 +323,7 @@ export class AdminService implements OnModuleInit {
         await Promise.all(
           previousUrls
             .filter((url): url is string => Boolean(url) && ![saved.fileUrl, saved.thumbnailUrl].includes(url))
-            .map((url) => this.removeStoredFile(url)),
+            .map((url) => this.safeRemoveStoredFile(url)),
         );
         return this.toGallery(saved);
       }
@@ -350,8 +352,8 @@ export class AdminService implements OnModuleInit {
     if (!item) this.notFound('GALLERY_ASSET_NOT_FOUND', 'رسانه پیدا نشد');
     await this.galleryRepo.delete(id);
     await Promise.all([
-      this.removeStoredFile(item!.fileUrl),
-      item!.thumbnailUrl ? this.removeStoredFile(item!.thumbnailUrl) : Promise.resolve(),
+      this.safeRemoveStoredFile(item!.fileUrl),
+      item!.thumbnailUrl ? this.safeRemoveStoredFile(item!.thumbnailUrl) : Promise.resolve(),
     ]);
   }
 
@@ -465,12 +467,32 @@ export class AdminService implements OnModuleInit {
     return { nazrTypeId: placement === 'intro' ? null : payload.nazrTypeId ?? null, title, type: payload.type, placement, fileUrl, thumbnailUrl };
   }
 
+  // getOrThrow فقط undefined را رد می‌کند نه رشته‌ی خالی؛ این helper نبود مقدار FTP را
+  // زودتر و شفاف اعلام می‌کند تا به‌جای ساخت URLِ خرابِ «/filename» سریع fail شود.
+  private ftpPublicBaseUrl(): string {
+    const base = this.configService
+      .getOrThrow<string>('media.ftp.publicBaseUrl')
+      .trim()
+      .replace(/\/$/, '');
+    if (!base) {
+      throw new Error('MEDIA_FTP_PUBLIC_BASE_URL پیکربندی نشده است');
+    }
+    return base;
+  }
+
+  // پاک‌سازی فایلِ پس از تغییر DB نباید کل درخواست را fail کند؛ خطا فقط log می‌شود.
+  private async safeRemoveStoredFile(url: string): Promise<void> {
+    try {
+      await this.removeStoredFile(url);
+    } catch (error) {
+      this.logger.warn(`حذف فایل رسانه ناموفق بود (${url}): ${String(error)}`);
+    }
+  }
+
   private async removeStoredFile(url: string): Promise<void> {
     const storage = this.configService.get<'local' | 'ftp'>('media.storage', 'local');
     if (storage === 'ftp') {
-      const publicBaseUrl = this.configService
-        .getOrThrow<string>('media.ftp.publicBaseUrl')
-        .replace(/\/$/, '');
+      const publicBaseUrl = this.ftpPublicBaseUrl();
       const prefix = `${publicBaseUrl}/`;
       if (!url.startsWith(prefix)) return;
 
@@ -534,9 +556,7 @@ export class AdminService implements OnModuleInit {
         await client.ensureDir(this.configService.getOrThrow<string>('media.ftp.uploadDir'));
         await client.uploadFrom(Readable.from([file!.buffer]), filename);
       });
-      const publicBaseUrl = this.configService
-        .getOrThrow<string>('media.ftp.publicBaseUrl')
-        .replace(/\/$/, '');
+      const publicBaseUrl = this.ftpPublicBaseUrl();
       return { url: `${publicBaseUrl}/${filename}` };
     }
 
