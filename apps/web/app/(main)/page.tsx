@@ -134,6 +134,18 @@ function getPlanProgress(index: number): number {
 
 const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(n);
 
+const VIDEO_MIME_BY_EXT: Record<string, string> = {
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  webm: 'video/webm',
+  mov: 'video/quicktime',
+};
+
+function videoMimeType(url: string): string | undefined {
+  const ext = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase();
+  return ext ? VIDEO_MIME_BY_EXT[ext] : undefined;
+}
+
 function HomeVideo({
   asset,
   className,
@@ -145,7 +157,8 @@ function HomeVideo({
   emptyTitle: string;
   emptyDescription: string;
 }) {
-  if (!asset?.thumbnailUrl) {
+  // پخش‌پذیری به fileUrl وابسته است نه به تصویر بندانگشتی؛ ویدئوی بدون poster هم باید پخش شود.
+  if (!asset?.fileUrl) {
     return (
       <div className={`${className} home-media-empty`}>
         <span className="home-media-empty-icon" aria-hidden="true" />
@@ -161,10 +174,10 @@ function HomeVideo({
         className="home-video-player"
         controls
         playsInline
-        poster={asset.thumbnailUrl}
+        poster={asset.thumbnailUrl ?? undefined}
         preload="metadata"
       >
-        <source src={asset.fileUrl} />
+        <source src={asset.fileUrl} type={videoMimeType(asset.fileUrl)} />
         مرورگر شما امکان پخش این ویدئو را ندارد.
       </video>
     </figure>
@@ -197,11 +210,11 @@ export default async function Home() {
   ]);
   const activePlans = nazrTypes.filter((t) => t.isActive).length;
   const videos = galleryAssets.filter(
-    (asset) => asset.type === 'video' && Boolean(asset.thumbnailUrl),
+    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
   );
   const images = galleryAssets.filter((asset) => asset.type === 'image').slice(0, 4);
   const heroVideo = introAssets.find(
-    (asset) => asset.type === 'video' && Boolean(asset.thumbnailUrl),
+    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
   ) ?? null;
   const galleryVideo = videos[0] ?? null;
   const galleryImageSlots = Array.from(
