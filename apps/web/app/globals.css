@@ -1499,6 +1499,36 @@ input {
   font-size: 15.5px;
 }
 
+.plan-urgency-section {
+  background: var(--plan-accent-deep);
+  color: #fff;
+  padding: 64px 0;
+}
+
+.plan-urgency-card {
+  display: grid;
+  gap: 12px;
+  max-width: 920px;
+}
+
+.plan-urgency-card .home-eyebrow {
+  color: rgb(255 255 255 / 72%);
+}
+
+.plan-urgency-card h2 {
+  color: #fff;
+  font-size: 28px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.plan-urgency-card p {
+  color: rgb(255 255 255 / 82%);
+  font-size: 14.5px;
+  line-height: 2.15;
+  margin: 0;
+}
+
 .plan-media-brief {
   align-items: start;
   display: grid;

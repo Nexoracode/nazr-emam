@@ -137,6 +137,16 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
         </div>
       </section>
 
+      {content.urgencyTitle ? (
+        <section className="plan-urgency-section">
+          <div className="home-container plan-urgency-card">
+            <span className="home-eyebrow">تلنگر</span>
+            <h2>{content.urgencyTitle}</h2>
+            <p>{content.urgencyDescription}</p>
+          </div>
+        </section>
+      ) : null}
+
       {content.clipPoints ? (
         <section className="plan-section">
           <div className="home-container plan-media-brief">

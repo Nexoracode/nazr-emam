@@ -29,7 +29,7 @@ export class NazrTypesService implements OnModuleInit {
         {
           slug: 'circulating-waqf',
           title: 'وقف در گردش',
-          description: 'تأمین کتاب و محتوای آموزشی که در مناطق محروم بین نوجوانان و فعالان فرهنگی دست‌به‌دست می‌شود.',
+          description: 'وقف محتوای آموزشی و ساخت چرخه بی نهایت اثرگذاری در ذهن نوجوانان مناطق محروم.',
           suggestedAmount: { amount: 300000, currency: 'IRT' },
           isActive: true,
         },
