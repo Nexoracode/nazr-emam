@@ -1499,6 +1499,95 @@ input {
   font-size: 15.5px;
 }
 
+.plan-media-brief {
+  align-items: start;
+  display: grid;
+  gap: 44px;
+  grid-template-columns: minmax(260px, 390px) minmax(0, 1fr);
+}
+
+.plan-brief-card {
+  background: var(--h-surface);
+  border: 1px solid var(--h-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 0;
+  padding: 8px 22px;
+}
+
+.plan-brief-card > div {
+  align-items: center;
+  border-bottom: 1px solid var(--h-border);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 12px minmax(0, 1fr);
+  padding: 17px 0;
+}
+
+.plan-brief-card > div:last-child {
+  border-bottom: 0;
+}
+
+.plan-brief-card span {
+  background: var(--plan-accent);
+  border-radius: 999px;
+  height: 8px;
+  width: 8px;
+}
+
+.plan-brief-card p {
+  color: var(--h-heading);
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.9;
+  margin: 0;
+}
+
+.plan-roadmap {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.plan-roadmap article {
+  background: var(--h-surface);
+  border: 1px solid var(--h-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 22px 18px;
+}
+
+.plan-roadmap span {
+  align-items: center;
+  background: var(--plan-soft);
+  border-radius: 8px;
+  color: var(--plan-accent);
+  display: flex;
+  font-size: 13px;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.plan-roadmap strong {
+  color: var(--h-heading);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.plan-roadmap p {
+  color: var(--h-soft);
+  font-size: 12.8px;
+  line-height: 2;
+  margin: 0;
+}
+
+.plan-faq-section {
+  background: var(--h-bg);
+}
+
 .plan-final-cta {
   background: var(--plan-accent-deep);
   color: #fff;
@@ -1783,7 +1872,8 @@ input {
   .home-gallery-grid,
   .home-faq-layout,
   .plan-hero-layout,
-  .plan-impact-layout {
+  .plan-impact-layout,
+  .plan-media-brief {
     grid-template-columns: 1fr;
   }
   .home-gallery-heading {
@@ -1798,6 +1888,9 @@ input {
   }
   .plan-highlight-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .plan-roadmap {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1818,7 +1911,8 @@ input {
   .home-plan-grid,
   .home-stats-grid,
   .plan-highlight-grid,
-  .plan-journey {
+  .plan-journey,
+  .plan-roadmap {
     grid-template-columns: 1fr;
   }
   .home-stats-grid {

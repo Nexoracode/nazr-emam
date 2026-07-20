@@ -21,9 +21,11 @@ export async function generateMetadata({ params }: PlanPageProps): Promise<Metad
 
   if (!plan) return { title: 'طرح پیدا نشد | نذر امام' };
 
+  const content = getPlanContent(slug, plan);
+
   return {
     title: `${plan.title} | نذر امام`,
-    description: plan.description,
+    description: content.introduction,
   };
 }
 
@@ -135,12 +137,87 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
         </div>
       </section>
 
+      {content.clipPoints ? (
+        <section className="plan-section">
+          <div className="home-container plan-media-brief">
+            <div className="plan-section-heading">
+              <span className="home-eyebrow">کلیپ</span>
+              <h2>{content.clipTitle}</h2>
+              {content.clipDescription ? <p>{content.clipDescription}</p> : null}
+            </div>
+            <div className="plan-brief-card">
+              {content.clipPoints.map((point) => (
+                <div key={point}>
+                  <span aria-hidden="true" />
+                  <p>{point}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {content.galleryTitle ? (
+        <section className="plan-section plan-journey-section">
+          <div className="home-container">
+            <div className="plan-section-heading plan-section-heading-center">
+              <span className="home-eyebrow">گالری</span>
+              <h2>{content.galleryTitle}</h2>
+              <p>گزارش‌های تصویری و ویدیویی اجرای همین طرح از بخش گالری مدیریت قابل تکمیل است.</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {content.roadmapItems ? (
+        <section className="plan-section">
+          <div className="home-container">
+            <div className="plan-section-heading plan-section-heading-center">
+              <span className="home-eyebrow">اینفوگرافیک</span>
+              <h2>{content.roadmapTitle}</h2>
+            </div>
+            <div className="plan-roadmap">
+              {content.roadmapItems.map((item, index) => (
+                <article key={item.title}>
+                  <span>{new Intl.NumberFormat('fa-IR').format(index + 1)}</span>
+                  <strong>{item.title}</strong>
+                  <p>{item.description}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {content.faqs ? (
+        <section className="plan-section plan-faq-section">
+          <div className="home-container home-faq-layout">
+            <div className="home-section-heading">
+              <span className="home-eyebrow">سوالات متداول</span>
+              <h2>پاسخِ کوتاه به پرسش‌های پرتکرار</h2>
+            </div>
+
+            <div className="home-faq-list">
+              {content.faqs.map((item, index) => (
+                <details className="home-faq-item" key={item.question} open={index === 0}>
+                  <summary>
+                    <span>{item.question}</span>
+                    <span className="home-faq-icon" aria-hidden="true" />
+                  </summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="plan-final-cta">
         <div className="home-container plan-final-cta-inner">
           <div>
             <span>همراه این مسیر باش</span>
             <h2>{plan.title}</h2>
-            <p>{plan.description}</p>
+            <p>{content.introduction}</p>
           </div>
           {plan.isActive ? (
             <Link className="home-btn plan-final-button" href={registrationHref}>

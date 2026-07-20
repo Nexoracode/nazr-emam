@@ -22,7 +22,7 @@ export class NazrTypesService implements OnModuleInit {
         {
           slug: 'international',
           title: 'بین‌الملل',
-          description: 'مشارکت در گسترش محتوای قرآنی و نهج‌البلاغه برای مخاطبان کشورهای دیگر.',
+          description: 'بیداری کشورها با کلام امیرالمومنین و گسترش پیام نهج البلاغه در جهان تشنه حقیقت.',
           suggestedAmount: { amount: 500000, currency: 'IRT' },
           isActive: true,
         },
