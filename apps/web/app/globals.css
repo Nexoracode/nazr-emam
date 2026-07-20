@@ -2259,36 +2259,124 @@ input {
 }
 
 .home-plan-grid {
-  gap: 16px;
+  gap: 18px;
 }
 
 .home-plan-cover {
-  min-height: 112px;
+  isolation: isolate;
+  min-height: 158px;
   padding: 16px;
 }
 
 .home-plan-card.accent-green .home-plan-cover {
-  background: #176c58;
+  background:
+    linear-gradient(140deg, rgb(13 61 49 / 22%), transparent 62%),
+    linear-gradient(155deg, #176c58, #0b4c3d);
 }
 
 .home-plan-card.accent-gold .home-plan-cover {
-  background: #a87926;
+  background:
+    linear-gradient(140deg, rgb(255 255 255 / 18%), transparent 58%),
+    linear-gradient(155deg, #bf9336, #7a5515);
 }
 
 .home-plan-card.accent-teal .home-plan-cover {
-  background: #287c74;
+  background:
+    linear-gradient(140deg, rgb(255 255 255 / 16%), transparent 58%),
+    linear-gradient(155deg, #287c74, #0d514c);
 }
 
 .home-plan-card.accent-plum .home-plan-cover {
-  background: #725b79;
+  background:
+    linear-gradient(140deg, rgb(255 255 255 / 15%), transparent 58%),
+    linear-gradient(155deg, #725b79, #493653);
 }
 
 .home-plan-card.accent-sand .home-plan-cover {
-  background: #8c6a43;
+  background:
+    linear-gradient(140deg, rgb(255 255 255 / 16%), transparent 58%),
+    linear-gradient(155deg, #9b7448, #62411f);
+}
+
+.home-plan-cover::after {
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 18%), transparent 52%),
+    radial-gradient(circle at 28% 28%, rgb(255 255 255 / 20%) 0 2px, transparent 3px),
+    radial-gradient(circle at 64% 60%, rgb(255 255 255 / 16%) 0 2px, transparent 3px);
+  background-size: auto, 34px 34px, 46px 46px;
+  content: "";
+  inset: 0;
+  position: absolute;
+  z-index: -1;
+}
+
+.home-plan-illustration {
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 999px;
+  display: block;
+  height: 82px;
+  inset-block-start: 26px;
+  inset-inline-start: 26px;
+  opacity: 0.9;
+  position: absolute;
+  width: 82px;
+}
+
+.home-plan-illustration::before,
+.home-plan-illustration::after {
+  content: "";
+  position: absolute;
+}
+
+.home-plan-illustration::before {
+  background: rgb(255 255 255 / 22%);
+  border-radius: 999px;
+  height: 42px;
+  inset-block-start: 18px;
+  inset-inline-start: 18px;
+  width: 42px;
+}
+
+.home-plan-illustration::after {
+  border-block-start: 2px solid rgb(255 255 255 / 52%);
+  height: 24px;
+  inset-block-start: 40px;
+  inset-inline-start: 19px;
+  transform: rotate(-22deg);
+  width: 44px;
+}
+
+.home-plan-cover.visual-circulating-waqf .home-plan-illustration {
+  border-radius: 8px;
+  height: 70px;
+  width: 86px;
+}
+
+.home-plan-cover.visual-circulating-waqf .home-plan-illustration::before {
+  border-radius: 6px;
+  height: 52px;
+  inset-block-start: 8px;
+  inset-inline-start: 11px;
+  width: 60px;
+}
+
+.home-plan-cover.visual-nahj-lesson .home-plan-illustration::after {
+  transform: rotate(22deg);
+}
+
+.home-plan-cover.visual-free-box .home-plan-illustration {
+  border-radius: 9px;
+}
+
+.home-plan-cover.visual-support-team .home-plan-illustration::before {
+  height: 20px;
+  inset-block-start: 24px;
+  width: 48px;
 }
 
 .home-plan-cover-label {
   font-size: 16px;
+  max-width: 62%;
 }
 
 .home-plan-body {
@@ -2314,6 +2402,18 @@ input {
 
 .home-plan-link {
   font-size: 12.5px;
+}
+
+.home-plan-card.is-complete {
+  opacity: 0.64;
+}
+
+.home-plan-card.is-complete .home-plan-cover {
+  filter: grayscale(0.7);
+}
+
+.home-plan-card.is-complete .home-plan-link {
+  color: var(--h-soft);
 }
 
 .home-gallery-grid {
@@ -2424,7 +2524,9 @@ input {
 }
 
 .home-sticky-cta {
-  display: none;
+  border: 1px solid rgb(255 255 255 / 18%);
+  display: inline-flex;
+  inset-inline-start: 24px;
 }
 
 @media (max-width: 900px) {

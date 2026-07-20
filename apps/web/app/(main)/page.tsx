@@ -14,13 +14,6 @@ const percents = ['۱٪', '۳٪', '۵٪'];
 const heroLead =
   'در نذر امام، درصدی از درآمدت را به مسیرهای فرهنگیِ مشخص می‌سپاری؛ از انتخاب طرح تا پرداخت، کد رهگیری و گزارشِ اجرا، همه‌چیز شفاف و قابل پیگیری است.';
 
-const steps: { title: string; text: string }[] = [
-  { title: 'انتخاب طرح', text: 'از میان طرح‌های فعال، مسیری را که به دلت نزدیک‌تر است انتخاب کن.' },
-  { title: 'ثبت نذر و مبلغ', text: 'درصدی از درآمدت (۱، ۳ یا ۵٪) یا مبلغ دلخواهت را ثبت کن.' },
-  { title: 'پرداخت', text: 'از طریق درگاه یا کارت‌به‌کارت، امن و ساده مشارکت کن.' },
-  { title: 'کد رهگیری و گزارش', text: 'کد رهگیری بگیر و اجرای نذرت را در پنل کاربری دنبال کن.' },
-];
-
 const whyCards: { title: string; text: string; icon: ReactNode; featured?: boolean }[] = [
   {
     title: 'شفاف و قابل پیگیری',
@@ -130,6 +123,10 @@ const faqItems = [
 function getPlanProgress(index: number): number {
   const progress = [68, 46, 82, 0, 57];
   return progress[index % progress.length];
+}
+
+function planVisualClass(slug: string): string {
+  return `visual-${slug.replace(/[^a-z0-9-]/gi, '') || 'default'}`;
 }
 
 const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(n);
@@ -274,26 +271,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── مسیر راه ── */}
-      <section className="home-section home-section-light" id="how">
-        <div className="home-container">
-          <div className="home-section-heading home-section-heading-center">
-            <span className="home-eyebrow">مسیرِ راه</span>
-            <h2>از نیت تا گزارش، در چهار گام</h2>
-            <p>مشارکت در نذر امام کوتاه و روشن است؛ بدون ابهام و بدون مسیرِ پیچیده.</p>
-          </div>
-          <div className="home-steps">
-            {steps.map((step, i) => (
-              <article className="home-step" key={step.title}>
-                <span className="home-step-num">{faNumber(i + 1)}</span>
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── چرا نذر امام ── */}
       <section className="home-section home-section-warm" id="why">
         <div className="home-container">
@@ -338,70 +315,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── بندِ انگیزشی ── */}
-      <section className="home-quote" id="reason">
-        <div className="home-container home-quote-inner">
-          <span className="home-quote-mark" aria-hidden="true">
-            ”
-          </span>
-          <blockquote>قلبِ نوجوان را دریابید، پیش از آنکه دشمن او را برُباید.</blockquote>
-          <cite>— امیرالمؤمنین علی (ع)</cite>
-          <p>امروز نوجوان را بسازیم تا فردا، آجر به آجرِ آینده‌ی این سرزمین با دستانِ او بنا شود.</p>
-        </div>
-      </section>
-
-      {/* ── طرح‌ها (کاشی) ── */}
-      <section className="home-section home-section-warm" id="plans">
-        <div className="home-container">
-          <div className="home-section-heading">
-            <span className="home-eyebrow">طرح‌ها</span>
-            <h2>مسیرِ نذرت را انتخاب کن</h2>
-            <p>
-              طرح‌ها مستقیماً از سامانه خوانده می‌شوند؛ طرحی که هزینه‌اش تکمیل شود به‌صورت خودکار
-              خاموش می‌شود.
-            </p>
-          </div>
-
-          <div className="home-plan-grid">
-            {nazrTypes.map((type, index) => {
-              const isActive = type.isActive;
-              const progress = getPlanProgress(index);
-              const meta = planLandingContent[type.slug];
-              const accent = meta?.accent ?? 'green';
-
-              return (
-                <Link
-                  className={`home-plan-card accent-${accent}${isActive ? '' : ' is-complete'}`}
-                  href={`/plans/${encodeURIComponent(type.slug)}`}
-                  key={type.id}
-                >
-                  <div className="home-plan-cover" aria-hidden="true">
-                    <span className="home-plan-cover-label">{type.title}</span>
-                    <span className="home-plan-badge">{isActive ? 'فعال' : 'تکمیل شد'}</span>
-                  </div>
-                  <div className="home-plan-body">
-                    {meta?.tagline ? <span className="home-plan-tagline">{meta.tagline}</span> : null}
-                    <h3>{type.title}</h3>
-                    <p>{type.description}</p>
-                    {isActive ? (
-                      <div
-                        className="home-plan-progress"
-                        aria-label={`پیشرفت ${faNumber(progress)} درصد`}
-                      >
-                        <span style={{ width: `${progress}%` }} />
-                      </div>
-                    ) : null}
-                    <div className="home-plan-foot">
-                      <span className="home-plan-link">{isActive ? 'مشاهده طرح ←' : 'مشاهده گزارش ←'}</span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* ── گالری ── */}
       <section className="home-section home-section-light" id="gallery">
         <div className="home-container home-gallery-grid">
@@ -426,6 +339,60 @@ export default async function Home() {
                 <GalleryImage asset={asset} index={index} key={asset?.id ?? index} />
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── طرح‌ها (کاشی) ── */}
+      <section className="home-section home-section-warm" id="plans">
+        <div className="home-container">
+          <div className="home-section-heading">
+            <span className="home-eyebrow">طرح‌ها</span>
+            <h2>مسیرِ نذرت را انتخاب کن</h2>
+            <p>
+              طرح‌ها مستقیماً از سامانه خوانده می‌شوند؛ طرحی که هزینه‌اش تکمیل شود به حالت
+              خاموش نمایش داده می‌شود.
+            </p>
+          </div>
+
+          <div className="home-plan-grid">
+            {nazrTypes.map((type, index) => {
+              const isActive = type.isActive;
+              const progress = getPlanProgress(index);
+              const meta = planLandingContent[type.slug];
+              const accent = meta?.accent ?? 'green';
+
+              return (
+                <Link
+                  aria-disabled={!isActive}
+                  className={`home-plan-card accent-${accent}${isActive ? '' : ' is-complete'}`}
+                  href={`/plans/${encodeURIComponent(type.slug)}`}
+                  key={type.id}
+                >
+                  <div className={`home-plan-cover ${planVisualClass(type.slug)}`} aria-hidden="true">
+                    <span className="home-plan-illustration" />
+                    <span className="home-plan-cover-label">{type.title}</span>
+                    <span className="home-plan-badge">{isActive ? 'فعال' : 'تکمیل شد'}</span>
+                  </div>
+                  <div className="home-plan-body">
+                    {meta?.tagline ? <span className="home-plan-tagline">{meta.tagline}</span> : null}
+                    <h3>{type.title}</h3>
+                    <p>{type.description}</p>
+                    {isActive ? (
+                      <div
+                        className="home-plan-progress"
+                        aria-label={`پیشرفت ${faNumber(progress)} درصد`}
+                      >
+                        <span style={{ width: `${progress}%` }} />
+                      </div>
+                    ) : null}
+                    <div className="home-plan-foot">
+                      <span className="home-plan-link">{isActive ? 'مشاهده طرح ←' : 'مشاهده گزارش ←'}</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
