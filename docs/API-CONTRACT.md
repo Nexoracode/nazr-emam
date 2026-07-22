@@ -1034,6 +1034,7 @@ interface AdminEitaaReceipt {
 ### پشتیبانی، اعلان و گالری
 
 - `GET /admin/tickets?page&pageSize` → `200 Paginated<Ticket>`
+- `GET /admin/tickets/:id` → `200 Ticket`
 - پاسخ و بستن تیکت از مسیرهای مشترک `POST /tickets/:id/reply` و `POST /tickets/:id/close` انجام می‌شود.
 - `GET /admin/notifications?page&pageSize` → `200 Paginated<AdminNotificationItem>`
 - `POST /admin/notifications` با `CreateNotificationRequest` → `201 AdminNotificationItem`

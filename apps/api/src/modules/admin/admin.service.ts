@@ -444,6 +444,12 @@ export class AdminService implements OnModuleInit {
     return { items: items.map((item) => this.toTicket(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
   }
 
+  async ticket(id: string): Promise<Ticket> {
+    const item = await this.ticketsRepo.findOne({ where: { id }, relations: { messages: true } });
+    if (!item) this.notFound('TICKET_NOT_FOUND', 'تیکت پیدا نشد');
+    return this.toTicket(item!);
+  }
+
   async notifications(page = 1, pageSize = 20): Promise<Paginated<AdminNotificationItem>> {
     const [safePage, safeSize] = this.safePage(page, pageSize);
     const [items, total] = await this.notificationsRepo.findAndCount({ relations: { user: true }, order: { createdAt: 'DESC' }, skip: (safePage - 1) * safeSize, take: safeSize });

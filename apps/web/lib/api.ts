@@ -418,6 +418,10 @@ export function getAdminTickets(page = 1, pageSize = 30) {
   return get<Paginated<Ticket>>(`/admin/tickets?${adminQuery({ page, pageSize })}`);
 }
 
+export function getAdminTicket(id: string) {
+  return get<Ticket>(`/admin/tickets/${id}`);
+}
+
 export function getAdminNotifications(page = 1, pageSize = 30) {
   return get<Paginated<AdminNotificationItem>>(`/admin/notifications?${adminQuery({ page, pageSize })}`);
 }

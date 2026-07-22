@@ -133,6 +133,12 @@ export class AdminController {
     return this.service.tickets(Number(page) || 1, Number(pageSize) || 20);
   }
 
+  @ApiOperation({ summary: 'جزئیات یک تیکت پشتیبانی' })
+  @Get('tickets/:id')
+  ticket(@Param('id') id: string) {
+    return this.service.ticket(id);
+  }
+
   @ApiOperation({ summary: 'لیست اعلان‌های ارسال‌شده' })
   @Get('notifications')
   notifications(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {

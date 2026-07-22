@@ -5203,11 +5203,11 @@ input {
 .admin-nav { display: grid; gap: 18px; overflow-y: auto; }
 .admin-nav-group { display: grid; gap: 4px; }
 .admin-nav-group > p { color: #82938c; font-size: 10px; margin: 0; padding: 0 10px 4px; }
-.admin-nav button { align-items: center; background: transparent; border: 0; border-radius: 6px; color: #d3ded9; cursor: pointer; display: flex; font-family: inherit; font-size: 12px; gap: 9px; min-height: 38px; padding: 7px 9px; text-align: start; width: 100%; }
-.admin-nav button:hover, .admin-nav button.is-active { background: #243a32; color: #ffffff; }
-.admin-nav button > span { align-items: center; border: 1px solid #41564e; border-radius: 5px; display: flex; flex: 0 0 25px; font-size: 10px; height: 25px; justify-content: center; }
-.admin-nav button.is-active > span { background: #d9b764; border-color: #d9b764; color: #15241f; }
-.admin-nav button b { background: #a83b3b; border-radius: 10px; color: #fff; font-size: 9px; margin-inline-start: auto; min-width: 18px; padding: 2px 5px; text-align: center; }
+.admin-nav a { align-items: center; background: transparent; border: 0; border-radius: 6px; color: #d3ded9; cursor: pointer; display: flex; font-family: inherit; font-size: 12px; gap: 9px; min-height: 38px; padding: 7px 9px; text-align: start; width: 100%; }
+.admin-nav a:hover, .admin-nav a.is-active { background: #243a32; color: #ffffff; }
+.admin-nav a > span { align-items: center; border: 1px solid #41564e; border-radius: 5px; display: flex; flex: 0 0 25px; font-size: 10px; height: 25px; justify-content: center; }
+.admin-nav a.is-active > span { background: #d9b764; border-color: #d9b764; color: #15241f; }
+.admin-nav a b { background: #a83b3b; border-radius: 10px; color: #fff; font-size: 9px; margin-inline-start: auto; min-width: 18px; padding: 2px 5px; text-align: center; }
 .admin-exit { background: transparent; border: 1px solid #344a42; border-radius: 6px; color: #bfcac5; cursor: pointer; font-family: inherit; font-size: 11px; margin-top: auto; min-height: 38px; }
 .admin-workspace { max-width: 100%; min-width: 0; padding: 0 28px 40px; }
 .admin-topbar { align-items: center; border-bottom: 1px solid var(--admin-border); display: flex; justify-content: space-between; min-height: 78px; }
@@ -5238,7 +5238,7 @@ input {
 .admin-panel-head h2, .admin-call-header h2 { font-size: 14px; margin: 0; }
 .admin-panel-head p, .admin-call-header p { color: var(--admin-muted); font-size: 10px; margin: 3px 0 0; }
 .admin-count { color: var(--admin-muted); font-size: 11px; }
-.admin-primary, .admin-secondary { border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 11px; min-height: 34px; padding: 7px 13px; }
+.admin-primary, .admin-secondary { align-items: center; border-radius: 6px; cursor: pointer; display: inline-flex; font-family: inherit; font-size: 11px; justify-content: center; min-height: 34px; padding: 7px 13px; }
 .admin-primary { background: var(--admin-primary); border: 1px solid var(--admin-primary); color: #fff; }
 .admin-primary:hover { background: var(--admin-primary-dark); }
 .admin-secondary { background: #fff; border: 1px solid var(--admin-border); color: var(--admin-ink); }
@@ -5312,10 +5312,16 @@ input {
 .admin-plan-card footer { border-top: 1px solid var(--admin-border); display: grid; gap: 9px; margin-top: 12px; padding-top: 10px; }
 .admin-plan-card footer strong { font-size: 10px; }
 .admin-plan-card-actions { align-items: center; display: flex; gap: 5px; }
-.admin-plan-card-actions button { align-items: center; background: #f7f9f8; border: 1px solid var(--admin-border); border-radius: 5px; color: var(--admin-primary-dark); cursor: pointer; display: inline-flex; font-family: inherit; font-size: 9px; gap: 5px; justify-content: center; min-height: 30px; padding: 5px 8px; }
-.admin-plan-card-actions button:hover { background: var(--admin-primary-soft); border-color: #c8dcd4; }
+.admin-plan-card-actions button, .admin-plan-card-actions a { align-items: center; background: #f7f9f8; border: 1px solid var(--admin-border); border-radius: 5px; color: var(--admin-primary-dark); cursor: pointer; display: inline-flex; font-family: inherit; font-size: 9px; gap: 5px; justify-content: center; min-height: 30px; padding: 5px 8px; }
+.admin-plan-card-actions button:hover, .admin-plan-card-actions a:hover { background: var(--admin-primary-soft); border-color: #c8dcd4; }
 .admin-plan-card-actions button:disabled { cursor: not-allowed; opacity: .55; }
-.admin-plan-card-actions button svg { height: 13px; stroke-width: 1.8; width: 13px; }
+.admin-plan-card-actions button svg, .admin-plan-card-actions a svg { height: 13px; stroke-width: 1.8; width: 13px; }
+.admin-panel-head-actions { align-items: center; display: flex; gap: 10px; }
+.admin-form-page { margin-inline: auto; max-width: 920px; width: 100%; }
+.admin-detail-page { margin-inline: auto; max-width: 980px; }
+.admin-detail-head { align-items: center; border-bottom: 1px solid var(--admin-border); display: flex; justify-content: space-between; padding-bottom: 14px; }
+.admin-detail-head h2 { font-size: 15px; margin: 0; }
+.admin-detail-head p { color: var(--admin-muted); font-size: 10px; margin: 3px 0 0; }
 .admin-plan-card-actions .admin-plan-delete-action { background: var(--admin-danger-bg); border-color: #f2cece; color: var(--admin-danger); margin-inline-start: auto; padding: 5px; width: 30px; }
 .admin-plan-card-actions .admin-plan-delete-action:hover { background: #f9dcdc; border-color: #e8b8b8; }
 .admin-drawer-backdrop { background: rgb(14 25 21 / 36%); inset: 0; position: fixed; z-index: 80; }
@@ -5349,9 +5355,11 @@ input {
 .admin-ticket-filters button.is-active { background: #fff; box-shadow: 0 1px 3px rgb(23 33 30 / 8%); color: var(--admin-primary-dark); font-weight: 700; }
 .admin-ticket-layout { display: grid; grid-template-columns: minmax(250px, 32%) minmax(0, 1fr); min-height: 610px; min-width: 0; }
 .admin-ticket-inbox { border-inline-end: 1px solid var(--admin-border); max-height: 680px; min-width: 0; overflow-y: auto; }
-.admin-ticket-inbox > button { align-items: start; background: #fff; border: 0; border-bottom: 1px solid #edf0ee; color: var(--admin-ink); cursor: pointer; display: grid; font-family: inherit; gap: 9px; grid-template-columns: 7px minmax(0, 1fr) auto; padding: 13px 14px; text-align: start; width: 100%; }
-.admin-ticket-inbox > button:hover { background: #fafcfb; }
-.admin-ticket-inbox > button.is-active { background: var(--admin-primary-soft); box-shadow: inset -3px 0 0 var(--admin-primary); }
+.admin-ticket-inbox > button, .admin-ticket-inbox > a { align-items: start; background: #fff; border: 0; border-bottom: 1px solid #edf0ee; color: var(--admin-ink); cursor: pointer; display: grid; font-family: inherit; gap: 9px; grid-template-columns: 7px minmax(0, 1fr) auto; padding: 13px 14px; text-align: start; width: 100%; }
+.admin-ticket-inbox > button:hover, .admin-ticket-inbox > a:hover { background: #fafcfb; }
+.admin-ticket-list-page .admin-ticket-inbox { border-inline-end: 0; max-height: none; }
+.admin-page-back { border-bottom: 1px solid var(--admin-border); padding: 12px 18px; }
+.admin-ticket-detail-page .admin-ticket-conversation { min-height: 610px; }
 .admin-ticket-state { background: #a8b1ad; border-radius: 50%; height: 7px; margin-top: 6px; width: 7px; }
 .admin-ticket-state.is-warning { background: var(--admin-warning); }
 .admin-ticket-state.is-success { background: var(--admin-primary); }
