@@ -232,7 +232,10 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
       setAdminName(me.fullName);
       if (screen !== 'guide' && !guidePromptDismissed.current) {
         try {
-          if (window.localStorage.getItem(`nazr-emam:admin-guide-dismissed:${me.id}`) !== '1') {
+          const permanentKey = `nazr-emam:admin-guide-dismissed:${me.id}`;
+          const sessionKey = `nazr-emam:admin-guide-shown:${me.id}`;
+          if (window.localStorage.getItem(permanentKey) !== '1' && window.sessionStorage.getItem(sessionKey) !== '1') {
+            window.sessionStorage.setItem(sessionKey, '1');
             setGuidePromptOpen(true);
           }
         } catch {
