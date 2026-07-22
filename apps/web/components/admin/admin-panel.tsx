@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Pencil, Power, Trash2 } from 'lucide-react';
@@ -62,7 +62,7 @@ import {
   formatAmountInput,
   parseAmountInput,
 } from '../../lib/amount';
-import { AdminGuide } from './admin-guide';
+import { AdminGuide, AdminGuidePrompt } from './admin-guide';
 
 type AdminSection = 'dashboard' | 'requests' | 'nazrTypes' | 'users' | 'payments' | 'eitaa' | 'tickets' | 'notifications' | 'gallery' | 'calls';
 type AdminScreen = AdminSection | 'guide' | 'nazrTypeForm' | 'userDetails' | 'eitaaForm' | 'ticketDetails' | 'notificationForm' | 'galleryForm' | 'callsForm';
@@ -213,6 +213,9 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
   const [callOperators, setCallOperators] = useState<CallOperator[]>([]);
   const [callAssignee, setCallAssignee] = useState('');
   const [adminId, setAdminId] = useState('');
+  const [guidePromptOpen, setGuidePromptOpen] = useState(false);
+  const [guidePromptDontShow, setGuidePromptDontShow] = useState(false);
+  const guidePromptDismissed = useRef(false);
   const [selectedUser, setSelectedUser] = useState<AdminUserDetails | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [search, setSearch] = useState('');
@@ -227,6 +230,15 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
       }
       setAdminId(me.id);
       setAdminName(me.fullName);
+      if (screen !== 'guide' && !guidePromptDismissed.current) {
+        try {
+          if (window.localStorage.getItem(`nazr-emam:admin-guide-dismissed:${me.id}`) !== '1') {
+            setGuidePromptOpen(true);
+          }
+        } catch {
+          setGuidePromptOpen(true);
+        }
+      }
       setDashboard(await getAdminDashboard());
       if (screen === 'requests') setRequests(await getAdminNazrRequests(1, ADMIN_PAGE_SIZE));
       if (screen === 'nazrTypes' || screen === 'nazrTypeForm' || screen === 'eitaaForm' || screen === 'galleryForm') setNazrTypes(await getAdminNazrTypes());
@@ -260,6 +272,30 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
 
   useEffect(() => { setLoading(true); void refresh(); }, [refresh]);
 
+  useEffect(() => {
+    if (!guidePromptOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (guidePromptDontShow && adminId) {
+          try {
+            window.localStorage.setItem(`nazr-emam:admin-guide-dismissed:${adminId}`, '1');
+          } catch {
+            // The prompt still closes when browser storage is unavailable.
+          }
+        }
+        guidePromptDismissed.current = true;
+        setGuidePromptOpen(false);
+      }
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [adminId, guidePromptDontShow, guidePromptOpen]);
+
   const loadPage = useCallback(async (section: PaginatedAdminSection, page: number, query = '') => {
     setWorking(true);
     setError('');
@@ -289,6 +325,19 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
     } finally {
       setWorking(false);
     }
+  };
+
+  const dismissGuidePrompt = (openGuide = false) => {
+    guidePromptDismissed.current = true;
+    if (guidePromptDontShow && adminId) {
+      try {
+        window.localStorage.setItem(`nazr-emam:admin-guide-dismissed:${adminId}`, '1');
+      } catch {
+        // The prompt still closes when browser storage is unavailable.
+      }
+    }
+    setGuidePromptOpen(false);
+    if (openGuide) router.push('/admin/guide');
   };
 
   useEffect(() => {
@@ -367,6 +416,7 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
         {screen === 'calls' ? <CallsSection assignee={callAssignee} currentAdminId={adminId} items={callTasks} mode="list" onAssigneeChange={filterCallTasks} onPageChange={(page) => loadPage('calls', page)} operators={callOperators} run={run} working={working} /> : null}
         {screen === 'callsForm' ? <CallsSection assignee={callAssignee} currentAdminId={adminId} items={callTasks} mode="form" onAssigneeChange={filterCallTasks} onPageChange={(page) => loadPage('calls', page)} operators={callOperators} run={run} working={working} /> : null}
       </section>
+      {guidePromptOpen ? <AdminGuidePrompt dontShow={guidePromptDontShow} onClose={() => dismissGuidePrompt()} onDontShowChange={setGuidePromptDontShow} onOpenGuide={() => dismissGuidePrompt(true)} /> : null}
     </main>
   );
 }

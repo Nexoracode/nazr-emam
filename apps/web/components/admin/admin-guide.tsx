@@ -13,6 +13,7 @@ import {
   MessageSquareText,
   ShieldCheck,
   Users,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -189,6 +190,26 @@ const requestStatuses = [
   ['لغوشده', 'فرآیند با انصراف یا لغو متوقف شده است.'],
   ['ردشده', 'درخواست یا اطلاعات آن معتبر تشخیص داده نشده است.'],
 ];
+
+export function AdminGuidePrompt({ dontShow, onClose, onDontShowChange, onOpenGuide }: { dontShow: boolean; onClose: () => void; onDontShowChange: (value: boolean) => void; onOpenGuide: () => void }) {
+  return (
+    <div className="admin-guide-prompt-backdrop" role="presentation">
+      <section aria-describedby="admin-guide-prompt-description" aria-labelledby="admin-guide-prompt-title" aria-modal="true" className="admin-guide-prompt" role="dialog">
+        <header>
+          <div className="admin-guide-prompt-icon"><BookOpen aria-hidden="true" /></div>
+          <button aria-label="بستن پیام آموزش" onClick={onClose} title="بستن" type="button"><X aria-hidden="true" /></button>
+        </header>
+        <div>
+          <span>اولین ورود به پنل</span>
+          <h2 id="admin-guide-prompt-title">با پنل مدیریت آشنا هستید؟</h2>
+          <p id="admin-guide-prompt-description">اگر هنوز با بخش‌های پنل و ترتیب انجام کارها آشنا نیستید، راهنمای کامل را ببینید. آموزش هر بخش، وضعیت‌ها و چک‌لیست‌های کاری آنجا آماده است.</p>
+        </div>
+        <label className="admin-guide-prompt-check"><input checked={dontShow} onChange={(event) => onDontShowChange(event.target.checked)} type="checkbox" /><span>دیگر این پیام را نشان نده</span></label>
+        <footer><button className="admin-secondary" onClick={onClose} type="button">بعداً</button><button autoFocus className="admin-primary" onClick={onOpenGuide} type="button"><BookOpen aria-hidden="true" />مشاهده آموزش پنل</button></footer>
+      </section>
+    </div>
+  );
+}
 
 export function AdminGuide() {
   return (

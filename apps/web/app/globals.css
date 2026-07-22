@@ -5337,6 +5337,22 @@ input {
 .admin-guide-checklists ul, .admin-guide-security-list { display: grid; gap: 7px; margin: 0; padding-inline-start: 18px; }
 .admin-guide-checklists li, .admin-guide-security-list li { color: var(--admin-body); font-size: 13px; line-height: 1.9; }
 .admin-guide-security-list li::marker { color: var(--admin-primary); }
+.admin-guide-prompt-backdrop { align-items: center; background: rgb(12 27 22 / 62%); display: flex; inset: 0; justify-content: center; padding: 20px; position: fixed; z-index: 100; }
+.admin-guide-prompt { background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 8px; box-shadow: 0 22px 60px rgb(7 20 16 / 24%); display: grid; gap: 18px; max-width: 460px; padding: 22px; width: 100%; }
+.admin-guide-prompt > header { align-items: center; display: flex; justify-content: space-between; }
+.admin-guide-prompt-icon { align-items: center; background: var(--admin-primary-soft); border-radius: 7px; color: var(--admin-primary-dark); display: flex; height: 44px; justify-content: center; width: 44px; }
+.admin-guide-prompt-icon svg { height: 21px; width: 21px; }
+.admin-guide-prompt > header > button { align-items: center; background: transparent; border: 0; border-radius: 5px; color: var(--admin-muted); cursor: pointer; display: flex; height: 34px; justify-content: center; padding: 0; width: 34px; }
+.admin-guide-prompt > header > button:hover { background: var(--admin-neutral-soft); color: var(--admin-ink); }
+.admin-guide-prompt > header > button svg { height: 18px; width: 18px; }
+.admin-guide-prompt > div > span { color: var(--admin-primary); font-size: 11px; font-weight: 700; }
+.admin-guide-prompt h2 { color: var(--admin-ink); font-size: 20px; margin: 4px 0 8px; }
+.admin-guide-prompt p { color: var(--admin-muted); font-size: 13px; line-height: 2; margin: 0; }
+.admin-guide-prompt-check { align-items: center; background: var(--admin-bg); border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-body); cursor: pointer; display: flex; font-size: 12px; gap: 9px; padding: 10px 12px; }
+.admin-guide-prompt-check input { accent-color: var(--admin-primary); height: 16px; margin: 0; width: 16px; }
+.admin-guide-prompt > footer { display: flex; gap: 8px; justify-content: flex-end; }
+.admin-guide-prompt > footer .admin-primary { gap: 7px; }
+.admin-guide-prompt > footer svg { height: 16px; width: 16px; }
 .admin-inline-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; }
 .admin-inline-actions button { background: transparent; border: 0; color: var(--admin-primary); cursor: pointer; font-family: inherit; font-size: 9px; }
 .admin-form-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 18px; }
@@ -5538,4 +5554,8 @@ input {
   .admin-guide-section-title > a { grid-column: 2; justify-self: start; }
   .admin-guide-status-list { grid-template-columns: 1fr; }
   .admin-guide-status-list > div:nth-child(odd) { border-inline-end: 0; }
+  .admin-guide-prompt-backdrop { padding: 12px; }
+  .admin-guide-prompt { gap: 15px; padding: 18px; }
+  .admin-guide-prompt > footer { align-items: stretch; flex-direction: column-reverse; }
+  .admin-guide-prompt > footer button { width: 100%; }
 }
