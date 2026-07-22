@@ -485,6 +485,140 @@ input {
    صفحه اصلی — نذر امام (بازطراحی)
    توکن‌های محلی + پشتیبانی حالت تیره
    ───────────────────────────────────────────── */
+.not-found-page {
+  align-items: center;
+  background: var(--background);
+  display: grid;
+  min-height: calc(100dvh - 72px);
+  padding: 48px 24px;
+}
+
+.not-found-content {
+  justify-self: center;
+  max-width: 680px;
+  text-align: center;
+  width: 100%;
+}
+
+.not-found-code {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+}
+
+.not-found-code > span {
+  color: var(--heading);
+  font-size: 92px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.not-found-code > div {
+  align-items: center;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--primary-dark);
+  display: flex;
+  height: 68px;
+  justify-content: center;
+  width: 68px;
+}
+
+.not-found-code svg {
+  height: 30px;
+  width: 30px;
+}
+
+.not-found-eyebrow {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+  margin: 24px 0 5px;
+}
+
+.not-found-content h1 {
+  color: var(--heading);
+  font-size: 32px;
+  margin: 0;
+}
+
+.not-found-description {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 2;
+  margin: 14px auto 0;
+  max-width: 590px;
+}
+
+.not-found-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.not-found-actions a {
+  align-items: center;
+  border-radius: 7px;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 17px;
+}
+
+.not-found-actions svg {
+  height: 18px;
+  width: 18px;
+}
+
+.not-found-primary {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: #fff;
+}
+
+.not-found-primary:hover {
+  background: var(--primary-dark);
+  color: #fff;
+}
+
+.not-found-secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--heading);
+}
+
+.not-found-secondary:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+.not-found-help {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 18px 0 0;
+}
+
+@media (max-width: 580px) {
+  .not-found-page { min-height: calc(100dvh - 112px); padding: 36px 18px; }
+  .not-found-code { gap: 12px; }
+  .not-found-code > span { font-size: 70px; }
+  .not-found-code > div { height: 54px; width: 54px; }
+  .not-found-code svg { height: 25px; width: 25px; }
+  .not-found-eyebrow { margin-top: 20px; }
+  .not-found-content h1 { font-size: 25px; }
+  .not-found-description { font-size: 14px; }
+  .not-found-actions { align-items: stretch; flex-direction: column; }
+  .not-found-actions a { width: 100%; }
+}
+
 .home-page {
   --h-bg: #f4f6f5;
   --h-bg-2: #ffffff;
