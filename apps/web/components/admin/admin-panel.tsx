@@ -62,9 +62,10 @@ import {
   formatAmountInput,
   parseAmountInput,
 } from '../../lib/amount';
+import { AdminGuide } from './admin-guide';
 
 type AdminSection = 'dashboard' | 'requests' | 'nazrTypes' | 'users' | 'payments' | 'eitaa' | 'tickets' | 'notifications' | 'gallery' | 'calls';
-type AdminScreen = AdminSection | 'nazrTypeForm' | 'userDetails' | 'eitaaForm' | 'ticketDetails' | 'notificationForm' | 'galleryForm' | 'callsForm';
+type AdminScreen = AdminSection | 'guide' | 'nazrTypeForm' | 'userDetails' | 'eitaaForm' | 'ticketDetails' | 'notificationForm' | 'galleryForm' | 'callsForm';
 type PaginatedAdminSection = 'requests' | 'users' | 'payments' | 'eitaa' | 'tickets' | 'notifications' | 'calls';
 
 interface ResolvedAdminView {
@@ -96,6 +97,7 @@ const navItems: { id: AdminSection; href: string; label: string; short: string; 
 function resolveAdminView(parts: string[]): ResolvedAdminView {
   const [resource, id, action] = parts;
   if (!resource) return { id: null, parent: 'dashboard', screen: 'dashboard', title: 'داشبورد' };
+  if (resource === 'guide') return { id: null, parent: 'dashboard', screen: 'guide', title: 'آموزش پنل مدیریت' };
   if (resource === 'nazr-requests') return { id: null, parent: 'requests', screen: 'requests', title: 'درخواست‌های نذر' };
   if (resource === 'nazr-types' && id === 'new') return { id: null, parent: 'nazrTypes', screen: 'nazrTypeForm', title: 'افزودن طرح' };
   if (resource === 'nazr-types' && id && action === 'edit') return { id, parent: 'nazrTypes', screen: 'nazrTypeForm', title: 'ویرایش طرح' };
@@ -343,6 +345,7 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
         {['users', 'requests', 'payments', 'eitaa'].includes(screen) ? <input className="admin-search" onChange={(event) => setSearch(event.target.value)} placeholder="جستجو در این بخش..." value={search} /> : null}
 
         {screen === 'dashboard' && dashboard ? <Dashboard dashboard={dashboard} requests={dashboard.recentRequests} navigate={(href) => router.push(href)} /> : null}
+        {screen === 'guide' ? <AdminGuide /> : null}
         {screen === 'requests' ? <NazrRequestsSection onPageChange={(page) => loadPage('requests', page, search.trim())} requests={requests} run={run} working={working} /> : null}
         {screen === 'nazrTypes' ? <NazrTypesSection items={nazrTypes} run={run} working={working} /> : null}
         {screen === 'nazrTypeForm' ? (
@@ -373,7 +376,7 @@ function Dashboard({ dashboard, requests, navigate }: { dashboard: AdminDashboar
     ['مخاطبان', dashboard.users.toLocaleString('fa-IR'), '/admin/users'], ['کل نذرها', dashboard.totalRequests.toLocaleString('fa-IR'), '/admin/nazr-requests'], ['در انتظار اقدام', dashboard.pendingRequests.toLocaleString('fa-IR'), '/admin/nazr-requests'], ['پرداخت معلق', dashboard.pendingPayments.toLocaleString('fa-IR'), '/admin/payments'], ['تیکت باز', dashboard.openTickets.toLocaleString('fa-IR'), '/admin/tickets'], ['تماس سررسیدشده', dashboard.dueCallTasks.toLocaleString('fa-IR'), '/admin/calls'],
   ] as const;
   return <div className="admin-stack">
-    <section className="admin-overview"><div><p>مجموع واریزی تأییدشده</p><strong>{money(dashboard.paidAmount)}</strong><small>نمای کلی فعالیت سامانه تا امروز</small></div><span>گزارش زنده</span></section>
+    <section className="admin-overview"><div><p>مجموع واریزی تأییدشده</p><strong>{money(dashboard.paidAmount)}</strong><small>نمای کلی فعالیت سامانه تا امروز</small></div><div className="admin-overview-actions"><span>گزارش زنده</span><Link href="/admin/guide">آموزش پنل مدیریت</Link></div></section>
     <section className="admin-stat-grid">{stats.map(([label, value, target]) => <button key={label} onClick={() => navigate(target)} type="button"><span>{label}</span><strong>{value}</strong><small>مشاهده جزئیات</small></button>)}</section>
     <section className="admin-panel"><div className="admin-panel-head"><div><h2>آخرین فعالیت‌ها</h2><p>نذرهای تازه ثبت‌شده در سامانه</p></div><Link className="admin-text-action" href="/admin/nazr-requests">مشاهده همه</Link></div><RequestTable items={requests} /></section>
   </div>;
