@@ -284,21 +284,14 @@ export class AdminService implements OnModuleInit {
 
   async payments(page = 1, pageSize = 20, search = '', status?: PaymentStatus): Promise<Paginated<Payment>> {
     const [safePage, safeSize] = this.safePage(page, pageSize);
-    const query = this.paymentsRepo.createQueryBuilder('payment').leftJoinAndSelect('payment.nazrRequest', 'request');
-    if (search.trim()) query.where('(payment.transaction_reference LIKE :search OR request.tracking_code LIKE :search OR request.donor_mobile LIKE :search)', { search: `%${search.trim()}%` });
+    const query = this.paymentsRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.nazrRequest', 'request')
+      .where('payment.method = :method', { method: 'online' });
+    if (search.trim()) query.andWhere('(payment.transaction_reference LIKE :search OR request.tracking_code LIKE :search OR request.donor_mobile LIKE :search)', { search: `%${search.trim()}%` });
     if (status && ['pending', 'paid', 'rejected', 'refunded'].includes(status)) query.andWhere('payment.status = :status', { status });
     const [items, total] = await query.orderBy('payment.created_at', 'DESC').skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
     return { items: items.map((item) => this.toPayment(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
-  }
-
-  async setPaymentStatus(id: string, status: 'paid' | 'rejected', reason?: string): Promise<Payment> {
-    const item = await this.paymentsRepo.findOne({ where: { id }, relations: { nazrRequest: true } });
-    if (!item) this.notFound('PAYMENT_NOT_FOUND', 'پرداخت پیدا نشد');
-    item!.status = status;
-    item!.nazrRequest.status = status === 'paid' ? 'confirmed' : 'cancelled';
-    if (status === 'rejected' && reason?.trim()) item!.nazrRequest.adminNote = reason.trim();
-    await this.requestsRepo.save(item!.nazrRequest);
-    return this.toPayment(await this.paymentsRepo.save(item!));
   }
 
   async eitaaReceipts(page = 1, pageSize = 20, search = ''): Promise<Paginated<AdminEitaaReceipt>> {

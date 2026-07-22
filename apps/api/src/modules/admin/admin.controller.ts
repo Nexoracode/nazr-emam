@@ -104,18 +104,6 @@ export class AdminController {
     return this.service.payments(Number(page) || 1, Number(pageSize) || 20, search, status);
   }
 
-  @ApiOperation({ summary: 'تایید پرداخت' })
-  @Post('payments/:id/approve')
-  approvePayment(@Param('id') id: string) {
-    return this.service.setPaymentStatus(id, 'paid');
-  }
-
-  @ApiOperation({ summary: 'رد پرداخت' })
-  @Post('payments/:id/reject')
-  rejectPayment(@Param('id') id: string, @Body() body: { reason?: string }) {
-    return this.service.setPaymentStatus(id, 'rejected', body.reason);
-  }
-
   @ApiOperation({ summary: 'لیست رسیدهای ثبت‌شده از ایتا' })
   @Get('eitaa-receipts')
   eitaaReceipts(

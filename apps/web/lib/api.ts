@@ -45,7 +45,6 @@ import type {
   CrmActivity,
   CrmProfile,
   NazrRequestStatus,
-  PaymentStatus,
   UpdateProfileRequest,
   UpdateUserProfileDetailsRequest,
   UpdateWalletSettingsRequest,
@@ -405,10 +404,6 @@ export function updateAdminNazrStatus(id: string, status: NazrRequestStatus, adm
 
 export function getAdminPayments(page = 1, pageSize = 30, search = '', status = '') {
   return get<Paginated<Payment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status })}`);
-}
-
-export function setAdminPaymentStatus(id: string, status: Extract<PaymentStatus, 'paid' | 'rejected'>, reason?: string) {
-  return post<Payment, { reason?: string }>(`/admin/payments/${id}/${status === 'paid' ? 'approve' : 'reject'}`, { reason });
 }
 
 export function getAdminEitaaReceipts(page = 1, pageSize = 20, search = '') {
