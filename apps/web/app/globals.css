@@ -5281,10 +5281,11 @@ input {
 .admin-plan-form-head { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
 .admin-plan-form-head h3 { font-size: 13px; margin: 0; }
 .admin-plan-form-head p { color: var(--admin-muted); font-size: 9px; margin: 3px 0 0; }
-.admin-plan-form-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.admin-plan-form-grid { align-items: start; display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .admin-plan-form-grid label { color: var(--admin-muted); display: grid; font-size: 9px; gap: 6px; min-width: 0; }
 .admin-plan-form-grid label > span { color: var(--admin-ink); font-size: 10px; font-weight: 700; }
 .admin-plan-form-grid input, .admin-plan-form-grid textarea { background: #fff; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-ink); font-family: inherit; font-size: 10px; min-height: 40px; padding: 8px 10px; width: 100%; }
+.admin-plan-form-grid input { height: 42px; }
 .admin-plan-form-grid input:focus, .admin-plan-form-grid textarea:focus { border-color: var(--admin-primary); outline: 2px solid rgb(23 107 85 / 12%); outline-offset: 1px; }
 .admin-plan-description-field { grid-column: 1 / -1; }
 .admin-plan-description-field textarea { line-height: 1.9; min-height: 96px; resize: vertical; }
@@ -5297,9 +5298,15 @@ input {
 .admin-plan-card { border: 1px solid var(--admin-border); border-radius: 7px; display: flex; flex-direction: column; justify-content: space-between; min-height: 170px; padding: 14px; }
 .admin-plan-card h3 { font-size: 12px; margin: 10px 0 5px; }
 .admin-plan-card p { color: var(--admin-muted); display: -webkit-box; font-size: 10px; line-height: 1.9; margin: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-.admin-plan-card footer { align-items: center; border-top: 1px solid var(--admin-border); display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 10px; }
-.admin-plan-card footer strong { font-size: 10px; margin-inline-end: auto; }
-.admin-plan-card footer button { background: transparent; border: 0; color: var(--admin-primary); cursor: pointer; font-family: inherit; font-size: 9px; }
+.admin-plan-card footer { border-top: 1px solid var(--admin-border); display: grid; gap: 9px; margin-top: 12px; padding-top: 10px; }
+.admin-plan-card footer strong { font-size: 10px; }
+.admin-plan-card-actions { align-items: center; display: flex; gap: 5px; }
+.admin-plan-card-actions button { align-items: center; background: #f7f9f8; border: 1px solid var(--admin-border); border-radius: 5px; color: var(--admin-primary-dark); cursor: pointer; display: inline-flex; font-family: inherit; font-size: 9px; gap: 5px; justify-content: center; min-height: 30px; padding: 5px 8px; }
+.admin-plan-card-actions button:hover { background: var(--admin-primary-soft); border-color: #c8dcd4; }
+.admin-plan-card-actions button:disabled { cursor: not-allowed; opacity: .55; }
+.admin-plan-card-actions button svg { height: 13px; stroke-width: 1.8; width: 13px; }
+.admin-plan-card-actions .admin-plan-delete-action { background: var(--admin-danger-bg); border-color: #f2cece; color: var(--admin-danger); margin-inline-start: auto; padding: 5px; width: 30px; }
+.admin-plan-card-actions .admin-plan-delete-action:hover { background: #f9dcdc; border-color: #e8b8b8; }
 .admin-drawer-backdrop { background: rgb(14 25 21 / 36%); inset: 0; position: fixed; z-index: 80; }
 .admin-drawer { background: var(--admin-surface); box-shadow: -18px 0 50px rgb(12 30 23 / 15%); height: 100%; inset-inline-end: 0; max-width: 560px; overflow-y: auto; position: absolute; width: min(100%, 560px); }
 .admin-drawer > header { align-items: center; border-bottom: 1px solid var(--admin-border); display: flex; justify-content: space-between; padding: 18px 20px; position: sticky; top: 0; background: #fff; z-index: 1; }

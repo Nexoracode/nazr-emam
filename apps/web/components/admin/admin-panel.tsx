@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Pencil, Power, Trash2 } from 'lucide-react';
 import type {
   AdminDashboardSummary,
   AdminNotificationItem,
@@ -359,7 +360,35 @@ function NazrSection({ nazrTypes, requests, run, working }: { nazrTypes: NazrTyp
           </div>
         </form>
       ) : null}
-      <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><footer><strong>{money(item.suggestedAmount)}</strong><button onClick={() => openEditForm(item)} type="button">ویرایش</button><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
+      <div className="admin-card-grid">
+        {nazrTypes.map((item) => (
+          <article className="admin-plan-card" key={item.id}>
+            <div>
+              <span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </div>
+            <footer>
+              <strong>{money(item.suggestedAmount)}</strong>
+              <div className="admin-plan-card-actions">
+                <button disabled={working} onClick={() => openEditForm(item)} type="button">
+                  <Pencil aria-hidden="true" />
+                  <span>ویرایش</span>
+                </button>
+                <button disabled={working} onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">
+                  <Power aria-hidden="true" />
+                  <span>{item.isActive ? 'غیرفعال' : 'فعال‌سازی'}</span>
+                </button>
+                {item.isActive ? (
+                  <button aria-label={`حذف طرح ${item.title}`} className="admin-plan-delete-action" disabled={working} onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} title="حذف طرح" type="button">
+                    <Trash2 aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+            </footer>
+          </article>
+        ))}
+      </div>
     </section>
     <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>بررسی و تغییر وضعیت فعالیت‌ها</p></div></div><RequestTable items={requests} editable run={run} working={working} /></section>
   </div>;
