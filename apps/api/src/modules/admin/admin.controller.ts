@@ -196,8 +196,14 @@ export class AdminController {
 
   @ApiOperation({ summary: 'لیست پیگیری‌های کال‌سنتر' })
   @Get('call-tasks')
-  callTasks(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('status') status?: CallTaskStatus) {
-    return this.service.callTasks(Number(page) || 1, Number(pageSize) || 30, status);
+  callTasks(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('status') status?: CallTaskStatus, @Query('assignee') assignee?: string) {
+    return this.service.callTasks(Number(page) || 1, Number(pageSize) || 30, status, assignee);
+  }
+
+  @ApiOperation({ summary: 'لیست اپراتورهای قابل تخصیص کال‌سنتر' })
+  @Get('call-operators')
+  callOperators() {
+    return this.service.callOperators();
   }
 
   @ApiOperation({ summary: 'ساخت پیگیری‌های ماهانه برای پرداخت‌های دوره‌ای' })

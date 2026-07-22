@@ -6,6 +6,7 @@ import type {
   AdminUserListItem,
   ApiError,
   AuthResponse,
+  CallOperator,
   CallTask,
   CallTaskStatus,
   ChangePasswordRequest,
@@ -472,8 +473,12 @@ export function deleteAdminGallery(id: string) {
   return del(`/admin/gallery/${id}`);
 }
 
-export function getAdminCallTasks(page = 1, pageSize = 50, status: CallTaskStatus | '' = '') {
-  return get<Paginated<CallTask>>(`/admin/call-tasks?${adminQuery({ page, pageSize, status })}`);
+export function getAdminCallTasks(page = 1, pageSize = 50, status: CallTaskStatus | '' = '', assignee = '') {
+  return get<Paginated<CallTask>>(`/admin/call-tasks?${adminQuery({ page, pageSize, status, assignee })}`);
+}
+
+export function getAdminCallOperators() {
+  return get<CallOperator[]>('/admin/call-operators');
 }
 
 export function createAdminCallTask(payload: CreateCallTaskRequest) {

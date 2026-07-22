@@ -9,6 +9,7 @@ import { Readable } from 'node:stream';
 import {
   Brackets,
   DataSource,
+  type FindOptionsWhere,
   In,
   IsNull,
   LessThanOrEqual,
@@ -18,6 +19,7 @@ import type {
   AdminDashboardSummary,
   AdminEitaaReceipt,
   AdminNotificationItem,
+  CallOperator,
   AdminUserDetails,
   AdminUserListItem,
   CallTask,
@@ -519,11 +521,20 @@ export class AdminService implements OnModuleInit {
     ]);
   }
 
-  async callTasks(page = 1, pageSize = 30, status?: CallTaskStatus): Promise<Paginated<CallTask>> {
+  async callTasks(page = 1, pageSize = 30, status?: CallTaskStatus, assignee?: string): Promise<Paginated<CallTask>> {
     const [safePage, safeSize] = this.safePage(page, pageSize);
-    const where = status && CALL_STATUSES.includes(status) ? { status } : {};
+    const where: FindOptionsWhere<CallTaskEntity> = {};
+    if (status && CALL_STATUSES.includes(status)) where.status = status;
+    if (assignee === 'unassigned') where.assignedTo = IsNull();
+    else if (assignee?.trim()) where.assignedTo = assignee.trim();
     const [items, total] = await this.callTasksRepo.findAndCount({ where, relations: { user: true }, order: { dueDate: 'ASC', createdAt: 'DESC' }, skip: (safePage - 1) * safeSize, take: safeSize });
-    return { items: items.map((item) => this.toCallTask(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
+    const operatorMap = await this.callOperatorMap();
+    return { items: items.map((item) => this.toCallTask(item, operatorMap)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
+  }
+
+  async callOperators(): Promise<CallOperator[]> {
+    const operators = await this.usersRepo.find({ where: { role: 'admin' }, order: { fullName: 'ASC' } });
+    return operators.map(({ id, fullName, mobile }) => ({ id, fullName, mobile }));
   }
 
   async createCallTask(payload: CreateCallTaskRequest): Promise<CallTask> {
@@ -532,8 +543,9 @@ export class AdminService implements OnModuleInit {
     const dueDate = this.requiredDate(payload.dueDate, 'dueDate');
     const existing = await this.callTasksRepo.findOne({ where: { userId: user.id, period: payload.period } });
     if (existing) throw new BadRequestException({ statusCode: 400, code: 'CALL_TASK_EXISTS', message: 'برای این مخاطب در این ماه قبلاً پیگیری ساخته شده است' });
-    const item = await this.callTasksRepo.save(this.callTasksRepo.create({ userId: user.id, user, period: payload.period, dueDate, expectedAmount: payload.expectedAmount ?? null, status: 'pending', assignedTo: payload.assignedTo?.trim() || null, note: payload.note?.trim() || null, outcome: null, contactedAt: null }));
-    return this.toCallTask(item);
+    const operator = payload.assignedToUserId !== undefined ? await this.getCallOperator(payload.assignedToUserId) : null;
+    const item = await this.callTasksRepo.save(this.callTasksRepo.create({ userId: user.id, user, period: payload.period, dueDate, expectedAmount: payload.expectedAmount ?? null, status: 'pending', assignedTo: operator?.id ?? (payload.assignedTo?.trim() || null), note: payload.note?.trim() || null, outcome: null, contactedAt: null }));
+    return this.toCallTask(item, new Map(operator ? [[operator.id, operator]] : []));
   }
 
   async generateCallTasks(period: string, dueDateValue: string): Promise<{ created: number }> {
@@ -555,11 +567,19 @@ export class AdminService implements OnModuleInit {
       item!.status = payload.status;
       if (['contacted', 'promised', 'paid', 'unreachable'].includes(payload.status)) item!.contactedAt = new Date();
     }
-    if (payload.assignedTo !== undefined) item!.assignedTo = payload.assignedTo?.trim() || null;
+    let operator: UserEntity | null | undefined;
+    if (payload.assignedToUserId !== undefined) {
+      operator = await this.getCallOperator(payload.assignedToUserId);
+      item!.assignedTo = operator?.id ?? null;
+    } else if (payload.assignedTo !== undefined) {
+      item!.assignedTo = payload.assignedTo?.trim() || null;
+    }
     if (payload.note !== undefined) item!.note = payload.note?.trim() || null;
     if (payload.outcome !== undefined) item!.outcome = payload.outcome?.trim() || null;
     if (payload.dueDate !== undefined) item!.dueDate = this.requiredDate(payload.dueDate, 'dueDate');
-    return this.toCallTask(await this.callTasksRepo.save(item!));
+    const saved = await this.callTasksRepo.save(item!);
+    const operatorMap = operator === undefined ? await this.callOperatorMap() : new Map(operator ? [[operator.id, operator]] : []);
+    return this.toCallTask(saved, operatorMap);
   }
 
   private async toAdminUser(user: UserEntity, crmValue?: CrmProfileEntity): Promise<AdminUserListItem> {
@@ -634,8 +654,22 @@ export class AdminService implements OnModuleInit {
     return { id: item.id, nazrTypeId: item.nazrTypeId, title: item.title, type: item.type, placement: item.placement, fileUrl: item.fileUrl, thumbnailUrl: item.thumbnailUrl, createdAt: item.createdAt.toISOString() };
   }
 
-  private toCallTask(item: CallTaskEntity): CallTask {
-    return { id: item.id, userId: item.userId, userFullName: item.user.fullName, userMobile: item.user.mobile, period: item.period, dueDate: item.dueDate.toISOString(), expectedAmount: item.expectedAmount, status: item.status, assignedTo: item.assignedTo, note: item.note, outcome: item.outcome, contactedAt: item.contactedAt?.toISOString() ?? null, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
+  private toCallTask(item: CallTaskEntity, operators: Map<string, UserEntity>): CallTask {
+    const operator = item.assignedTo ? operators.get(item.assignedTo) : undefined;
+    const legacyAssignedName = item.assignedTo && !/^[0-9a-f-]{36}$/i.test(item.assignedTo) ? item.assignedTo : null;
+    return { id: item.id, userId: item.userId, userFullName: item.user.fullName, userMobile: item.user.mobile, period: item.period, dueDate: item.dueDate.toISOString(), expectedAmount: item.expectedAmount, status: item.status, assignedToUserId: operator?.id ?? null, assignedTo: operator?.fullName ?? legacyAssignedName, note: item.note, outcome: item.outcome, contactedAt: item.contactedAt?.toISOString() ?? null, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
+  }
+
+  private async callOperatorMap(): Promise<Map<string, UserEntity>> {
+    const operators = await this.usersRepo.find({ where: { role: 'admin' } });
+    return new Map(operators.flatMap((operator) => [[operator.id, operator], [operator.fullName, operator]]));
+  }
+
+  private async getCallOperator(id: string | null): Promise<UserEntity | null> {
+    if (id === null) return null;
+    const operator = await this.usersRepo.findOne({ where: { id, role: 'admin' } });
+    if (!operator) this.validation({ assignedToUserId: 'اپراتور انتخاب‌شده معتبر نیست' });
+    return operator!;
   }
 
   private validateGallery(payload: CreateGalleryAssetRequest) {

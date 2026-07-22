@@ -10,6 +10,7 @@ import type {
   AdminNotificationItem,
   AdminUserDetails,
   AdminUserListItem,
+  CallOperator,
   CallTask,
   CallTaskStatus,
   CrmActivityType,
@@ -34,6 +35,7 @@ import {
   deleteAdminGallery,
   deleteAdminNazrType,
   generateAdminCallTasks,
+  getAdminCallOperators,
   getAdminCallTasks,
   getAdminDashboard,
   getAdminEitaaReceipts,
@@ -206,6 +208,9 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
   const [notificationUsers, setNotificationUsers] = useState<AdminUserListItem[]>([]);
   const [gallery, setGallery] = useState<GalleryAsset[]>([]);
   const [callTasks, setCallTasks] = useState<Paginated<CallTask>>(() => emptyPage());
+  const [callOperators, setCallOperators] = useState<CallOperator[]>([]);
+  const [callAssignee, setCallAssignee] = useState('');
+  const [adminId, setAdminId] = useState('');
   const [selectedUser, setSelectedUser] = useState<AdminUserDetails | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [search, setSearch] = useState('');
@@ -218,6 +223,7 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
         router.replace('/');
         return;
       }
+      setAdminId(me.id);
       setAdminName(me.fullName);
       setDashboard(await getAdminDashboard());
       if (screen === 'requests') setRequests(await getAdminNazrRequests(1, ADMIN_PAGE_SIZE));
@@ -231,7 +237,14 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
       if (screen === 'notifications') setNotifications(await getAdminNotifications(1, ADMIN_PAGE_SIZE));
       if (screen === 'notificationForm') setNotificationUsers((await getAdminUsers(1, 100)).items);
       if (screen === 'gallery') setGallery(await getAdminGallery());
-      if (screen === 'calls') setCallTasks(await getAdminCallTasks(1, ADMIN_PAGE_SIZE));
+      if (screen === 'calls') {
+        const [tasks, operators] = await Promise.all([
+          getAdminCallTasks(1, ADMIN_PAGE_SIZE),
+          getAdminCallOperators(),
+        ]);
+        setCallTasks(tasks);
+        setCallOperators(operators);
+      }
     } catch (cause) {
       if (cause instanceof ApiRequestError && cause.statusCode === 401) {
         router.replace('/auth/login?redirect=%2Fadmin');
@@ -255,13 +268,26 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
       if (section === 'eitaa') setEitaaReceipts(await getAdminEitaaReceipts(page, ADMIN_PAGE_SIZE, query));
       if (section === 'tickets') setTickets(await getAdminTickets(page, ADMIN_PAGE_SIZE));
       if (section === 'notifications') setNotifications(await getAdminNotifications(page, ADMIN_PAGE_SIZE));
-      if (section === 'calls') setCallTasks(await getAdminCallTasks(page, ADMIN_PAGE_SIZE));
+      if (section === 'calls') setCallTasks(await getAdminCallTasks(page, ADMIN_PAGE_SIZE, '', callAssignee));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'دریافت صفحه جدید انجام نشد');
     } finally {
       setWorking(false);
     }
-  }, []);
+  }, [callAssignee]);
+
+  const filterCallTasks = async (assignee: string) => {
+    setCallAssignee(assignee);
+    setWorking(true);
+    setError('');
+    try {
+      setCallTasks(await getAdminCallTasks(1, ADMIN_PAGE_SIZE, '', assignee));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'دریافت صف اپراتور انجام نشد');
+    } finally {
+      setWorking(false);
+    }
+  };
 
   useEffect(() => {
     if (!['users', 'requests', 'payments', 'eitaa'].includes(screen)) return;
@@ -335,8 +361,8 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
         {screen === 'notificationForm' ? <NotificationForm users={notificationUsers} run={run} working={working} /> : null}
         {screen === 'gallery' ? <GallerySection items={gallery} mode="list" nazrTypes={nazrTypes} run={run} working={working} /> : null}
         {screen === 'galleryForm' ? <GallerySection items={gallery} mode="form" nazrTypes={nazrTypes} run={run} working={working} /> : null}
-        {screen === 'calls' ? <CallsSection items={callTasks} mode="list" onPageChange={(page) => loadPage('calls', page)} run={run} working={working} /> : null}
-        {screen === 'callsForm' ? <CallsSection items={callTasks} mode="form" onPageChange={(page) => loadPage('calls', page)} run={run} working={working} /> : null}
+        {screen === 'calls' ? <CallsSection assignee={callAssignee} currentAdminId={adminId} items={callTasks} mode="list" onAssigneeChange={filterCallTasks} onPageChange={(page) => loadPage('calls', page)} operators={callOperators} run={run} working={working} /> : null}
+        {screen === 'callsForm' ? <CallsSection assignee={callAssignee} currentAdminId={adminId} items={callTasks} mode="form" onAssigneeChange={filterCallTasks} onPageChange={(page) => loadPage('calls', page)} operators={callOperators} run={run} working={working} /> : null}
       </section>
     </main>
   );
@@ -774,12 +800,13 @@ function GallerySection({ items, mode, nazrTypes, run, working }: { items: Galle
   );
 }
 
-function CallsSection({ items, mode, onPageChange, run, working }: { items: Paginated<CallTask>; mode: 'list' | 'form'; onPageChange: (page: number) => Promise<void>; run: Runner; working: boolean }) {
+function CallsSection({ assignee, currentAdminId, items, mode, onAssigneeChange, onPageChange, operators, run, working }: { assignee: string; currentAdminId: string; items: Paginated<CallTask>; mode: 'list' | 'form'; onAssigneeChange: (value: string) => Promise<void>; onPageChange: (page: number) => Promise<void>; operators: CallOperator[]; run: Runner; working: boolean }) {
   const router = useRouter();
   const [period, setPeriod] = useState(jalaliMonthInput()); const [dueDate, setDueDate] = useState(jalaliDateInput());
   const startIndex = (items.page - 1) * items.pageSize;
+  const updateTask = (id: string, payload: Parameters<typeof updateAdminCallTask>[1], message: string) => void run(async () => { await updateAdminCallTask(id, payload); await onPageChange(items.page); }, message, false);
   if (mode === 'form') return <section className="admin-panel admin-form-page"><div className="admin-panel-head"><div><h2>ساخت صف پیگیری ماهانه</h2><p>دوره و تاریخ سررسید تماس‌ها را مشخص کنید.</p></div><Link className="admin-text-action" href="/admin/calls">بازگشت به کال‌سنتر</Link></div><div className="admin-form-stack"><label>دوره<input dir="ltr" inputMode="numeric" maxLength={7} onChange={(event) => setPeriod(event.target.value)} placeholder="1405/02" value={period} /></label><label>تاریخ سررسید<input dir="ltr" inputMode="numeric" maxLength={10} onChange={(event) => setDueDate(event.target.value)} placeholder="1405/02/03" value={dueDate} /></label><div className="admin-plan-form-actions"><Link className="admin-secondary" href="/admin/calls">انصراف</Link><button className="admin-primary" disabled={working} onClick={() => void (async () => { if (await run(() => generateAdminCallTasks(period.replace('/', '-'), jalaliDateToIso(dueDate)), 'صف تماس ماهانه ساخته شد')) router.push('/admin/calls'); })()} type="button">ساخت صف ماه</button></div></div></section>;
-  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>صف پیگیری ماهانه</h2><p>مخاطبان دارای پرداخت دوره‌ای و نتیجه تماس‌ها</p></div><Link className="admin-primary" href="/admin/calls/new">ساخت صف ماه</Link></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>مخاطب</th><th>دوره</th><th>مبلغ مورد انتظار</th><th>سررسید</th><th>مسئول</th><th>نتیجه پیگیری</th></tr></thead><tbody>{items.items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(startIndex + index + 1).toLocaleString('fa-IR')}</td><td><strong>{item.userFullName}</strong><small><a href={`tel:${item.userMobile}`}>{item.userMobile}</a></small></td><td dir="ltr">{item.period.replace('-', '/')}</td><td>{money(item.expectedAmount)}</td><td>{date(item.dueDate)}</td><td>{item.assignedTo ?? 'تخصیص‌نیافته'}</td><td><select disabled={working} onChange={(event) => void run(() => updateAdminCallTask(item.id, { status: event.target.value as CallTaskStatus }), 'نتیجه تماس ثبت شد')} value={item.status}>{Object.entries(callLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td></tr>)}</tbody></table>{!items.items.length ? <Empty text="هنوز پیگیری ماهانه‌ای ساخته نشده است." /> : null}</div><AdminPagination info={items} onPageChange={onPageChange} working={working} /></section>;
+  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>صف پیگیری ماهانه</h2><p>مخاطبان دارای پرداخت دوره‌ای و نتیجه تماس‌ها</p></div><Link className="admin-primary" href="/admin/calls/new">ساخت صف ماه</Link></div><div className="admin-call-toolbar"><label>نمایش صف<select disabled={working} onChange={(event) => void onAssigneeChange(event.target.value)} value={assignee}><option value="">همه اپراتورها</option>{currentAdminId ? <option value={currentAdminId}>صف من</option> : null}<option value="unassigned">بدون مسئول</option>{operators.filter((operator) => operator.id !== currentAdminId).map((operator) => <option key={operator.id} value={operator.id}>{operator.fullName}</option>)}</select></label></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>مخاطب</th><th>دوره</th><th>مبلغ مورد انتظار</th><th>سررسید</th><th>مسئول</th><th>نتیجه پیگیری</th></tr></thead><tbody>{items.items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(startIndex + index + 1).toLocaleString('fa-IR')}</td><td><strong>{item.userFullName}</strong><small><a href={`tel:${item.userMobile}`}>{item.userMobile}</a></small></td><td dir="ltr">{item.period.replace('-', '/')}</td><td>{money(item.expectedAmount)}</td><td>{date(item.dueDate)}</td><td><select aria-label={`مسئول پیگیری ${item.userFullName} در ${item.period.replace('-', '/')}`} disabled={working} onChange={(event) => updateTask(item.id, { assignedToUserId: event.target.value || null }, 'مسئول تماس تغییر کرد')} value={item.assignedToUserId ?? ''}><option value="">بدون مسئول</option>{operators.map((operator) => <option key={operator.id} value={operator.id}>{operator.fullName}</option>)}</select></td><td><select disabled={working} onChange={(event) => updateTask(item.id, { status: event.target.value as CallTaskStatus }, 'نتیجه تماس ثبت شد')} value={item.status}>{Object.entries(callLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td></tr>)}</tbody></table>{!items.items.length ? <Empty text="در این صف پیگیری موردی وجود ندارد." /> : null}</div><AdminPagination info={items} onPageChange={onPageChange} working={working} /></section>;
 }
 
 type Runner = (action: () => Promise<unknown>, message: string, reload?: boolean) => Promise<boolean>;

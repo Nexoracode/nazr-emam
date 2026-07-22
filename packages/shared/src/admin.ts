@@ -89,6 +89,12 @@ export interface AdminUsersQuery {
   stage?: CrmStage;
 }
 
+export interface CallOperator {
+  id: ID;
+  fullName: string;
+  mobile: string;
+}
+
 export interface CallTask {
   id: ID;
   userId: ID;
@@ -98,6 +104,7 @@ export interface CallTask {
   dueDate: ISODate;
   expectedAmount: Money | null;
   status: CallTaskStatus;
+  assignedToUserId: ID | null;
   assignedTo: string | null;
   note: string | null;
   outcome: string | null;
@@ -111,12 +118,16 @@ export interface CreateCallTaskRequest {
   period: string;
   dueDate: ISODate;
   expectedAmount?: Money | null;
+  assignedToUserId?: ID | null;
+  /** @deprecated Use assignedToUserId. */
   assignedTo?: string | null;
   note?: string | null;
 }
 
 export interface UpdateCallTaskRequest {
   status?: CallTaskStatus;
+  assignedToUserId?: ID | null;
+  /** @deprecated Use assignedToUserId. */
   assignedTo?: string | null;
   note?: string | null;
   outcome?: string | null;

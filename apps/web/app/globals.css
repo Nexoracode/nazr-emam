@@ -5237,6 +5237,9 @@ input {
 .admin-panel-head { align-items: center; display: flex; gap: 16px; justify-content: space-between; margin-bottom: 16px; }
 .admin-panel-head h2, .admin-call-header h2 { font-size: 14px; margin: 0; }
 .admin-panel-head p, .admin-call-header p { color: var(--admin-muted); font-size: 10px; margin: 3px 0 0; }
+.admin-call-toolbar { align-items: center; background: #f7f9f8; border: 1px solid var(--admin-border); border-radius: 6px; display: flex; margin-bottom: 14px; padding: 9px 11px; }
+.admin-call-toolbar label { align-items: center; color: var(--admin-muted); display: flex; font-size: 10px; gap: 8px; }
+.admin-call-toolbar select { background-color: #fff; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-ink); font-family: inherit; font-size: 10px; min-height: 34px; min-width: 180px; padding: 7px 9px; }
 .admin-count { color: var(--admin-muted); font-size: 11px; }
 .admin-primary, .admin-secondary { align-items: center; border-radius: 6px; cursor: pointer; display: inline-flex; font-family: inherit; font-size: 11px; justify-content: center; min-height: 34px; padding: 7px 13px; }
 .admin-primary { background: var(--admin-primary); border: 1px solid var(--admin-primary); color: #fff; }
@@ -5453,6 +5456,8 @@ input {
   .admin-call-header { align-items: stretch; flex-direction: column; gap: 14px; }
   .admin-call-header > div:last-child { align-items: stretch; display: grid; grid-template-columns: 1fr 1fr; }
   .admin-call-header button { grid-column: 1 / -1; }
+  .admin-call-toolbar, .admin-call-toolbar label { align-items: stretch; flex-direction: column; width: 100%; }
+  .admin-call-toolbar select { min-width: 0; width: 100%; }
   .admin-ticket-toolbar { align-items: stretch; flex-direction: column; }
   .admin-ticket-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; width: 100%; }
   .admin-ticket-filters button { min-width: 0; }

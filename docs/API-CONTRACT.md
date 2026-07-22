@@ -1059,10 +1059,13 @@ interface GalleryUploadResponse {
 
 ### کال‌سنتر و پیگیری ماهانه
 
-- `GET /admin/call-tasks?page&pageSize&status` → `200 Paginated<CallTask>`
+- `GET /admin/call-operators` → `200 CallOperator[]`؛ فهرست حساب‌های مدیریتی قابل تخصیص
+- `GET /admin/call-tasks?page&pageSize&status&assignee` → `200 Paginated<CallTask>`؛ مقدار `assignee` شناسه اپراتور یا `unassigned` است.
 - `POST /admin/call-tasks` با `CreateCallTaskRequest` → `201 CallTask`
 - `POST /admin/call-tasks/generate` با `GenerateMonthlyCallTasksRequest` → `201 { created: number }`
 - `PATCH /admin/call-tasks/:id` با `UpdateCallTaskRequest` → `200 CallTask`
+
+تخصیص مسئول با `assignedToUserId` انجام می‌شود. مقدار `assignedTo` در پاسخ فقط نام نمایشی اپراتور است و نباید برای ذخیره رابطه استفاده شود.
 
 دوره با قالب `YYYY-MM` ارسال می‌شود. تولید ماهانه فقط برای کیف‌پول‌هایی انجام می‌شود که برداشت دوره‌ای فعال دارند و برای هر مخاطب در هر دوره فقط یک وظیفه ساخته می‌شود.
 
