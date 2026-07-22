@@ -1,6 +1,7 @@
 import type { GalleryAsset, PublicHomeWhyIcon } from '@nazr-emam/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { VideoGalleryPlayer } from '../../components/video-gallery-player';
 import { getPublicHomeData } from '../../lib/public-home';
 import { planLandingContent } from '../../lib/public-nazr-types';
 
@@ -51,18 +52,6 @@ function planVisualClass(slug: string): string {
 
 const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(n);
 
-const VIDEO_MIME_BY_EXT: Record<string, string> = {
-  mp4: 'video/mp4',
-  m4v: 'video/mp4',
-  webm: 'video/webm',
-  mov: 'video/quicktime',
-};
-
-function videoMimeType(url: string): string | undefined {
-  const ext = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase();
-  return ext ? VIDEO_MIME_BY_EXT[ext] : undefined;
-}
-
 function HomeVideo({
   asset,
   className,
@@ -94,7 +83,7 @@ function HomeVideo({
         poster={asset.thumbnailUrl ?? undefined}
         preload="metadata"
       >
-        <source src={asset.fileUrl} type={videoMimeType(asset.fileUrl)} />
+        <source src={asset.fileUrl} />
         مرورگر شما امکان پخش این ویدئو را ندارد.
       </video>
     </figure>
@@ -239,11 +228,10 @@ export default async function Home() {
           </div>
 
           <div className="home-gallery-media-layout">
-            <HomeVideo
-              asset={media.galleryVideo}
-              className="home-gallery-main"
-              emptyTitle="ویدئوی گزارش اجرای طرح‌ها"
-              emptyDescription="ویدئوهای اجرای طرح‌ها از بخش گالری مدیریت ثبت می‌شوند."
+            <VideoGalleryPlayer
+              className="home-gallery-videos"
+              emptyTitle="هنوز ویدئویی برای گالری ثبت نشده است."
+              videos={media.galleryVideos}
             />
             <div className="home-gallery-list" aria-label="تصاویر گالری">
               {galleryImageSlots.map((asset, index) => (

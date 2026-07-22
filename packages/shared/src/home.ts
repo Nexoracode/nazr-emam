@@ -42,7 +42,7 @@ export interface PublicHomePlan extends NazrType {
 
 export interface PublicHomeMedia {
   introVideo: GalleryAsset | null;
-  galleryVideo: GalleryAsset | null;
+  galleryVideos: GalleryAsset[];
   galleryImages: GalleryAsset[];
 }
 

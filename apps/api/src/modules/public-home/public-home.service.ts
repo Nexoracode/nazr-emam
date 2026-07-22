@@ -118,9 +118,9 @@ export class PublicHomeService {
       ['confirmed', 'in_progress', 'completed'].includes(item.status),
     ).length;
     const paidAmount = this.sumMoney(paidPayments.map((item) => item.amount));
-    const galleryVideo =
-      galleryMedia.find((item) => item.type === 'video' && Boolean(item.fileUrl)) ??
-      null;
+    const galleryVideos = galleryMedia.filter(
+      (item) => item.type === 'video' && Boolean(item.fileUrl),
+    );
     const galleryImages = galleryMedia
       .filter((item) => item.type === 'image' && Boolean(item.fileUrl))
       .slice(0, 4);
@@ -171,7 +171,7 @@ export class PublicHomeService {
       }),
       media: {
         introVideo: introMedia[0] ? this.toGalleryAsset(introMedia[0]) : null,
-        galleryVideo: galleryVideo ? this.toGalleryAsset(galleryVideo) : null,
+        galleryVideos: galleryVideos.map((item) => this.toGalleryAsset(item)),
         galleryImages: galleryImages.map((item) => this.toGalleryAsset(item)),
       },
       activePlans,

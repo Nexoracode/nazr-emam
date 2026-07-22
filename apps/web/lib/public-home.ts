@@ -18,6 +18,9 @@ export async function getPublicHomeData(): Promise<PublicHomeData> {
     getPublicGalleryAssets('gallery'),
   ]);
   const galleryImages = galleryAssets.filter((asset) => asset.type === 'image').slice(0, 4);
+  const galleryVideos = galleryAssets.filter(
+    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
+  );
 
   return {
     hero: {
@@ -40,9 +43,7 @@ export async function getPublicHomeData(): Promise<PublicHomeData> {
       introVideo:
         introAssets.find((asset) => asset.type === 'video' && Boolean(asset.fileUrl)) ??
         null,
-      galleryVideo:
-        galleryAssets.find((asset) => asset.type === 'video' && Boolean(asset.fileUrl)) ??
-        null,
+      galleryVideos,
       galleryImages,
     },
     activePlans: plans.filter((plan) => plan.isActive).length,

@@ -2,6 +2,7 @@ import type { GalleryAsset } from '@nazr-emam/shared';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { VideoGalleryPlayer } from '../../../../components/video-gallery-player';
 import { getPublicGalleryAssets } from '../../../../lib/public-gallery';
 import {
   getPlanContent,
@@ -15,35 +16,6 @@ type PlanPageProps = {
 async function getPlan(slug: string) {
   const types = await getPublicNazrTypes();
   return types.find((type) => type.slug === slug) ?? null;
-}
-
-const VIDEO_MIME_BY_EXT: Record<string, string> = {
-  mp4: 'video/mp4',
-  m4v: 'video/mp4',
-  webm: 'video/webm',
-  mov: 'video/quicktime',
-};
-
-function videoMimeType(url: string): string | undefined {
-  const ext = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase();
-  return ext ? VIDEO_MIME_BY_EXT[ext] : undefined;
-}
-
-function PlanGalleryVideo({ asset }: { asset: GalleryAsset }) {
-  return (
-    <figure className="plan-gallery-video">
-      <video
-        className="plan-gallery-video-player"
-        controls
-        playsInline
-        poster={asset.thumbnailUrl ?? undefined}
-        preload="metadata"
-      >
-        <source src={asset.fileUrl} type={videoMimeType(asset.fileUrl)} />
-        مرورگر شما امکان پخش این ویدئو را ندارد.
-      </video>
-    </figure>
-  );
 }
 
 function PlanGalleryImage({ asset }: { asset: GalleryAsset }) {
@@ -77,9 +49,9 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
 
   const content = getPlanContent(slug, plan);
   const planGallery = await getPublicGalleryAssets('gallery', plan.id);
-  const galleryVideo =
-    planGallery.find((asset) => asset.type === 'video' && Boolean(asset.fileUrl)) ??
-    null;
+  const galleryVideos = planGallery.filter(
+    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
+  );
   const galleryImages = planGallery
     .filter((asset) => asset.type === 'image' && Boolean(asset.fileUrl))
     .slice(0, 4);
@@ -228,13 +200,11 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
             </div>
             {planGallery.length > 0 ? (
               <div className="plan-gallery-layout">
-                {galleryVideo ? (
-                  <PlanGalleryVideo asset={galleryVideo} />
-                ) : (
-                  <div className="plan-gallery-empty">
-                    هنوز ویدئویی برای این طرح ثبت نشده است.
-                  </div>
-                )}
+                <VideoGalleryPlayer
+                  className="plan-gallery-videos"
+                  emptyTitle="هنوز ویدئویی برای این طرح ثبت نشده است."
+                  videos={galleryVideos}
+                />
                 {galleryImages.length > 0 ? (
                   <div className="plan-gallery-images">
                     {galleryImages.map((asset) => (

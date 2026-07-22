@@ -343,7 +343,7 @@ interface PublicHomePlan extends NazrType {
 
 interface PublicHomeMedia {
   introVideo: GalleryAsset | null;
-  galleryVideo: GalleryAsset | null;
+  galleryVideos: GalleryAsset[];
   galleryImages: GalleryAsset[];
 }
 

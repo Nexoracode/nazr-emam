@@ -51,6 +51,7 @@ import {
   formatAmountInput,
   parseAmountInput,
 } from '../../lib/amount';
+import { VideoGalleryPlayer } from '../video-gallery-player';
 
 type ProfileTab =
   | 'dashboard'
@@ -1420,6 +1421,9 @@ function ClubPanel({ summary }: { summary: UserProfileSummary }) {
 
 function GalleryPanel() {
   const [assets, setAssets] = useState<GalleryAsset[]>([]);
+  const videos = assets.filter(
+    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
+  );
 
   useEffect(() => {
     getProfileGallery().then(setAssets).catch(() => setAssets([]));
@@ -1431,14 +1435,17 @@ function GalleryPanel() {
       {assets.length === 0 ? (
         <EmptyState title="فعلاً فایل گالری ثبت نشده است" body="عکس‌ها و ویدئوهای طرح‌ها بعد از ثبت توسط مدیریت اینجا قابل دریافت خواهند بود." />
       ) : (
-        <div className="profile-gallery-grid">
-          {assets.map((asset) => (
-            <a className="profile-gallery-item" href={asset.fileUrl} key={asset.id} rel="noreferrer" target="_blank">
-              <span>{asset.type === 'image' ? 'عکس' : 'ویدئو'}</span>
-              <strong>{asset.title}</strong>
-              <small>دریافت فایل</small>
-            </a>
-          ))}
+        <div className="profile-gallery-content">
+          <VideoGalleryPlayer className="profile-gallery-videos" videos={videos} />
+          <div className="profile-gallery-grid">
+            {assets.map((asset) => (
+              <a className="profile-gallery-item" href={asset.fileUrl} key={asset.id} rel="noreferrer" target="_blank">
+                <span>{asset.type === 'image' ? 'عکس' : 'ویدئو'}</span>
+                <strong>{asset.title}</strong>
+                <small>دریافت فایل</small>
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </section>
