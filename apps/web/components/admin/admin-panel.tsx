@@ -265,21 +265,101 @@ function Dashboard({ dashboard, requests, setActive }: { dashboard: AdminDashboa
 
 function NazrSection({ nazrTypes, requests, run, working }: { nazrTypes: NazrType[]; requests: NazrRequest[]; run: Runner; working: boolean }) {
   const [showForm, setShowForm] = useState(false);
-  const [suggestedAmount, setSuggestedAmount] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formState, setFormState] = useState({
+    title: '',
+    slug: '',
+    description: '',
+    suggestedAmount: '',
+  });
   const suggestedAmountValue = useMemo(
-    () => parseAmountInput(suggestedAmount),
-    [suggestedAmount],
+    () => parseAmountInput(formState.suggestedAmount),
+    [formState.suggestedAmount],
   );
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); const form = event.currentTarget; const data = new FormData(form);
-    if (await run(() => createAdminNazrType({ slug: String(data.get('slug')), title: String(data.get('title')), description: String(data.get('description')), suggestedAmount: suggestedAmountValue > 0 ? { amount: suggestedAmountValue, currency: 'IRT' } : null, isActive: true }), 'نوع نذر ساخته شد')) {
-      form.reset(); setSuggestedAmount(''); setShowForm(false);
-    }
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormState({ title: '', slug: '', description: '', suggestedAmount: '' });
   };
+
+  const openCreateForm = () => {
+    setEditingId(null);
+    setFormState({ title: '', slug: '', description: '', suggestedAmount: '' });
+    setShowForm(true);
+  };
+
+  const openEditForm = (item: NazrType) => {
+    setEditingId(item.id);
+    setFormState({
+      title: item.title,
+      slug: item.slug,
+      description: item.description,
+      suggestedAmount: item.suggestedAmount
+        ? formatAmountInput(String(item.suggestedAmount.amount))
+        : '',
+    });
+    setShowForm(true);
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const payload = {
+      slug: formState.slug.trim(),
+      title: formState.title.trim(),
+      description: formState.description.trim(),
+      suggestedAmount:
+        suggestedAmountValue > 0
+          ? { amount: suggestedAmountValue, currency: 'IRT' as const }
+          : null,
+    };
+    const succeeded = await run(
+      () =>
+        editingId
+          ? updateAdminNazrType(editingId, payload)
+          : createAdminNazrType({ ...payload, isActive: true }),
+      editingId ? 'اطلاعات طرح به‌روزرسانی شد' : 'نوع نذر ساخته شد',
+    );
+    if (succeeded) closeForm();
+  };
+
   return <div className="admin-stack">
-    <section className="admin-panel"><div className="admin-panel-head"><div><h2>طرح‌ها و انواع نذر</h2><p>{nazrTypes.length.toLocaleString('fa-IR')} طرح ثبت‌شده</p></div><button className="admin-primary" onClick={() => setShowForm((value) => !value)} type="button">افزودن طرح</button></div>
-      {showForm ? <form className="admin-form-grid" onSubmit={submit}><input name="title" placeholder="عنوان طرح" required /><input dir="ltr" name="slug" placeholder="slug" required /><label className="admin-amount-field"><input dir="ltr" inputMode="numeric" name="amount" onChange={(event) => setSuggestedAmount(formatAmountInput(event.target.value))} placeholder="مبلغ پیشنهادی (تومان)" value={suggestedAmount} /><small>{amountToPersianWords(suggestedAmountValue)}</small></label><textarea name="description" placeholder="توضیحات طرح" required /><button className="admin-primary" disabled={working}>ثبت طرح</button></form> : null}
-      <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><footer><strong>{money(item.suggestedAmount)}</strong><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
+    <section className="admin-panel"><div className="admin-panel-head"><div><h2>طرح‌ها و انواع نذر</h2><p>{nazrTypes.length.toLocaleString('fa-IR')} طرح ثبت‌شده</p></div><button className="admin-primary" onClick={openCreateForm} type="button">افزودن طرح</button></div>
+      {showForm ? (
+        <form className="admin-plan-form" onSubmit={submit}>
+          <div className="admin-plan-form-head">
+            <div>
+              <h3>{editingId ? 'ویرایش اطلاعات طرح' : 'افزودن طرح جدید'}</h3>
+              <p>{editingId ? 'عنوان، آدرس، مبلغ و توضیحات طرح را اصلاح کنید.' : 'اطلاعات اصلی طرح را کامل و سپس آن را ثبت کنید.'}</p>
+            </div>
+            <button className="admin-text-action" onClick={closeForm} type="button">بستن</button>
+          </div>
+          <div className="admin-plan-form-grid">
+            <label>
+              <span>عنوان طرح</span>
+              <input onChange={(event) => setFormState((value) => ({ ...value, title: event.target.value }))} placeholder="مثلاً وقف در گردش" required value={formState.title} />
+            </label>
+            <label>
+              <span>آدرس انگلیسی طرح</span>
+              <input dir="ltr" onChange={(event) => setFormState((value) => ({ ...value, slug: event.target.value }))} placeholder="circulating-waqf" required value={formState.slug} />
+            </label>
+            <label className="admin-plan-amount-field">
+              <span>مبلغ پیشنهادی</span>
+              <div><input dir="ltr" inputMode="numeric" onChange={(event) => setFormState((value) => ({ ...value, suggestedAmount: formatAmountInput(event.target.value) }))} placeholder="مثلاً 300,000" value={formState.suggestedAmount} /><b>تومان</b></div>
+              <small>{amountToPersianWords(suggestedAmountValue)}</small>
+            </label>
+            <label className="admin-plan-description-field">
+              <span>توضیحات طرح</span>
+              <textarea onChange={(event) => setFormState((value) => ({ ...value, description: event.target.value }))} placeholder="شرح کوتاه و روشن درباره هدف این طرح" required value={formState.description} />
+            </label>
+          </div>
+          <div className="admin-plan-form-actions">
+            <button className="admin-secondary" onClick={closeForm} type="button">انصراف</button>
+            <button className="admin-primary" disabled={working} type="submit">{working ? 'در حال ذخیره...' : editingId ? 'ذخیره تغییرات' : 'ثبت طرح'}</button>
+          </div>
+        </form>
+      ) : null}
+      <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><footer><strong>{money(item.suggestedAmount)}</strong><button onClick={() => openEditForm(item)} type="button">ویرایش</button><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
     </section>
     <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>بررسی و تغییر وضعیت فعالیت‌ها</p></div></div><RequestTable items={requests} editable run={run} working={working} /></section>
   </div>;
