@@ -987,7 +987,7 @@ interface InvitationCard {
   - اگر نوع نذر استفاده شده باشد: `409 NAZR_TYPE_IN_USE` و مدیر باید آن را غیرفعال کند.
 - `GET /admin/nazr-requests?page&pageSize&search&status` → `200 Paginated<NazrRequest>`
 - `PATCH /admin/nazr-requests/:id/status` با `UpdateNazrRequestStatus` → `200 NazrRequest`
-- `GET /admin/payments?page&pageSize&search&status` → `200 Paginated<Payment>`؛ فقط پرداخت‌های `online` و به‌صورت فقط‌خواندنی
+- `GET /admin/payments?page&pageSize&search&status` → `200 Paginated<Payment>`؛ همه روش‌های پرداخت و به‌صورت فقط‌خواندنی
 - `GET /admin/eitaa-receipts?page&pageSize&search` → `200 Paginated<AdminEitaaReceipt>`
 - `POST /admin/eitaa-receipts` با `CreateAdminEitaaReceiptRequest` → `201 AdminEitaaReceipt`
 

@@ -286,9 +286,8 @@ export class AdminService implements OnModuleInit {
     const [safePage, safeSize] = this.safePage(page, pageSize);
     const query = this.paymentsRepo
       .createQueryBuilder('payment')
-      .leftJoinAndSelect('payment.nazrRequest', 'request')
-      .where('payment.method = :method', { method: 'online' });
-    if (search.trim()) query.andWhere('(payment.transaction_reference LIKE :search OR request.tracking_code LIKE :search OR request.donor_mobile LIKE :search)', { search: `%${search.trim()}%` });
+      .leftJoinAndSelect('payment.nazrRequest', 'request');
+    if (search.trim()) query.where('(payment.transaction_reference LIKE :search OR request.tracking_code LIKE :search OR request.donor_mobile LIKE :search)', { search: `%${search.trim()}%` });
     if (status && ['pending', 'paid', 'rejected', 'refunded'].includes(status)) query.andWhere('payment.status = :status', { status });
     const [items, total] = await query.orderBy('payment.created_at', 'DESC').skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
     return { items: items.map((item) => this.toPayment(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
