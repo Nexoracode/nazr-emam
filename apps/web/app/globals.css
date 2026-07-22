@@ -1618,6 +1618,80 @@ input {
   background: var(--h-bg);
 }
 
+.plan-gallery-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  margin-top: 34px;
+}
+
+.plan-gallery-video,
+.plan-gallery-empty {
+  background: var(--h-panel);
+  border-radius: 8px;
+  min-height: 360px;
+  overflow: hidden;
+}
+
+.plan-gallery-video {
+  margin: 0;
+}
+
+.plan-gallery-video-player {
+  background: #0b100e;
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.plan-gallery-empty {
+  align-items: center;
+  border: 1px dashed var(--h-border-strong);
+  color: #fff;
+  display: flex;
+  font-size: 13.5px;
+  font-weight: 800;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.plan-gallery-images {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.plan-gallery-image {
+  background: var(--h-surface);
+  border: 1px solid var(--h-border);
+  border-radius: 8px;
+  margin: 0;
+  min-height: 174px;
+  overflow: hidden;
+  position: relative;
+}
+
+.plan-gallery-image img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.plan-gallery-image figcaption {
+  background: rgb(15 31 25 / 78%);
+  bottom: 0;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  inset-inline: 0;
+  line-height: 1.7;
+  padding: 8px 10px;
+  position: absolute;
+}
+
 .plan-final-cta {
   background: var(--plan-accent-deep);
   color: #fff;
@@ -1901,6 +1975,7 @@ input {
   .home-hero-grid,
   .home-gallery-grid,
   .home-faq-layout,
+  .plan-gallery-layout,
   .plan-hero-layout,
   .plan-impact-layout,
   .plan-media-brief {
@@ -2587,6 +2662,15 @@ input {
 
   .home-gallery-main {
     min-height: 250px;
+  }
+
+  .plan-gallery-video,
+  .plan-gallery-empty {
+    min-height: 240px;
+  }
+
+  .plan-gallery-images {
+    grid-template-columns: 1fr;
   }
 
   .home-quote blockquote {

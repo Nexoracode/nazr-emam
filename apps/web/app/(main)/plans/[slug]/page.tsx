@@ -1,6 +1,8 @@
+import type { GalleryAsset } from '@nazr-emam/shared';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getPublicGalleryAssets } from '../../../../lib/public-gallery';
 import {
   getPlanContent,
   getPublicNazrTypes,
@@ -13,6 +15,44 @@ type PlanPageProps = {
 async function getPlan(slug: string) {
   const types = await getPublicNazrTypes();
   return types.find((type) => type.slug === slug) ?? null;
+}
+
+const VIDEO_MIME_BY_EXT: Record<string, string> = {
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  webm: 'video/webm',
+  mov: 'video/quicktime',
+};
+
+function videoMimeType(url: string): string | undefined {
+  const ext = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase();
+  return ext ? VIDEO_MIME_BY_EXT[ext] : undefined;
+}
+
+function PlanGalleryVideo({ asset }: { asset: GalleryAsset }) {
+  return (
+    <figure className="plan-gallery-video">
+      <video
+        className="plan-gallery-video-player"
+        controls
+        playsInline
+        poster={asset.thumbnailUrl ?? undefined}
+        preload="metadata"
+      >
+        <source src={asset.fileUrl} type={videoMimeType(asset.fileUrl)} />
+        مرورگر شما امکان پخش این ویدئو را ندارد.
+      </video>
+    </figure>
+  );
+}
+
+function PlanGalleryImage({ asset }: { asset: GalleryAsset }) {
+  return (
+    <figure className="plan-gallery-image">
+      <img alt={asset.title} loading="lazy" src={asset.fileUrl} />
+      <figcaption>{asset.title}</figcaption>
+    </figure>
+  );
 }
 
 export async function generateMetadata({ params }: PlanPageProps): Promise<Metadata> {
@@ -36,6 +76,13 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
   if (!plan) notFound();
 
   const content = getPlanContent(slug, plan);
+  const planGallery = await getPublicGalleryAssets('gallery', plan.id);
+  const galleryVideo =
+    planGallery.find((asset) => asset.type === 'video' && Boolean(asset.fileUrl)) ??
+    null;
+  const galleryImages = planGallery
+    .filter((asset) => asset.type === 'image' && Boolean(asset.fileUrl))
+    .slice(0, 4);
   const registrationHref = `/nazr/new?nazrTypeId=${encodeURIComponent(plan.id)}`;
 
   return (
@@ -173,8 +220,30 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
             <div className="plan-section-heading plan-section-heading-center">
               <span className="home-eyebrow">گالری</span>
               <h2>{content.galleryTitle}</h2>
-              <p>گزارش‌های تصویری و ویدیویی اجرای همین طرح از بخش گالری مدیریت قابل تکمیل است.</p>
+              <p>
+                {planGallery.length > 0
+                  ? 'گزارش‌های تصویری و ویدیویی همین طرح را اینجا می‌بینی.'
+                  : 'گزارش‌های تصویری و ویدیویی اجرای همین طرح از بخش گالری مدیریت قابل تکمیل است.'}
+              </p>
             </div>
+            {planGallery.length > 0 ? (
+              <div className="plan-gallery-layout">
+                {galleryVideo ? (
+                  <PlanGalleryVideo asset={galleryVideo} />
+                ) : (
+                  <div className="plan-gallery-empty">
+                    هنوز ویدئویی برای این طرح ثبت نشده است.
+                  </div>
+                )}
+                {galleryImages.length > 0 ? (
+                  <div className="plan-gallery-images">
+                    {galleryImages.map((asset) => (
+                      <PlanGalleryImage asset={asset} key={asset.id} />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
