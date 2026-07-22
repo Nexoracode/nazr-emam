@@ -5254,6 +5254,7 @@ input {
 .admin-table td strong, .admin-table td small { display: block; }
 .admin-table td strong { font-size: 11px; }
 .admin-table td small { color: var(--admin-muted); font-size: 9px; margin-top: 2px; }
+.admin-table .admin-row-number { color: var(--admin-muted); text-align: center; width: 48px; }
 .admin-table select, .admin-form-stack select, .admin-form-stack input, .admin-form-stack textarea, .admin-form-grid input, .admin-form-grid select, .admin-form-grid textarea, .admin-call-header input, .admin-drawer select, .admin-drawer input, .admin-drawer textarea { background: #fff; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-ink); font-family: inherit; font-size: 10px; min-height: 34px; padding: 7px 9px; }
 .admin-status { border-radius: 12px; display: inline-flex; font-size: 9px; padding: 4px 8px; white-space: nowrap; }
 .admin-status.is-success { background: var(--admin-primary-soft); color: var(--admin-primary-dark); }
