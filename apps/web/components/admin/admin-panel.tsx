@@ -68,6 +68,8 @@ type AdminSection = 'dashboard' | 'requests' | 'nazrTypes' | 'users' | 'payments
 type AdminScreen = AdminSection | 'guide' | 'nazrTypeForm' | 'userDetails' | 'eitaaForm' | 'ticketDetails' | 'notificationForm' | 'galleryForm' | 'callsForm';
 type PaginatedAdminSection = 'requests' | 'users' | 'payments' | 'eitaa' | 'tickets' | 'notifications' | 'calls';
 
+let guidePromptShownDuringCurrentVisit = false;
+
 interface ResolvedAdminView {
   id: string | null;
   parent: AdminSection;
@@ -230,15 +232,15 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
       }
       setAdminId(me.id);
       setAdminName(me.fullName);
-      if (screen !== 'guide' && !guidePromptDismissed.current) {
+      if (screen !== 'guide' && !guidePromptDismissed.current && !guidePromptShownDuringCurrentVisit) {
         try {
           const permanentKey = `nazr-emam:admin-guide-dismissed:${me.id}`;
-          const sessionKey = `nazr-emam:admin-guide-shown:${me.id}`;
-          if (window.localStorage.getItem(permanentKey) !== '1' && window.sessionStorage.getItem(sessionKey) !== '1') {
-            window.sessionStorage.setItem(sessionKey, '1');
+          if (window.localStorage.getItem(permanentKey) !== '1') {
+            guidePromptShownDuringCurrentVisit = true;
             setGuidePromptOpen(true);
           }
         } catch {
+          guidePromptShownDuringCurrentVisit = true;
           setGuidePromptOpen(true);
         }
       }
@@ -274,6 +276,12 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
   }, [resourceId, router, screen]);
 
   useEffect(() => { setLoading(true); void refresh(); }, [refresh]);
+
+  useEffect(() => () => {
+    window.setTimeout(() => {
+      if (!window.location.pathname.startsWith('/admin')) guidePromptShownDuringCurrentVisit = false;
+    }, 0);
+  }, []);
 
   useEffect(() => {
     if (!guidePromptOpen) return;
