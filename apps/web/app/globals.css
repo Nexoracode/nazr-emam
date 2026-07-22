@@ -5292,9 +5292,9 @@ input {
 .admin-plan-form-grid { align-items: start; display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .admin-plan-form-grid label { color: var(--admin-muted); display: grid; font-size: 9px; gap: 6px; min-width: 0; }
 .admin-plan-form-grid label > span { color: var(--admin-ink); font-size: 10px; font-weight: 700; }
-.admin-plan-form-grid input, .admin-plan-form-grid textarea { background: #fff; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-ink); font-family: inherit; font-size: 10px; min-height: 40px; padding: 8px 10px; width: 100%; }
-.admin-plan-form-grid input { height: 42px; }
-.admin-plan-form-grid input:focus, .admin-plan-form-grid textarea:focus { border-color: var(--admin-primary); outline: 2px solid rgb(23 107 85 / 12%); outline-offset: 1px; }
+.admin-plan-form-grid input, .admin-plan-form-grid select, .admin-plan-form-grid textarea { background-color: #fff; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-ink); font-family: inherit; font-size: 10px; min-height: 40px; padding: 8px 10px; width: 100%; }
+.admin-plan-form-grid input, .admin-plan-form-grid select { height: 42px; }
+.admin-plan-form-grid input:focus, .admin-plan-form-grid select:focus, .admin-plan-form-grid textarea:focus { border-color: var(--admin-primary); outline: 2px solid rgb(23 107 85 / 12%); outline-offset: 1px; }
 .admin-plan-description-field { grid-column: 1 / -1; }
 .admin-plan-description-field textarea { line-height: 1.9; min-height: 96px; resize: vertical; }
 .admin-plan-amount-field > div { position: relative; }
@@ -5302,6 +5302,9 @@ input {
 .admin-plan-amount-field b { border-inline-start: 1px solid var(--admin-border); color: var(--admin-primary-dark); font-size: 9px; font-weight: 700; inset-inline-end: 10px; line-height: 18px; padding-inline-start: 9px; pointer-events: none; position: absolute; top: 50%; transform: translateY(-50%); }
 .admin-plan-amount-field small { color: var(--admin-primary-dark); font-size: 8px; min-height: 14px; }
 .admin-plan-form-actions { align-items: center; border-top: 1px solid var(--admin-border); display: flex; gap: 8px; justify-content: flex-end; padding-top: 14px; }
+.admin-eitaa-url-field { grid-column: span 2; }
+.admin-table-user-action { background: transparent; border: 0; color: inherit; cursor: pointer; font-family: inherit; padding: 0; text-align: start; }
+.admin-table-user-action:hover strong { color: var(--admin-primary); }
 .admin-card-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .admin-plan-card { border: 1px solid var(--admin-border); border-radius: 7px; display: flex; flex-direction: column; justify-content: space-between; min-height: 170px; padding: 14px; }
 .admin-plan-card h3 { font-size: 12px; margin: 10px 0 5px; }
@@ -5436,6 +5439,7 @@ input {
   .admin-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-card-grid, .admin-gallery-grid, .admin-form-grid { grid-template-columns: 1fr; }
   .admin-plan-form-grid { grid-template-columns: 1fr; }
+  .admin-eitaa-url-field { grid-column: auto; }
   .admin-form-grid textarea { grid-column: auto; }
   .admin-panel { padding: 13px; }
   .admin-call-header { align-items: stretch; flex-direction: column; gap: 14px; }

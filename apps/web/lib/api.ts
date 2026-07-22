@@ -1,5 +1,6 @@
 import type {
   AdminDashboardSummary,
+  AdminEitaaReceipt,
   AdminNotificationItem,
   AdminUserDetails,
   AdminUserListItem,
@@ -9,6 +10,7 @@ import type {
   CallTaskStatus,
   ChangePasswordRequest,
   CreateCallTaskRequest,
+  CreateAdminEitaaReceiptRequest,
   CreateCrmActivityRequest,
   CreateGalleryAssetRequest,
   CreateInvitationCardRequest,
@@ -395,6 +397,14 @@ export function getAdminPayments(page = 1, pageSize = 30, search = '', status = 
 
 export function setAdminPaymentStatus(id: string, status: Extract<PaymentStatus, 'paid' | 'rejected'>, reason?: string) {
   return post<Payment, { reason?: string }>(`/admin/payments/${id}/${status === 'paid' ? 'approve' : 'reject'}`, { reason });
+}
+
+export function getAdminEitaaReceipts(page = 1, pageSize = 20, search = '') {
+  return get<Paginated<AdminEitaaReceipt>>(`/admin/eitaa-receipts?${adminQuery({ page, pageSize, search })}`);
+}
+
+export function createAdminEitaaReceipt(payload: CreateAdminEitaaReceiptRequest) {
+  return post<AdminEitaaReceipt, CreateAdminEitaaReceiptRequest>('/admin/eitaa-receipts', payload);
 }
 
 export function getAdminTickets(page = 1, pageSize = 30) {

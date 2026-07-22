@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Pencil, Power, Trash2 } from 'lucide-react';
 import type {
   AdminDashboardSummary,
+  AdminEitaaReceipt,
   AdminNotificationItem,
   AdminUserDetails,
   AdminUserListItem,
@@ -24,6 +25,7 @@ import type {
 import {
   addAdminCrmActivity,
   closeTicket,
+  createAdminEitaaReceipt,
   createAdminGallery,
   createAdminNazrType,
   createAdminNotification,
@@ -32,6 +34,7 @@ import {
   generateAdminCallTasks,
   getAdminCallTasks,
   getAdminDashboard,
+  getAdminEitaaReceipts,
   getAdminGallery,
   getAdminNazrRequests,
   getAdminNazrTypes,
@@ -56,8 +59,8 @@ import {
   parseAmountInput,
 } from '../../lib/amount';
 
-type AdminSection = 'dashboard' | 'nazr' | 'users' | 'payments' | 'tickets' | 'notifications' | 'gallery' | 'calls';
-type PaginatedAdminSection = 'nazr' | 'users' | 'payments' | 'tickets' | 'notifications' | 'calls';
+type AdminSection = 'dashboard' | 'nazr' | 'users' | 'payments' | 'eitaa' | 'tickets' | 'notifications' | 'gallery' | 'calls';
+type PaginatedAdminSection = 'nazr' | 'users' | 'payments' | 'eitaa' | 'tickets' | 'notifications' | 'calls';
 
 const ADMIN_PAGE_SIZE = 10;
 
@@ -69,6 +72,7 @@ const navItems: { id: AdminSection; label: string; short: string; group: string 
   { id: 'dashboard', label: 'داشبورد', short: 'د', group: 'نمای کلی' },
   { id: 'nazr', label: 'نذرها و طرح‌ها', short: 'ن', group: 'عملیات' },
   { id: 'payments', label: 'پرداخت‌ها', short: 'و', group: 'عملیات' },
+  { id: 'eitaa', label: 'رسیدهای ایتا', short: 'ا', group: 'عملیات' },
   { id: 'users', label: 'مخاطبان و CRM', short: 'م', group: 'ارتباط' },
   { id: 'calls', label: 'کال‌سنتر', short: 'ک', group: 'ارتباط' },
   { id: 'tickets', label: 'تیکت‌ها', short: 'ت', group: 'ارتباط' },
@@ -134,6 +138,12 @@ function jalaliDateToIso(value: string, hour = 9) {
   throw new Error('تاریخ شمسی واردشده معتبر نیست');
 }
 
+function jalaliDateToStartOfDayIso(value: string) {
+  const date = new Date(jalaliDateToIso(value, 12));
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+
 function statusClass(value: string) {
   if (['paid', 'confirmed', 'completed', 'answered'].includes(value)) return 'is-success';
   if (['pending', 'awaiting_payment', 'payment_pending_review', 'open', 'promised'].includes(value)) return 'is-warning';
@@ -154,6 +164,7 @@ export function AdminPanel() {
   const [requests, setRequests] = useState<Paginated<NazrRequest>>(() => emptyPage());
   const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
   const [payments, setPayments] = useState<Paginated<Payment>>(() => emptyPage());
+  const [eitaaReceipts, setEitaaReceipts] = useState<Paginated<AdminEitaaReceipt>>(() => emptyPage());
   const [tickets, setTickets] = useState<Paginated<Ticket>>(() => emptyPage());
   const [notifications, setNotifications] = useState<Paginated<AdminNotificationItem>>(() => emptyPage());
   const [notificationUsers, setNotificationUsers] = useState<AdminUserListItem[]>([]);
@@ -171,14 +182,15 @@ export function AdminPanel() {
         return;
       }
       setAdminName(me.fullName);
-      const [dashboardData, usersData, requestsData, typesData, paymentsData, ticketsData, notificationsData, galleryData, callsData, notificationUsersData] = await Promise.all([
-        getAdminDashboard(), getAdminUsers(1, ADMIN_PAGE_SIZE), getAdminNazrRequests(1, ADMIN_PAGE_SIZE), getAdminNazrTypes(), getAdminPayments(1, ADMIN_PAGE_SIZE), getAdminTickets(1, ADMIN_PAGE_SIZE), getAdminNotifications(1, ADMIN_PAGE_SIZE), getAdminGallery(), getAdminCallTasks(1, ADMIN_PAGE_SIZE), getAdminUsers(1, 100),
+      const [dashboardData, usersData, requestsData, typesData, paymentsData, eitaaData, ticketsData, notificationsData, galleryData, callsData, notificationUsersData] = await Promise.all([
+        getAdminDashboard(), getAdminUsers(1, ADMIN_PAGE_SIZE), getAdminNazrRequests(1, ADMIN_PAGE_SIZE), getAdminNazrTypes(), getAdminPayments(1, ADMIN_PAGE_SIZE), getAdminEitaaReceipts(1, ADMIN_PAGE_SIZE), getAdminTickets(1, ADMIN_PAGE_SIZE), getAdminNotifications(1, ADMIN_PAGE_SIZE), getAdminGallery(), getAdminCallTasks(1, ADMIN_PAGE_SIZE), getAdminUsers(1, 100),
       ]);
       setDashboard(dashboardData);
       setUsers(usersData);
       setRequests(requestsData);
       setNazrTypes(typesData);
       setPayments(paymentsData);
+      setEitaaReceipts(eitaaData);
       setTickets(ticketsData);
       setNotifications(notificationsData);
       setNotificationUsers(notificationUsersData.items);
@@ -200,6 +212,7 @@ export function AdminPanel() {
       if (section === 'users') setUsers(await getAdminUsers(page, ADMIN_PAGE_SIZE, query));
       if (section === 'nazr') setRequests(await getAdminNazrRequests(page, ADMIN_PAGE_SIZE, query));
       if (section === 'payments') setPayments(await getAdminPayments(page, ADMIN_PAGE_SIZE, query));
+      if (section === 'eitaa') setEitaaReceipts(await getAdminEitaaReceipts(page, ADMIN_PAGE_SIZE, query));
       if (section === 'tickets') setTickets(await getAdminTickets(page, ADMIN_PAGE_SIZE));
       if (section === 'notifications') setNotifications(await getAdminNotifications(page, ADMIN_PAGE_SIZE));
       if (section === 'calls') setCallTasks(await getAdminCallTasks(page, ADMIN_PAGE_SIZE));
@@ -211,7 +224,7 @@ export function AdminPanel() {
   }, []);
 
   useEffect(() => {
-    if (!['users', 'nazr', 'payments'].includes(active)) return;
+    if (!['users', 'nazr', 'payments', 'eitaa'].includes(active)) return;
     const timeout = window.setTimeout(() => {
       void loadPage(active as PaginatedAdminSection, 1, search.trim());
     }, 300);
@@ -276,6 +289,7 @@ export function AdminPanel() {
         {active === 'nazr' ? <NazrSection nazrTypes={nazrTypes} onPageChange={(page) => loadPage('nazr', page, search.trim())} requests={requests} run={run} working={working} /> : null}
         {active === 'users' ? <UsersSection users={users} onPageChange={(page) => loadPage('users', page, search.trim())} selected={selectedUser} select={selectUser} close={() => setSelectedUser(null)} run={run} working={working} /> : null}
         {active === 'payments' ? <PaymentsSection payments={payments} onPageChange={(page) => loadPage('payments', page, search.trim())} run={run} working={working} /> : null}
+        {active === 'eitaa' ? <EitaaReceiptsSection items={eitaaReceipts} nazrTypes={nazrTypes} onPageChange={(page) => loadPage('eitaa', page, search.trim())} onSelectUser={selectUser} selectedUser={selectedUser} closeUser={() => setSelectedUser(null)} run={run} working={working} /> : null}
         {active === 'tickets' ? <TicketsSection tickets={tickets} onPageChange={(page) => loadPage('tickets', page)} run={run} working={working} /> : null}
         {active === 'notifications' ? <NotificationsSection items={notifications} onPageChange={(page) => loadPage('notifications', page)} users={notificationUsers} run={run} working={working} /> : null}
         {active === 'gallery' ? <GallerySection items={gallery} nazrTypes={nazrTypes} run={run} working={working} /> : null}
@@ -444,6 +458,81 @@ function UserDrawer({ details, close, refresh, run, working }: { details: AdminU
 function PaymentsSection({ payments, onPageChange, run, working }: { payments: Paginated<Payment>; onPageChange: (page: number) => Promise<void>; run: Runner; working: boolean }) {
   const startIndex = (payments.page - 1) * payments.pageSize;
   return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده</p></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>شناسه درخواست</th><th>روش</th><th>مبلغ</th><th>مرجع تراکنش</th><th>تاریخ</th><th>وضعیت و اقدام</th></tr></thead><tbody>{payments.items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(startIndex + index + 1).toLocaleString('fa-IR')}</td><td dir="ltr">{item.nazrRequestId.slice(0, 8)}</td><td>{item.method === 'online' ? 'آنلاین' : item.method === 'cash' ? 'نقدی' : 'کارت‌به‌کارت'}</td><td>{money(item.amount)}</td><td dir="ltr">{item.transactionReference ?? '—'}</td><td>{date(item.createdAt)}</td><td><div className="admin-inline-actions"><span className={`admin-status ${statusClass(item.status)}`}>{paymentLabels[item.status]}</span>{item.status === 'pending' ? <><button disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'paid'), 'پرداخت تأیید شد')} type="button">تأیید</button><button className="is-danger-text" disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'rejected', 'رد توسط مدیر'), 'پرداخت رد شد')} type="button">رد</button></> : null}</div></td></tr>)}</tbody></table>{!payments.items.length ? <Empty /> : null}</div><AdminPagination info={payments} onPageChange={onPageChange} working={working} /></section>;
+}
+
+function EitaaReceiptsSection({ items, nazrTypes, onPageChange, onSelectUser, selectedUser, closeUser, run, working }: { items: Paginated<AdminEitaaReceipt>; nazrTypes: NazrType[]; onPageChange: (page: number) => Promise<void>; onSelectUser: (id: string) => Promise<void>; selectedUser: AdminUserDetails | null; closeUser: () => void; run: Runner; working: boolean }) {
+  const [amountInput, setAmountInput] = useState('');
+  const [receivedAt, setReceivedAt] = useState(jalaliDateInput());
+  const amountValue = useMemo(() => parseAmountInput(amountInput), [amountInput]);
+  const startIndex = (items.page - 1) * items.pageSize;
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const succeeded = await run(
+      () => createAdminEitaaReceipt({
+        fullName: String(data.get('fullName')),
+        mobile: String(data.get('mobile')),
+        eitaNumber: String(data.get('eitaNumber')).trim() || null,
+        nazrTypeId: String(data.get('nazrTypeId')),
+        amount: { amount: amountValue, currency: 'IRT' },
+        transactionReference: String(data.get('transactionReference')).trim() || null,
+        eitaaMessageUrl: String(data.get('eitaaMessageUrl')).trim() || null,
+        receivedAt: jalaliDateToStartOfDayIso(receivedAt),
+        note: String(data.get('note')).trim() || null,
+      }),
+      'رسید ایتا ثبت و نذر تأیید شد',
+    );
+    if (succeeded) {
+      form.reset();
+      setAmountInput('');
+      setReceivedAt(jalaliDateInput());
+    }
+  };
+
+  return (
+    <div className="admin-stack">
+      <section className="admin-panel">
+        <div className="admin-panel-head">
+          <div><h2>ثبت رسید ایتا</h2><p>ثبت نذر و پرداخت تأییدشده بر اساس رسید دریافتی</p></div>
+        </div>
+        <form className="admin-plan-form admin-eitaa-form" onSubmit={submit}>
+          <div className="admin-plan-form-grid admin-eitaa-form-grid">
+            <label><span>نام و نام خانوادگی</span><input name="fullName" placeholder="نام کامل مخاطب" required /></label>
+            <label><span>شماره همراه</span><input dir="ltr" inputMode="numeric" maxLength={11} name="mobile" placeholder="09123456789" required /></label>
+            <label><span>شماره یا شناسه ایتا</span><input dir="ltr" name="eitaNumber" placeholder="اختیاری" /></label>
+            <label><span>طرح نذر</span><select name="nazrTypeId" required><option value="">انتخاب طرح</option>{nazrTypes.filter((item) => item.isActive).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+            <label className="admin-plan-amount-field">
+              <span>مبلغ واریزی</span>
+              <div><input dir="ltr" inputMode="numeric" onChange={(event) => setAmountInput(formatAmountInput(event.target.value))} placeholder="مثلاً 300,000" required value={amountInput} /><b>تومان</b></div>
+              <small>{amountToPersianWords(amountValue)}</small>
+            </label>
+            <label><span>تاریخ دریافت رسید</span><input dir="ltr" inputMode="numeric" maxLength={10} onChange={(event) => setReceivedAt(event.target.value)} placeholder="1405/02/03" required value={receivedAt} /></label>
+            <label><span>شماره مرجع تراکنش</span><input dir="ltr" name="transactionReference" placeholder="اختیاری" /></label>
+            <label className="admin-eitaa-url-field"><span>لینک پیام ایتا</span><input dir="ltr" name="eitaaMessageUrl" placeholder="https://eitaa.com/..." type="url" /></label>
+            <label className="admin-plan-description-field"><span>یادداشت مدیر</span><textarea maxLength={1000} name="note" placeholder="توضیح تکمیلی درباره رسید یا مخاطب" /></label>
+          </div>
+          <div className="admin-plan-form-actions">
+            <button className="admin-primary" disabled={working || amountValue <= 0} type="submit">{working ? 'در حال ثبت...' : 'ثبت و تأیید نذر'}</button>
+          </div>
+        </form>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-head"><div><h2>مخاطبان تأییدشده از ایتا</h2><p>رسیدهایی که توسط مدیر ثبت و قطعی شده‌اند</p></div><span className="admin-count">{items.total.toLocaleString('fa-IR')} رسید</span></div>
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead><tr><th className="admin-row-number">ردیف</th><th>مخاطب</th><th>طرح</th><th>مبلغ</th><th>تاریخ رسید</th><th>کد رهگیری</th><th>وضعیت</th><th>پیام ایتا</th></tr></thead>
+            <tbody>{items.items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(startIndex + index + 1).toLocaleString('fa-IR')}</td><td><button className="admin-table-user-action" onClick={() => void onSelectUser(item.userId)} type="button"><strong>{item.userFullName}</strong><small>{item.userMobile}{item.eitaNumber ? ` · ${item.eitaNumber}` : ''}</small></button></td><td>{item.nazrTypeTitle}</td><td>{money(item.amount)}</td><td><strong>{date(item.receivedAt)}</strong><small>ثبت توسط {item.recordedBy}</small></td><td dir="ltr">{item.trackingCode}</td><td><span className={`admin-status ${statusClass(item.requestStatus)}`}>{requestLabels[item.requestStatus]}</span><small>{paymentLabels[item.paymentStatus]}</small></td><td>{item.eitaaMessageUrl ? <a className="admin-text-action" href={item.eitaaMessageUrl} rel="noreferrer" target="_blank">مشاهده پیام</a> : '—'}</td></tr>)}</tbody>
+          </table>
+          {!items.items.length ? <Empty text="هنوز رسیدی از ایتا ثبت نشده است." /> : null}
+        </div>
+        <AdminPagination info={items} onPageChange={onPageChange} working={working} />
+      </section>
+      {selectedUser ? <UserDrawer details={selectedUser} close={closeUser} refresh={onSelectUser} run={run} working={working} /> : null}
+    </div>
+  );
 }
 
 function TicketsSection({ tickets, onPageChange, run, working }: { tickets: Paginated<Ticket>; onPageChange: (page: number) => Promise<void>; run: Runner; working: boolean }) {

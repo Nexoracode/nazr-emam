@@ -154,6 +154,40 @@ export interface AdminNotificationItem {
   createdAt: ISODate;
 }
 
+export interface CreateAdminEitaaReceiptRequest {
+  fullName: string;
+  mobile: string;
+  eitaNumber?: string | null;
+  nazrTypeId: ID;
+  amount: Money;
+  transactionReference?: string | null;
+  eitaaMessageUrl?: string | null;
+  receivedAt?: ISODate;
+  note?: string | null;
+}
+
+export interface AdminEitaaReceipt {
+  id: ID;
+  userId: ID;
+  userFullName: string;
+  userMobile: string;
+  eitaNumber: string | null;
+  nazrRequestId: ID;
+  trackingCode: string;
+  nazrTypeId: ID;
+  nazrTypeTitle: string;
+  paymentId: ID;
+  amount: Money;
+  transactionReference: string | null;
+  eitaaMessageUrl: string | null;
+  receivedAt: ISODate;
+  note: string | null;
+  requestStatus: NazrRequestStatus;
+  paymentStatus: PaymentStatus;
+  recordedBy: string;
+  createdAt: ISODate;
+}
+
 export interface AdminDataCollections {
   users: Paginated<AdminUserListItem>;
   requests: Paginated<NazrRequest>;
@@ -162,6 +196,7 @@ export interface AdminDataCollections {
   callTasks: Paginated<CallTask>;
   gallery: GalleryAsset[];
   notifications: Paginated<AdminNotificationItem>;
+  eitaaReceipts: Paginated<AdminEitaaReceipt>;
 }
 
 export interface AdminNazrRequestQuery {
@@ -176,4 +211,10 @@ export interface AdminPaymentQuery {
   pageSize?: number;
   search?: string;
   status?: PaymentStatus;
+}
+
+export interface AdminEitaaReceiptsQuery {
+  page?: number;
+  pageSize?: number;
+  search?: string;
 }

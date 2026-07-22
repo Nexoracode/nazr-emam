@@ -8,6 +8,7 @@ import { basename, join } from 'node:path';
 import { Readable } from 'node:stream';
 import {
   Brackets,
+  DataSource,
   In,
   IsNull,
   LessThanOrEqual,
@@ -15,6 +16,7 @@ import {
 } from 'typeorm';
 import type {
   AdminDashboardSummary,
+  AdminEitaaReceipt,
   AdminNotificationItem,
   AdminUserDetails,
   AdminUserListItem,
@@ -23,6 +25,7 @@ import type {
   CreateCallTaskRequest,
   CreateCrmActivityRequest,
   CreateGalleryAssetRequest,
+  CreateAdminEitaaReceiptRequest,
   CreateNotificationRequest,
   CreateNazrTypeRequest,
   CrmActivity,
@@ -47,6 +50,7 @@ import type {
   UpdateNazrTypeRequest,
   User,
 } from '@nazr-emam/shared';
+import { isValidIranMobile } from '@nazr-emam/shared';
 import { UserEntity } from '../auth/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
 import { NazrRequestEntity } from '../nazr-requests/entities/nazr-request.entity';
@@ -59,6 +63,7 @@ import { TicketEntity } from '../tickets/entities/ticket.entity';
 import { CallTaskEntity } from './entities/call-task.entity';
 import { CrmActivityEntity } from './entities/crm-activity.entity';
 import { CrmProfileEntity } from './entities/crm-profile.entity';
+import { EitaaReceiptEntity } from './entities/eitaa-receipt.entity';
 
 const CRM_STAGES: CrmStage[] = ['new', 'engaged', 'recurring', 'at_risk', 'inactive'];
 const CALL_STATUSES: CallTaskStatus[] = ['pending', 'contacted', 'promised', 'paid', 'unreachable', 'cancelled'];
@@ -85,6 +90,18 @@ export interface UploadedGalleryFile {
   size: number;
 }
 
+interface ValidatedEitaaReceipt {
+  fullName: string;
+  mobile: string;
+  eitaNumber: string | null;
+  nazrTypeId: string;
+  amount: Money;
+  transactionReference: string | null;
+  eitaaMessageUrl: string | null;
+  receivedAt: Date;
+  note: string | null;
+}
+
 @Injectable()
 export class AdminService implements OnModuleInit {
   private readonly logger = new Logger(AdminService.name);
@@ -92,6 +109,7 @@ export class AdminService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
+    private readonly dataSource: DataSource,
     @InjectRepository(UserEntity) private readonly usersRepo: Repository<UserEntity>,
     @InjectRepository(NazrRequestEntity) private readonly requestsRepo: Repository<NazrRequestEntity>,
     @InjectRepository(NazrTypeEntity) private readonly nazrTypesRepo: Repository<NazrTypeEntity>,
@@ -103,6 +121,7 @@ export class AdminService implements OnModuleInit {
     @InjectRepository(CrmProfileEntity) private readonly crmRepo: Repository<CrmProfileEntity>,
     @InjectRepository(CrmActivityEntity) private readonly activitiesRepo: Repository<CrmActivityEntity>,
     @InjectRepository(CallTaskEntity) private readonly callTasksRepo: Repository<CallTaskEntity>,
+    @InjectRepository(EitaaReceiptEntity) private readonly eitaaReceiptsRepo: Repository<EitaaReceiptEntity>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -282,6 +301,151 @@ export class AdminService implements OnModuleInit {
     return this.toPayment(await this.paymentsRepo.save(item!));
   }
 
+  async eitaaReceipts(page = 1, pageSize = 20, search = ''): Promise<Paginated<AdminEitaaReceipt>> {
+    const [safePage, safeSize] = this.safePage(page, pageSize);
+    const query = this.eitaaReceiptsRepo.createQueryBuilder('receipt')
+      .leftJoinAndSelect('receipt.user', 'user')
+      .leftJoinAndSelect('receipt.nazrRequest', 'request')
+      .leftJoinAndSelect('receipt.nazrType', 'nazrType')
+      .leftJoinAndSelect('receipt.payment', 'payment');
+    if (search.trim()) {
+      query.where(new Brackets((builder) => builder
+        .where('user.full_name LIKE :search', { search: `%${search.trim()}%` })
+        .orWhere('user.mobile LIKE :search', { search: `%${search.trim()}%` })
+        .orWhere('receipt.eita_number LIKE :search', { search: `%${search.trim()}%` })
+        .orWhere('request.tracking_code LIKE :search', { search: `%${search.trim()}%` })
+        .orWhere('payment.transaction_reference LIKE :search', { search: `%${search.trim()}%` })));
+    }
+    const [items, total] = await query
+      .orderBy('receipt.received_at', 'DESC')
+      .skip((safePage - 1) * safeSize)
+      .take(safeSize)
+      .getManyAndCount();
+    return {
+      items: items.map((item) => this.toEitaaReceipt(item)),
+      page: safePage,
+      pageSize: safeSize,
+      total,
+      totalPages: Math.ceil(total / safeSize),
+    };
+  }
+
+  async createEitaaReceipt(
+    payload: CreateAdminEitaaReceiptRequest,
+    admin: User,
+  ): Promise<AdminEitaaReceipt> {
+    const body = this.validateEitaaReceipt(payload);
+    const nazrTypeExists = await this.nazrTypesRepo.exists({
+      where: { id: body.nazrTypeId, isActive: true },
+    });
+    if (!nazrTypeExists) this.notFound('NAZR_TYPE_NOT_FOUND', 'طرح نذر فعال پیدا نشد');
+    if (body.transactionReference && await this.paymentsRepo.exists({
+      where: { transactionReference: body.transactionReference },
+    })) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'EITAA_RECEIPT_DUPLICATE',
+        message: 'این شماره مرجع قبلاً ثبت شده است',
+      });
+    }
+    if (body.eitaaMessageUrl && await this.eitaaReceiptsRepo.exists({
+      where: { eitaaMessageUrl: body.eitaaMessageUrl },
+    })) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'EITAA_RECEIPT_DUPLICATE',
+        message: 'این پیام ایتا قبلاً ثبت شده است',
+      });
+    }
+    const user = await this.authService.ensureDonorAccount(
+      body.fullName,
+      body.mobile,
+      body.eitaNumber,
+    );
+
+    const receiptId = await this.dataSource.transaction(async (manager) => {
+      const nazrTypesRepo = manager.getRepository(NazrTypeEntity);
+      const requestsRepo = manager.getRepository(NazrRequestEntity);
+      const paymentsRepo = manager.getRepository(PaymentEntity);
+      const receiptsRepo = manager.getRepository(EitaaReceiptEntity);
+      const nazrType = await nazrTypesRepo.findOne({
+        where: { id: body.nazrTypeId, isActive: true },
+      });
+      if (!nazrType) this.notFound('NAZR_TYPE_NOT_FOUND', 'طرح نذر فعال پیدا نشد');
+
+      if (body.transactionReference && await paymentsRepo.exists({
+        where: { transactionReference: body.transactionReference },
+      })) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'EITAA_RECEIPT_DUPLICATE',
+          message: 'این شماره مرجع قبلاً ثبت شده است',
+        });
+      }
+      if (body.eitaaMessageUrl && await receiptsRepo.exists({
+        where: { eitaaMessageUrl: body.eitaaMessageUrl },
+      })) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'EITAA_RECEIPT_DUPLICATE',
+          message: 'این پیام ایتا قبلاً ثبت شده است',
+        });
+      }
+
+      const request = requestsRepo.create({
+        trackingCode: await this.createTrackingCode(requestsRepo),
+        userId: user.id,
+        nazrTypeId: nazrType!.id,
+        nazrType: nazrType!,
+        donorFullName: body.fullName,
+        donorMobile: body.mobile,
+        donorNationalCode: null,
+        amount: body.amount,
+        note: body.note,
+        isAnonymous: false,
+        status: 'confirmed',
+        adminNote: 'ثبت و تأیید از روی رسید ارسالی در ایتا',
+        createdAt: body.receivedAt,
+      });
+      const savedRequest = await requestsRepo.save(request);
+      const payment = paymentsRepo.create({
+        nazrRequestId: savedRequest.id,
+        nazrRequest: savedRequest,
+        method: 'card_to_card',
+        status: 'paid',
+        amount: body.amount,
+        transactionReference: body.transactionReference,
+        receiptUrl: null,
+        createdAt: body.receivedAt,
+      });
+      const savedPayment = await paymentsRepo.save(payment);
+      const receipt = receiptsRepo.create({
+        userId: user.id,
+        user,
+        nazrRequestId: savedRequest.id,
+        nazrRequest: savedRequest,
+        nazrTypeId: nazrType!.id,
+        nazrType: nazrType!,
+        paymentId: savedPayment.id,
+        payment: savedPayment,
+        eitaNumber: body.eitaNumber,
+        eitaaMessageUrl: body.eitaaMessageUrl,
+        receivedAt: body.receivedAt,
+        note: body.note,
+        recordedByUserId: admin.id,
+        recordedBy: admin.fullName,
+      });
+      return (await receiptsRepo.save(receipt)).id;
+    });
+
+    const item = await this.eitaaReceiptsRepo.findOne({
+      where: { id: receiptId },
+      relations: { user: true, nazrRequest: true, nazrType: true, payment: true },
+    });
+    if (!item) this.notFound('EITAA_RECEIPT_NOT_FOUND', 'رسید ایتا پیدا نشد');
+    return this.toEitaaReceipt(item!);
+  }
+
   async tickets(page = 1, pageSize = 20): Promise<Paginated<Ticket>> {
     const [safePage, safeSize] = this.safePage(page, pageSize);
     const [items, total] = await this.ticketsRepo.findAndCount({ relations: { messages: true }, order: { updatedAt: 'DESC' }, skip: (safePage - 1) * safeSize, take: safeSize });
@@ -440,6 +604,30 @@ export class AdminService implements OnModuleInit {
     return { id: item.id, nazrRequestId: item.nazrRequestId, method: item.method, status: item.status, amount: item.amount, transactionReference: item.transactionReference, receiptUrl: item.receiptUrl, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
   }
 
+  private toEitaaReceipt(item: EitaaReceiptEntity): AdminEitaaReceipt {
+    return {
+      id: item.id,
+      userId: item.userId,
+      userFullName: item.nazrRequest.donorFullName,
+      userMobile: item.nazrRequest.donorMobile,
+      eitaNumber: item.eitaNumber,
+      nazrRequestId: item.nazrRequestId,
+      trackingCode: item.nazrRequest.trackingCode,
+      nazrTypeId: item.nazrTypeId,
+      nazrTypeTitle: item.nazrType.title,
+      paymentId: item.paymentId,
+      amount: item.payment.amount,
+      transactionReference: item.payment.transactionReference,
+      eitaaMessageUrl: item.eitaaMessageUrl,
+      receivedAt: item.receivedAt.toISOString(),
+      note: item.note,
+      requestStatus: item.nazrRequest.status,
+      paymentStatus: item.payment.status,
+      recordedBy: item.recordedBy,
+      createdAt: item.createdAt.toISOString(),
+    };
+  }
+
   private toTicket(item: TicketEntity): Ticket {
     return { id: item.id, userId: item.userId, guestMobile: item.guestMobile, subject: item.subject, status: item.status, nazrRequestId: item.nazrRequestId, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString(), messages: [...(item.messages ?? [])].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).map((message): TicketMessage => ({ id: message.id, body: message.body, authorType: message.authorType, createdAt: message.createdAt.toISOString() })) };
   }
@@ -595,6 +783,60 @@ export class AdminService implements OnModuleInit {
     if (!description || description.length < 3 || description.length > 4000) this.validation({ description: 'توضیحات نوع نذر معتبر نیست' });
     if (payload.suggestedAmount && (!Number.isFinite(payload.suggestedAmount.amount) || payload.suggestedAmount.amount <= 0)) this.validation({ suggestedAmount: 'مبلغ پیشنهادی معتبر نیست' });
     return { slug, title, description, suggestedAmount: payload.suggestedAmount ?? null, isActive: payload.isActive ?? true };
+  }
+
+  private validateEitaaReceipt(payload: CreateAdminEitaaReceiptRequest): ValidatedEitaaReceipt {
+    const fields: Record<string, string> = {};
+    const fullName = payload?.fullName?.trim();
+    const mobile = payload?.mobile?.trim();
+    const eitaNumber = payload?.eitaNumber?.trim() || null;
+    const nazrTypeId = payload?.nazrTypeId?.trim();
+    const transactionReference = payload?.transactionReference?.trim() || null;
+    const eitaaMessageUrl = payload?.eitaaMessageUrl?.trim() || null;
+    const note = payload?.note?.trim() || null;
+    const amount = payload?.amount;
+    const receivedAt = payload?.receivedAt
+      ? this.requiredDate(payload.receivedAt, 'receivedAt')
+      : new Date();
+
+    if (!fullName || fullName.length < 2 || fullName.length > 160) fields.fullName = 'نام و نام خانوادگی معتبر نیست';
+    if (!isValidIranMobile(mobile)) fields.mobile = 'شماره موبایل معتبر نیست';
+    if (eitaNumber && eitaNumber.length > 40) fields.eitaNumber = 'شماره ایتا نباید بیشتر از ۴۰ کاراکتر باشد';
+    if (!nazrTypeId) fields.nazrTypeId = 'انتخاب طرح نذر الزامی است';
+    if (!amount || !Number.isSafeInteger(amount.amount) || amount.amount <= 0 || !['IRT', 'IRR'].includes(amount.currency)) fields.amount = 'مبلغ نذر معتبر نیست';
+    if (transactionReference && transactionReference.length > 180) fields.transactionReference = 'شماره مرجع نباید بیشتر از ۱۸۰ کاراکتر باشد';
+    if (eitaaMessageUrl) {
+      try {
+        const url = new URL(eitaaMessageUrl);
+        if (url.protocol !== 'https:' || !['eitaa.com', 'www.eitaa.com'].includes(url.hostname)) throw new Error('invalid');
+      } catch {
+        fields.eitaaMessageUrl = 'لینک پیام باید از دامنه eitaa.com باشد';
+      }
+    }
+    if (receivedAt.getTime() > Date.now() + 5 * 60 * 1000) fields.receivedAt = 'تاریخ دریافت نمی‌تواند در آینده باشد';
+    if (note && note.length > 1000) fields.note = 'یادداشت نباید بیشتر از ۱۰۰۰ کاراکتر باشد';
+    if (Object.keys(fields).length) this.validation(fields);
+
+    return {
+      fullName: fullName ?? '',
+      mobile: mobile ?? '',
+      eitaNumber,
+      nazrTypeId: nazrTypeId ?? '',
+      amount: amount!,
+      transactionReference,
+      eitaaMessageUrl,
+      receivedAt,
+      note,
+    };
+  }
+
+  private async createTrackingCode(repo: Repository<NazrRequestEntity>): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const suffix = randomUUID().replaceAll('-', '').slice(0, 6).toUpperCase();
+      const code = `NE-${Date.now().toString(36).toUpperCase()}-${suffix}`;
+      if (!await repo.exists({ where: { trackingCode: code } })) return code;
+    }
+    return `NE-${Date.now().toString(36).toUpperCase()}-${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
   }
 
   private sumMoney(items: Money[]): Money {

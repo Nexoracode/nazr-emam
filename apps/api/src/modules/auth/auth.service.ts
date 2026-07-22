@@ -212,6 +212,50 @@ export class AuthService {
     return this.toPublicUser(await this.usersRepository.save(user));
   }
 
+  async ensureDonorAccount(
+    fullName: string,
+    mobile: string,
+    eitaNumber?: string | null,
+  ): Promise<UserEntity> {
+    const normalizedName = fullName?.trim();
+    const normalizedMobile = mobile?.trim();
+    const normalizedEitaNumber = eitaNumber?.trim() || null;
+    const fields: Record<string, string> = {};
+
+    if (!normalizedName || normalizedName.length < 2 || normalizedName.length > 160) {
+      fields.fullName = 'نام و نام خانوادگی معتبر نیست';
+    }
+    if (!this.isValidMobile(normalizedMobile)) {
+      fields.mobile = 'شماره موبایل معتبر نیست';
+    }
+    if (normalizedEitaNumber && normalizedEitaNumber.length > 40) {
+      fields.eitaNumber = 'شماره ایتا نباید بیشتر از ۴۰ کاراکتر باشد';
+    }
+    this.throwValidation(fields);
+    const validatedName = normalizedName ?? '';
+    const validatedMobile = normalizedMobile ?? '';
+
+    const existing = await this.usersRepository.findOne({
+      where: { mobile: validatedMobile },
+    });
+    if (existing?.role === 'admin') {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'ADMIN_MOBILE_NOT_ALLOWED',
+        message: 'شماره مدیر را نمی‌توان به‌عنوان مخاطب رسید ثبت کرد',
+      });
+    }
+
+    const user = existing ?? this.usersRepository.create({
+      mobile: validatedMobile,
+      role: 'donor',
+      passwordHash: this.hashPassword(this.createToken()),
+    });
+    user.fullName = validatedName;
+    if (normalizedEitaNumber !== null) user.eitaNumber = normalizedEitaNumber;
+    return this.usersRepository.save(user);
+  }
+
   async resetPassword(payload: ResetPasswordRequest): Promise<void> {
     const body = this.validateResetPassword(payload);
     const otp = await this.otpCodesRepository.findOne({

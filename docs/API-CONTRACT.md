@@ -1001,6 +1001,46 @@ interface InvitationCard {
 - `GET /admin/payments?page&pageSize&search&status` → `200 Paginated<Payment>`
 - `POST /admin/payments/:id/approve` → `200 Payment`
 - `POST /admin/payments/:id/reject` با `{ reason?: string }` → `200 Payment`
+- `GET /admin/eitaa-receipts?page&pageSize&search` → `200 Paginated<AdminEitaaReceipt>`
+- `POST /admin/eitaa-receipts` با `CreateAdminEitaaReceiptRequest` → `201 AdminEitaaReceipt`
+
+ثبت رسید ایتا یک عملیات مدیریتی و قطعی است. شماره همراه هویت مخاطب محسوب می‌شود؛ حساب موجود استفاده می‌شود و اگر حسابی وجود نداشته باشد، حساب پایه قابل ورود با OTP ساخته خواهد شد. ثبت موفق در یک عملیات، درخواست نذر را با وضعیت `confirmed`، پرداخت کارت‌به‌کارت را با وضعیت `paid` و رکورد اختصاصی ایتا را ایجاد می‌کند. `transactionReference` و `eitaaMessageUrl` اختیاری‌اند، اما هرکدام در صورت ارسال باید تکراری نباشند. تاریخ دریافت نمی‌تواند در آینده باشد.
+
+```ts
+interface CreateAdminEitaaReceiptRequest {
+  fullName: string;
+  mobile: string;
+  eitaNumber?: string | null;
+  nazrTypeId: ID;
+  amount: Money;
+  transactionReference?: string | null;
+  eitaaMessageUrl?: string | null;
+  receivedAt?: ISODate;
+  note?: string | null;
+}
+
+interface AdminEitaaReceipt {
+  id: ID;
+  userId: ID;
+  userFullName: string;
+  userMobile: string;
+  eitaNumber: string | null;
+  nazrRequestId: ID;
+  trackingCode: string;
+  nazrTypeId: ID;
+  nazrTypeTitle: string;
+  paymentId: ID;
+  amount: Money;
+  transactionReference: string | null;
+  eitaaMessageUrl: string | null;
+  receivedAt: ISODate;
+  note: string | null;
+  requestStatus: NazrRequestStatus;
+  paymentStatus: PaymentStatus;
+  recordedBy: string;
+  createdAt: ISODate;
+}
+```
 
 تأیید پرداخت، درخواست نذر را `confirmed` می‌کند. رد پرداخت، درخواست را `cancelled` می‌کند و دلیل در یادداشت مدیریتی ثبت می‌شود.
 

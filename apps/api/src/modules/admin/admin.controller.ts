@@ -3,6 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   CallTaskStatus,
+  CreateAdminEitaaReceiptRequest,
   CreateCallTaskRequest,
   CreateCrmActivityRequest,
   CreateGalleryAssetRequest,
@@ -113,6 +114,29 @@ export class AdminController {
   @Post('payments/:id/reject')
   rejectPayment(@Param('id') id: string, @Body() body: { reason?: string }) {
     return this.service.setPaymentStatus(id, 'rejected', body.reason);
+  }
+
+  @ApiOperation({ summary: 'لیست رسیدهای ثبت‌شده از ایتا' })
+  @Get('eitaa-receipts')
+  eitaaReceipts(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.service.eitaaReceipts(
+      Number(page) || 1,
+      Number(pageSize) || 20,
+      search,
+    );
+  }
+
+  @ApiOperation({ summary: 'ثبت و تأیید نذر از روی رسید ارسالی در ایتا' })
+  @Post('eitaa-receipts')
+  createEitaaReceipt(
+    @Body() body: CreateAdminEitaaReceiptRequest,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.service.createEitaaReceipt(body, request.user!);
   }
 
   @ApiOperation({ summary: 'لیست تیکت‌های پشتیبانی' })
