@@ -5255,6 +5255,14 @@ input {
 .admin-table td strong { font-size: 11px; }
 .admin-table td small { color: var(--admin-muted); font-size: 9px; margin-top: 2px; }
 .admin-table .admin-row-number { color: var(--admin-muted); text-align: center; width: 48px; }
+.admin-pagination { align-items: center; border-top: 1px solid var(--admin-border); display: flex; gap: 12px; justify-content: space-between; margin-top: 12px; padding-top: 12px; }
+.admin-pagination > span { color: var(--admin-muted); font-size: 9px; }
+.admin-pagination > div { align-items: center; display: flex; gap: 7px; }
+.admin-pagination strong { color: var(--admin-ink); font-size: 9px; font-weight: 600; min-width: 92px; text-align: center; }
+.admin-pagination button { align-items: center; background: #fff; border: 1px solid var(--admin-border); border-radius: 5px; color: var(--admin-primary-dark); cursor: pointer; display: inline-flex; height: 30px; justify-content: center; padding: 0; width: 30px; }
+.admin-pagination button:hover:not(:disabled) { background: var(--admin-primary-soft); border-color: #c8dcd4; }
+.admin-pagination button:disabled { color: #aeb7b2; cursor: not-allowed; opacity: .6; }
+.admin-pagination button svg { height: 14px; stroke-width: 1.8; width: 14px; }
 .admin-table select, .admin-form-stack select, .admin-form-stack input, .admin-form-stack textarea, .admin-form-grid input, .admin-form-grid select, .admin-form-grid textarea, .admin-call-header input, .admin-drawer select, .admin-drawer input, .admin-drawer textarea { background: #fff; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-ink); font-family: inherit; font-size: 10px; min-height: 34px; padding: 7px 9px; }
 .admin-shell select {
   appearance: none;
@@ -5421,6 +5429,8 @@ input {
 @media (max-width: 580px) {
   .admin-topbar { min-height: 68px; }
   .admin-top-actions a { display: none; }
+  .admin-pagination { align-items: stretch; flex-direction: column; }
+  .admin-pagination > div { justify-content: space-between; }
   .admin-overview { align-items: flex-start; min-height: 120px; padding: 18px; }
   .admin-overview strong { font-size: 18px; }
   .admin-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

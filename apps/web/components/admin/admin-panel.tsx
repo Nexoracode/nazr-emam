@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Power, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Power, Trash2 } from 'lucide-react';
 import type {
   AdminDashboardSummary,
   AdminNotificationItem,
@@ -17,6 +17,7 @@ import type {
   NazrRequest,
   NazrRequestStatus,
   NazrType,
+  Paginated,
   Payment,
   Ticket,
 } from '@nazr-emam/shared';
@@ -56,6 +57,13 @@ import {
 } from '../../lib/amount';
 
 type AdminSection = 'dashboard' | 'nazr' | 'users' | 'payments' | 'tickets' | 'notifications' | 'gallery' | 'calls';
+type PaginatedAdminSection = 'nazr' | 'users' | 'payments' | 'tickets' | 'notifications' | 'calls';
+
+const ADMIN_PAGE_SIZE = 10;
+
+function emptyPage<T>(): Paginated<T> {
+  return { items: [], page: 1, pageSize: ADMIN_PAGE_SIZE, total: 0, totalPages: 0 };
+}
 
 const navItems: { id: AdminSection; label: string; short: string; group: string }[] = [
   { id: 'dashboard', label: 'داشبورد', short: 'د', group: 'نمای کلی' },
@@ -142,14 +150,15 @@ export function AdminPanel() {
   const [success, setSuccess] = useState('');
   const [adminName, setAdminName] = useState('مدیر سامانه');
   const [dashboard, setDashboard] = useState<AdminDashboardSummary | null>(null);
-  const [users, setUsers] = useState<AdminUserListItem[]>([]);
-  const [requests, setRequests] = useState<NazrRequest[]>([]);
+  const [users, setUsers] = useState<Paginated<AdminUserListItem>>(() => emptyPage());
+  const [requests, setRequests] = useState<Paginated<NazrRequest>>(() => emptyPage());
   const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [notifications, setNotifications] = useState<AdminNotificationItem[]>([]);
+  const [payments, setPayments] = useState<Paginated<Payment>>(() => emptyPage());
+  const [tickets, setTickets] = useState<Paginated<Ticket>>(() => emptyPage());
+  const [notifications, setNotifications] = useState<Paginated<AdminNotificationItem>>(() => emptyPage());
+  const [notificationUsers, setNotificationUsers] = useState<AdminUserListItem[]>([]);
   const [gallery, setGallery] = useState<GalleryAsset[]>([]);
-  const [callTasks, setCallTasks] = useState<CallTask[]>([]);
+  const [callTasks, setCallTasks] = useState<Paginated<CallTask>>(() => emptyPage());
   const [selectedUser, setSelectedUser] = useState<AdminUserDetails | null>(null);
   const [search, setSearch] = useState('');
 
@@ -162,18 +171,19 @@ export function AdminPanel() {
         return;
       }
       setAdminName(me.fullName);
-      const [dashboardData, usersData, requestsData, typesData, paymentsData, ticketsData, notificationsData, galleryData, callsData] = await Promise.all([
-        getAdminDashboard(), getAdminUsers(), getAdminNazrRequests(), getAdminNazrTypes(), getAdminPayments(), getAdminTickets(), getAdminNotifications(), getAdminGallery(), getAdminCallTasks(),
+      const [dashboardData, usersData, requestsData, typesData, paymentsData, ticketsData, notificationsData, galleryData, callsData, notificationUsersData] = await Promise.all([
+        getAdminDashboard(), getAdminUsers(1, ADMIN_PAGE_SIZE), getAdminNazrRequests(1, ADMIN_PAGE_SIZE), getAdminNazrTypes(), getAdminPayments(1, ADMIN_PAGE_SIZE), getAdminTickets(1, ADMIN_PAGE_SIZE), getAdminNotifications(1, ADMIN_PAGE_SIZE), getAdminGallery(), getAdminCallTasks(1, ADMIN_PAGE_SIZE), getAdminUsers(1, 100),
       ]);
       setDashboard(dashboardData);
-      setUsers(usersData.items);
-      setRequests(requestsData.items);
+      setUsers(usersData);
+      setRequests(requestsData);
       setNazrTypes(typesData);
-      setPayments(paymentsData.items);
-      setTickets(ticketsData.items);
-      setNotifications(notificationsData.items);
+      setPayments(paymentsData);
+      setTickets(ticketsData);
+      setNotifications(notificationsData);
+      setNotificationUsers(notificationUsersData.items);
       setGallery(galleryData);
-      setCallTasks(callsData.items);
+      setCallTasks(callsData);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'دریافت اطلاعات پنل انجام نشد');
     } finally {
@@ -182,6 +192,31 @@ export function AdminPanel() {
   }, [router]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  const loadPage = useCallback(async (section: PaginatedAdminSection, page: number, query = '') => {
+    setWorking(true);
+    setError('');
+    try {
+      if (section === 'users') setUsers(await getAdminUsers(page, ADMIN_PAGE_SIZE, query));
+      if (section === 'nazr') setRequests(await getAdminNazrRequests(page, ADMIN_PAGE_SIZE, query));
+      if (section === 'payments') setPayments(await getAdminPayments(page, ADMIN_PAGE_SIZE, query));
+      if (section === 'tickets') setTickets(await getAdminTickets(page, ADMIN_PAGE_SIZE));
+      if (section === 'notifications') setNotifications(await getAdminNotifications(page, ADMIN_PAGE_SIZE));
+      if (section === 'calls') setCallTasks(await getAdminCallTasks(page, ADMIN_PAGE_SIZE));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'دریافت صفحه جدید انجام نشد');
+    } finally {
+      setWorking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!['users', 'nazr', 'payments'].includes(active)) return;
+    const timeout = window.setTimeout(() => {
+      void loadPage(active as PaginatedAdminSection, 1, search.trim());
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [active, loadPage, search]);
 
   const run = async (action: () => Promise<unknown>, message: string, reload = true) => {
     setWorking(true); setError(''); setSuccess('');
@@ -204,9 +239,6 @@ export function AdminPanel() {
   };
 
   const selectUser = async (id: string) => setSelectedUser(await getAdminUser(id));
-
-  const filteredUsers = useMemo(() => users.filter((item) => `${item.fullName} ${item.mobile} ${item.tags.join(' ')}`.includes(search.trim())), [users, search]);
-  const filteredRequests = useMemo(() => requests.filter((item) => `${item.donorFullName} ${item.donorMobile} ${item.trackingCode} ${item.nazrType.title}`.includes(search.trim())), [requests, search]);
 
   if (loading) return <main className="admin-loading">در حال آماده‌سازی پنل مدیریت...</main>;
 
@@ -241,13 +273,13 @@ export function AdminPanel() {
         {active !== 'dashboard' && !['notifications', 'gallery', 'calls', 'tickets'].includes(active) ? <input className="admin-search" onChange={(event) => setSearch(event.target.value)} placeholder="جستجو در این بخش..." value={search} /> : null}
 
         {active === 'dashboard' && dashboard ? <Dashboard dashboard={dashboard} requests={dashboard.recentRequests} setActive={changeSection} /> : null}
-        {active === 'nazr' ? <NazrSection nazrTypes={nazrTypes} requests={filteredRequests} run={run} working={working} /> : null}
-        {active === 'users' ? <UsersSection users={filteredUsers} selected={selectedUser} select={selectUser} close={() => setSelectedUser(null)} run={run} working={working} /> : null}
-        {active === 'payments' ? <PaymentsSection payments={payments} run={run} working={working} /> : null}
-        {active === 'tickets' ? <TicketsSection tickets={tickets} run={run} working={working} /> : null}
-        {active === 'notifications' ? <NotificationsSection items={notifications} users={users} run={run} working={working} /> : null}
+        {active === 'nazr' ? <NazrSection nazrTypes={nazrTypes} onPageChange={(page) => loadPage('nazr', page, search.trim())} requests={requests} run={run} working={working} /> : null}
+        {active === 'users' ? <UsersSection users={users} onPageChange={(page) => loadPage('users', page, search.trim())} selected={selectedUser} select={selectUser} close={() => setSelectedUser(null)} run={run} working={working} /> : null}
+        {active === 'payments' ? <PaymentsSection payments={payments} onPageChange={(page) => loadPage('payments', page, search.trim())} run={run} working={working} /> : null}
+        {active === 'tickets' ? <TicketsSection tickets={tickets} onPageChange={(page) => loadPage('tickets', page)} run={run} working={working} /> : null}
+        {active === 'notifications' ? <NotificationsSection items={notifications} onPageChange={(page) => loadPage('notifications', page)} users={notificationUsers} run={run} working={working} /> : null}
         {active === 'gallery' ? <GallerySection items={gallery} nazrTypes={nazrTypes} run={run} working={working} /> : null}
-        {active === 'calls' ? <CallsSection items={callTasks} run={run} working={working} /> : null}
+        {active === 'calls' ? <CallsSection items={callTasks} onPageChange={(page) => loadPage('calls', page)} run={run} working={working} /> : null}
       </section>
     </main>
   );
@@ -264,7 +296,7 @@ function Dashboard({ dashboard, requests, setActive }: { dashboard: AdminDashboa
   </div>;
 }
 
-function NazrSection({ nazrTypes, requests, run, working }: { nazrTypes: NazrType[]; requests: NazrRequest[]; run: Runner; working: boolean }) {
+function NazrSection({ nazrTypes, requests, onPageChange, run, working }: { nazrTypes: NazrType[]; requests: Paginated<NazrRequest>; onPageChange: (page: number) => Promise<void>; run: Runner; working: boolean }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] = useState({
@@ -390,16 +422,17 @@ function NazrSection({ nazrTypes, requests, run, working }: { nazrTypes: NazrTyp
         ))}
       </div>
     </section>
-    <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>بررسی و تغییر وضعیت فعالیت‌ها</p></div></div><RequestTable items={requests} editable run={run} working={working} /></section>
+    <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>بررسی و تغییر وضعیت فعالیت‌ها</p></div></div><RequestTable items={requests.items} editable run={run} startIndex={(requests.page - 1) * requests.pageSize} working={working} /><AdminPagination info={requests} onPageChange={onPageChange} working={working} /></section>
   </div>;
 }
 
-function RequestTable({ items, editable = false, run, working }: { items: NazrRequest[]; editable?: boolean; run?: Runner; working?: boolean }) {
-  return <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>مخاطب</th><th>طرح</th><th>مبلغ</th><th>کد رهگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(index + 1).toLocaleString('fa-IR')}</td><td><strong>{item.donorFullName}</strong><small>{item.donorMobile}</small></td><td>{item.nazrType.title}</td><td>{money(item.amount)}</td><td dir="ltr">{item.trackingCode}</td><td>{date(item.createdAt)}</td><td>{editable && run ? <select disabled={working} onChange={(event) => void run(() => updateAdminNazrStatus(item.id, event.target.value as NazrRequestStatus), 'وضعیت نذر به‌روزرسانی شد')} value={item.status}>{requestStatuses.map((status) => <option key={status} value={status}>{requestLabels[status]}</option>)}</select> : <span className={`admin-status ${statusClass(item.status)}`}>{requestLabels[item.status]}</span>}</td></tr>)}</tbody></table>{!items.length ? <Empty /> : null}</div>;
+function RequestTable({ items, editable = false, run, startIndex = 0, working }: { items: NazrRequest[]; editable?: boolean; run?: Runner; startIndex?: number; working?: boolean }) {
+  return <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>مخاطب</th><th>طرح</th><th>مبلغ</th><th>کد رهگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(startIndex + index + 1).toLocaleString('fa-IR')}</td><td><strong>{item.donorFullName}</strong><small>{item.donorMobile}</small></td><td>{item.nazrType.title}</td><td>{money(item.amount)}</td><td dir="ltr">{item.trackingCode}</td><td>{date(item.createdAt)}</td><td>{editable && run ? <select disabled={working} onChange={(event) => void run(() => updateAdminNazrStatus(item.id, event.target.value as NazrRequestStatus), 'وضعیت نذر به‌روزرسانی شد')} value={item.status}>{requestStatuses.map((status) => <option key={status} value={status}>{requestLabels[status]}</option>)}</select> : <span className={`admin-status ${statusClass(item.status)}`}>{requestLabels[item.status]}</span>}</td></tr>)}</tbody></table>{!items.length ? <Empty /> : null}</div>;
 }
 
-function UsersSection({ users, selected, select, close, run, working }: { users: AdminUserListItem[]; selected: AdminUserDetails | null; select: (id: string) => Promise<void>; close: () => void; run: Runner; working: boolean }) {
-  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>مخاطبان</h2><p>پرونده ارتباطی و سوابق مشارکت</p></div><span className="admin-count">{users.length.toLocaleString('fa-IR')} نفر</span></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>نام و تماس</th><th>مرحله CRM</th><th>مشارکت</th><th>مجموع پرداخت</th><th>پیگیری بعدی</th><th></th></tr></thead><tbody>{users.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(index + 1).toLocaleString('fa-IR')}</td><td><strong>{item.fullName}</strong><small>{item.mobile}{item.eitaNumber ? ` · ایتا: ${item.eitaNumber}` : ''}</small></td><td><span className={`admin-status ${item.crmStage === 'at_risk' ? 'is-warning' : 'is-neutral'}`}>{crmLabels[item.crmStage]}</span></td><td>{item.requestCount.toLocaleString('fa-IR')} نذر</td><td>{money(item.paidAmount)}</td><td>{date(item.nextFollowUpAt)}</td><td><button className="admin-text-action" onClick={() => void select(item.id)} type="button">پرونده</button></td></tr>)}</tbody></table></div>{selected ? <UserDrawer details={selected} close={close} refresh={select} run={run} working={working} /> : null}</section>;
+function UsersSection({ users, onPageChange, selected, select, close, run, working }: { users: Paginated<AdminUserListItem>; onPageChange: (page: number) => Promise<void>; selected: AdminUserDetails | null; select: (id: string) => Promise<void>; close: () => void; run: Runner; working: boolean }) {
+  const startIndex = (users.page - 1) * users.pageSize;
+  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>مخاطبان</h2><p>پرونده ارتباطی و سوابق مشارکت</p></div><span className="admin-count">{users.total.toLocaleString('fa-IR')} نفر</span></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>نام و تماس</th><th>مرحله CRM</th><th>مشارکت</th><th>مجموع پرداخت</th><th>پیگیری بعدی</th><th></th></tr></thead><tbody>{users.items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(startIndex + index + 1).toLocaleString('fa-IR')}</td><td><strong>{item.fullName}</strong><small>{item.mobile}{item.eitaNumber ? ` · ایتا: ${item.eitaNumber}` : ''}</small></td><td><span className={`admin-status ${item.crmStage === 'at_risk' ? 'is-warning' : 'is-neutral'}`}>{crmLabels[item.crmStage]}</span></td><td>{item.requestCount.toLocaleString('fa-IR')} نذر</td><td>{money(item.paidAmount)}</td><td>{date(item.nextFollowUpAt)}</td><td><button className="admin-text-action" onClick={() => void select(item.id)} type="button">پرونده</button></td></tr>)}</tbody></table>{!users.items.length ? <Empty /> : null}</div><AdminPagination info={users} onPageChange={onPageChange} working={working} />{selected ? <UserDrawer details={selected} close={close} refresh={select} run={run} working={working} /> : null}</section>;
 }
 
 function UserDrawer({ details, close, refresh, run, working }: { details: AdminUserDetails; close: () => void; refresh: (id: string) => Promise<void>; run: Runner; working: boolean }) {
@@ -408,24 +441,24 @@ function UserDrawer({ details, close, refresh, run, working }: { details: AdminU
   return <div className="admin-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><aside className="admin-drawer"><header><div><h2>{details.user.fullName}</h2><p>{details.user.mobile}</p></div><button aria-label="بستن" onClick={close} type="button">×</button></header><div className="admin-drawer-body"><div className="admin-mini-stats"><span><small>تعداد نذر</small><strong>{details.user.requestCount.toLocaleString('fa-IR')}</strong></span><span><small>مجموع پرداخت</small><strong>{money(details.user.paidAmount)}</strong></span></div><form className="admin-form-stack" onSubmit={saveCrm}><h3>وضعیت ارتباط</h3><label>مرحله<select defaultValue={details.crm.stage} name="stage">{Object.entries(crmLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>برچسب‌ها<input defaultValue={details.crm.tags.join('، ')} name="tags" placeholder="همراه قدیمی، تماس ماهانه" /></label><label>مسئول پیگیری<input defaultValue={details.crm.assignedTo ?? ''} name="assignedTo" /></label><label>اقدام بعدی<input defaultValue={details.crm.nextFollowUpAt ? jalaliDateInput(details.crm.nextFollowUpAt) : ''} dir="ltr" inputMode="numeric" maxLength={10} name="nextFollowUpAt" placeholder="1405/02/03" /></label><label>یادداشت<textarea defaultValue={details.crm.note ?? ''} name="note" /></label><button className="admin-primary" disabled={working}>ذخیره پرونده</button></form><div className="admin-form-stack"><h3>ثبت فعالیت</h3><select onChange={(event) => setActivityType(event.target.value as CrmActivityType)} value={activityType}><option value="call">تماس</option><option value="note">یادداشت</option><option value="payment">پرداخت</option><option value="ticket">تیکت</option><option value="status">تغییر وضعیت</option></select><textarea onChange={(event) => setActivity(event.target.value)} placeholder="خلاصه گفتگو یا اقدام انجام‌شده" value={activity} /><button className="admin-secondary" disabled={!activity.trim() || working} onClick={() => void run(async () => { await addAdminCrmActivity(details.user.id, { type: activityType, summary: activity }); setActivity(''); await refresh(details.user.id); }, 'فعالیت ثبت شد')} type="button">ثبت در تاریخچه</button></div><div className="admin-timeline"><h3>تاریخچه CRM</h3>{details.activities.map((item) => <article key={item.id}><span></span><div><strong>{item.summary}</strong><small>{item.createdBy} · {date(item.createdAt)}</small></div></article>)}{!details.activities.length ? <Empty /> : null}</div></div></aside></div>;
 }
 
-function PaymentsSection({ payments, run, working }: { payments: Payment[]; run: Runner; working: boolean }) {
-  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده</p></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>شناسه درخواست</th><th>روش</th><th>مبلغ</th><th>مرجع تراکنش</th><th>تاریخ</th><th>وضعیت و اقدام</th></tr></thead><tbody>{payments.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(index + 1).toLocaleString('fa-IR')}</td><td dir="ltr">{item.nazrRequestId.slice(0, 8)}</td><td>{item.method === 'online' ? 'آنلاین' : item.method === 'cash' ? 'نقدی' : 'کارت‌به‌کارت'}</td><td>{money(item.amount)}</td><td dir="ltr">{item.transactionReference ?? '—'}</td><td>{date(item.createdAt)}</td><td><div className="admin-inline-actions"><span className={`admin-status ${statusClass(item.status)}`}>{paymentLabels[item.status]}</span>{item.status === 'pending' ? <><button disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'paid'), 'پرداخت تأیید شد')} type="button">تأیید</button><button className="is-danger-text" disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'rejected', 'رد توسط مدیر'), 'پرداخت رد شد')} type="button">رد</button></> : null}</div></td></tr>)}</tbody></table>{!payments.length ? <Empty /> : null}</div></section>;
+function PaymentsSection({ payments, onPageChange, run, working }: { payments: Paginated<Payment>; onPageChange: (page: number) => Promise<void>; run: Runner; working: boolean }) {
+  const startIndex = (payments.page - 1) * payments.pageSize;
+  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده</p></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>شناسه درخواست</th><th>روش</th><th>مبلغ</th><th>مرجع تراکنش</th><th>تاریخ</th><th>وضعیت و اقدام</th></tr></thead><tbody>{payments.items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(startIndex + index + 1).toLocaleString('fa-IR')}</td><td dir="ltr">{item.nazrRequestId.slice(0, 8)}</td><td>{item.method === 'online' ? 'آنلاین' : item.method === 'cash' ? 'نقدی' : 'کارت‌به‌کارت'}</td><td>{money(item.amount)}</td><td dir="ltr">{item.transactionReference ?? '—'}</td><td>{date(item.createdAt)}</td><td><div className="admin-inline-actions"><span className={`admin-status ${statusClass(item.status)}`}>{paymentLabels[item.status]}</span>{item.status === 'pending' ? <><button disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'paid'), 'پرداخت تأیید شد')} type="button">تأیید</button><button className="is-danger-text" disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'rejected', 'رد توسط مدیر'), 'پرداخت رد شد')} type="button">رد</button></> : null}</div></td></tr>)}</tbody></table>{!payments.items.length ? <Empty /> : null}</div><AdminPagination info={payments} onPageChange={onPageChange} working={working} /></section>;
 }
 
-function TicketsSection({ tickets, run, working }: { tickets: Ticket[]; run: Runner; working: boolean }) {
+function TicketsSection({ tickets, onPageChange, run, working }: { tickets: Paginated<Ticket>; onPageChange: (page: number) => Promise<void>; run: Runner; working: boolean }) {
   const [replies, setReplies] = useState<Record<string, string>>({});
-  const [selectedId, setSelectedId] = useState<string | null>(tickets[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(tickets.items[0]?.id ?? null);
   const [filter, setFilter] = useState<'all' | Ticket['status']>('all');
-  const filteredTickets = filter === 'all' ? tickets : tickets.filter((ticket) => ticket.status === filter);
+  const filteredTickets = filter === 'all' ? tickets.items : tickets.items.filter((ticket) => ticket.status === filter);
   const selectedTicket = filteredTickets.find((ticket) => ticket.id === selectedId) ?? filteredTickets[0] ?? null;
-  const openCount = tickets.filter((ticket) => ticket.status === 'open').length;
 
   return (
     <section className="admin-ticket-center">
       <header className="admin-ticket-toolbar">
         <div>
           <h2>مرکز پشتیبانی</h2>
-          <p>{openCount.toLocaleString('fa-IR')} تیکت در انتظار پاسخ</p>
+          <p>{tickets.total.toLocaleString('fa-IR')} تیکت ثبت‌شده</p>
         </div>
         <div className="admin-ticket-filters" role="group" aria-label="فیلتر وضعیت تیکت‌ها">
           {([['all', 'همه'], ['open', 'باز'], ['answered', 'پاسخ‌داده‌شده'], ['closed', 'بسته']] as const).map(([value, label]) => (
@@ -494,13 +527,14 @@ function TicketsSection({ tickets, run, working }: { tickets: Ticket[]; run: Run
           <div className="admin-ticket-no-selection"><Empty text="برای مشاهده گفتگو، یک تیکت را انتخاب کنید." /></div>
         )}
       </div>
+      <AdminPagination info={tickets} onPageChange={onPageChange} working={working} />
     </section>
   );
 }
 
-function NotificationsSection({ items, users, run, working }: { items: AdminNotificationItem[]; users: AdminUserListItem[]; run: Runner; working: boolean }) {
+function NotificationsSection({ items, onPageChange, users, run, working }: { items: Paginated<AdminNotificationItem>; onPageChange: (page: number) => Promise<void>; users: AdminUserListItem[]; run: Runner; working: boolean }) {
   const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); if (await run(() => createAdminNotification({ userId: String(data.get('userId')) || null, title: String(data.get('title')), body: String(data.get('body')), link: String(data.get('link')) || null }), 'اعلان ارسال شد')) form.reset(); };
-  return <div className="admin-two-column"><section className="admin-panel"><div className="admin-panel-head"><div><h2>ارسال اعلان</h2><p>پیام عمومی یا اختصاصی برای مخاطب</p></div></div><form className="admin-form-stack" onSubmit={submit}><label>مخاطب<select name="userId"><option value="">همه مخاطبان</option>{users.map((user) => <option key={user.id} value={user.id}>{user.fullName} · {user.mobile}</option>)}</select></label><label>عنوان<input name="title" required /></label><label>متن<textarea name="body" required /></label><label>لینک مرتبط<input dir="ltr" name="link" placeholder="/profile" /></label><button className="admin-primary" disabled={working}>ارسال اعلان</button></form></section><section className="admin-panel"><div className="admin-panel-head"><div><h2>اعلان‌های اخیر</h2><p>سوابق پیام‌های ارسال‌شده</p></div></div><div className="admin-notification-list">{items.map((item) => <article key={item.id}><div><h3>{item.title}</h3><p>{item.body}</p></div><small>{item.userFullName ?? 'ارسال عمومی'} · {date(item.createdAt)}</small></article>)}</div></section></div>;
+  return <div className="admin-two-column"><section className="admin-panel"><div className="admin-panel-head"><div><h2>ارسال اعلان</h2><p>پیام عمومی یا اختصاصی برای مخاطب</p></div></div><form className="admin-form-stack" onSubmit={submit}><label>مخاطب<select name="userId"><option value="">همه مخاطبان</option>{users.map((user) => <option key={user.id} value={user.id}>{user.fullName} · {user.mobile}</option>)}</select></label><label>عنوان<input name="title" required /></label><label>متن<textarea name="body" required /></label><label>لینک مرتبط<input dir="ltr" name="link" placeholder="/profile" /></label><button className="admin-primary" disabled={working}>ارسال اعلان</button></form></section><section className="admin-panel"><div className="admin-panel-head"><div><h2>اعلان‌های اخیر</h2><p>سوابق پیام‌های ارسال‌شده</p></div></div><div className="admin-notification-list">{items.items.map((item) => <article key={item.id}><div><h3>{item.title}</h3><p>{item.body}</p></div><small>{item.userFullName ?? 'ارسال عمومی'} · {date(item.createdAt)}</small></article>)}</div><AdminPagination info={items} onPageChange={onPageChange} working={working} /></section></div>;
 }
 
 function GallerySection({ items, nazrTypes, run, working }: { items: GalleryAsset[]; nazrTypes: NazrType[]; run: Runner; working: boolean }) {
@@ -664,10 +698,30 @@ function GallerySection({ items, nazrTypes, run, working }: { items: GalleryAsse
   );
 }
 
-function CallsSection({ items, run, working }: { items: CallTask[]; run: Runner; working: boolean }) {
+function CallsSection({ items, onPageChange, run, working }: { items: Paginated<CallTask>; onPageChange: (page: number) => Promise<void>; run: Runner; working: boolean }) {
   const [period, setPeriod] = useState(jalaliMonthInput()); const [dueDate, setDueDate] = useState(jalaliDateInput());
-  return <div className="admin-stack"><section className="admin-call-header"><div><h2>صف پیگیری ماهانه</h2><p>مخاطبان دارای پرداخت دوره‌ای را برای تماس این ماه آماده کنید.</p></div><div><input dir="ltr" inputMode="numeric" maxLength={7} onChange={(event) => setPeriod(event.target.value)} placeholder="1405/02" value={period} /><input dir="ltr" inputMode="numeric" maxLength={10} onChange={(event) => setDueDate(event.target.value)} placeholder="1405/02/03" value={dueDate} /><button className="admin-primary" disabled={working} onClick={() => void run(() => generateAdminCallTasks(period.replace('/', '-'), jalaliDateToIso(dueDate)), 'صف تماس ماهانه ساخته شد')} type="button">ساخت صف ماه</button></div></section><section className="admin-panel"><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>مخاطب</th><th>دوره</th><th>مبلغ مورد انتظار</th><th>سررسید</th><th>مسئول</th><th>نتیجه پیگیری</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(index + 1).toLocaleString('fa-IR')}</td><td><strong>{item.userFullName}</strong><small><a href={`tel:${item.userMobile}`}>{item.userMobile}</a></small></td><td dir="ltr">{item.period.replace('-', '/')}</td><td>{money(item.expectedAmount)}</td><td>{date(item.dueDate)}</td><td>{item.assignedTo ?? 'تخصیص‌نیافته'}</td><td><select disabled={working} onChange={(event) => void run(() => updateAdminCallTask(item.id, { status: event.target.value as CallTaskStatus }), 'نتیجه تماس ثبت شد')} value={item.status}>{Object.entries(callLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td></tr>)}</tbody></table>{!items.length ? <Empty text="هنوز پیگیری ماهانه‌ای ساخته نشده است." /> : null}</div></section></div>;
+  const startIndex = (items.page - 1) * items.pageSize;
+  return <div className="admin-stack"><section className="admin-call-header"><div><h2>صف پیگیری ماهانه</h2><p>مخاطبان دارای پرداخت دوره‌ای را برای تماس این ماه آماده کنید.</p></div><div><input dir="ltr" inputMode="numeric" maxLength={7} onChange={(event) => setPeriod(event.target.value)} placeholder="1405/02" value={period} /><input dir="ltr" inputMode="numeric" maxLength={10} onChange={(event) => setDueDate(event.target.value)} placeholder="1405/02/03" value={dueDate} /><button className="admin-primary" disabled={working} onClick={() => void run(() => generateAdminCallTasks(period.replace('/', '-'), jalaliDateToIso(dueDate)), 'صف تماس ماهانه ساخته شد')} type="button">ساخت صف ماه</button></div></section><section className="admin-panel"><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th className="admin-row-number">ردیف</th><th>مخاطب</th><th>دوره</th><th>مبلغ مورد انتظار</th><th>سررسید</th><th>مسئول</th><th>نتیجه پیگیری</th></tr></thead><tbody>{items.items.map((item, index) => <tr key={item.id}><td className="admin-row-number">{(startIndex + index + 1).toLocaleString('fa-IR')}</td><td><strong>{item.userFullName}</strong><small><a href={`tel:${item.userMobile}`}>{item.userMobile}</a></small></td><td dir="ltr">{item.period.replace('-', '/')}</td><td>{money(item.expectedAmount)}</td><td>{date(item.dueDate)}</td><td>{item.assignedTo ?? 'تخصیص‌نیافته'}</td><td><select disabled={working} onChange={(event) => void run(() => updateAdminCallTask(item.id, { status: event.target.value as CallTaskStatus }), 'نتیجه تماس ثبت شد')} value={item.status}>{Object.entries(callLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td></tr>)}</tbody></table>{!items.items.length ? <Empty text="هنوز پیگیری ماهانه‌ای ساخته نشده است." /> : null}</div><AdminPagination info={items} onPageChange={onPageChange} working={working} /></section></div>;
 }
 
 type Runner = (action: () => Promise<unknown>, message: string, reload?: boolean) => Promise<boolean>;
+type PaginationInfo = Pick<Paginated<unknown>, 'page' | 'pageSize' | 'total' | 'totalPages'>;
+
+function AdminPagination({ info, onPageChange, working }: { info: PaginationInfo; onPageChange: (page: number) => Promise<void>; working: boolean }) {
+  if (!info.total) return null;
+  const totalPages = Math.max(1, info.totalPages);
+  const firstItem = (info.page - 1) * info.pageSize + 1;
+  const lastItem = Math.min(info.page * info.pageSize, info.total);
+  return (
+    <nav aria-label="صفحه‌بندی جدول" className="admin-pagination">
+      <span>نمایش {firstItem.toLocaleString('fa-IR')} تا {lastItem.toLocaleString('fa-IR')} از {info.total.toLocaleString('fa-IR')}</span>
+      <div>
+        <button aria-label="صفحه قبلی" disabled={working || info.page <= 1} onClick={() => void onPageChange(info.page - 1)} title="صفحه قبلی" type="button"><ChevronRight aria-hidden="true" /></button>
+        <strong>صفحه {info.page.toLocaleString('fa-IR')} از {totalPages.toLocaleString('fa-IR')}</strong>
+        <button aria-label="صفحه بعدی" disabled={working || info.page >= totalPages} onClick={() => void onPageChange(info.page + 1)} title="صفحه بعدی" type="button"><ChevronLeft aria-hidden="true" /></button>
+      </div>
+    </nav>
+  );
+}
+
 function Empty({ text = 'موردی برای نمایش وجود ندارد.' }: { text?: string }) { return <p className="admin-empty">{text}</p>; }
