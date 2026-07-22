@@ -23,6 +23,7 @@ import type {
   Ticket,
 } from '@nazr-emam/shared';
 import {
+  ApiRequestError,
   addAdminCrmActivity,
   closeTicket,
   createAdminEitaaReceipt,
@@ -197,6 +198,10 @@ export function AdminPanel() {
       setGallery(galleryData);
       setCallTasks(callsData);
     } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.statusCode === 401) {
+        router.replace('/auth/login?redirect=%2Fadmin');
+        return;
+      }
       setError(cause instanceof Error ? cause.message : 'دریافت اطلاعات پنل انجام نشد');
     } finally {
       setLoading(false);
