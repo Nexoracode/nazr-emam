@@ -1,129 +1,49 @@
-import type { GalleryAsset } from '@nazr-emam/shared';
+import type { GalleryAsset, PublicHomeWhyIcon } from '@nazr-emam/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { getPublicGalleryAssets } from '../../lib/public-gallery';
-import {
-  getPublicNazrTypes,
-  planLandingContent,
-} from '../../lib/public-nazr-types';
+import { getPublicHomeData } from '../../lib/public-home';
+import { planLandingContent } from '../../lib/public-nazr-types';
 
 /* ── محتوای واقعی صفحه اصلی (برگرفته از سند طرح نذر امام) ── */
 
-const percents = ['۱٪', '۳٪', '۵٪'];
-
-const heroLead =
-  'در نذر امام، درصدی از درآمدت را به مسیرهای فرهنگیِ مشخص می‌سپاری؛ از انتخاب طرح تا پرداخت، کد رهگیری و گزارشِ اجرا، همه‌چیز شفاف و قابل پیگیری است.';
-
-const whyCards: { title: string; text: string; icon: ReactNode; featured?: boolean }[] = [
-  {
-    title: 'شفاف و قابل پیگیری',
-    text: 'هر نذر کد رهگیری دارد و گزارش اجرای آن در دسترس مشارکت‌کننده قرار می‌گیرد.',
-    icon: (
+const whyIcons: Record<PublicHomeWhyIcon, ReactNode> = {
+  shield: (
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
         <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-    ),
-  },
-  {
-    title: 'انتخاب مسیر با خودت',
-    text: 'پنج طرح مشخص به‌همراه باکس آزاد؛ مبلغ و مقصدِ نذر با انتخاب توست.',
-    featured: true,
-    icon: (
+  ),
+  compass: (
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
         <path d="M15.5 8.5l-2 5-5 2 2-5 5-2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       </svg>
-    ),
-  },
-  {
-    title: 'اثری ماندگار و معنوی',
-    text: 'مشارکت در باقیات‌الصالحات؛ سرمایه‌گذاری روی ذهن و نسلِ آینده.',
-    icon: (
+  ),
+  legacy: (
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 21c-1-6-4-7-4-11a4 4 0 018 0c0 4-3 5-4 11z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
         <path d="M12 21v-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
-    ),
-  },
-  {
-    title: 'پرداخت آسان و منظم',
-    text: 'درگاه، کارت‌به‌کارت و کیف پول برای مشارکتِ ماهانه و بدون دردسر.',
-    icon: (
+  ),
+  wallet: (
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <rect x="3" y="6" width="18" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
         <path d="M3 10h18M7 15h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
-    ),
-  },
-  {
-    title: 'همراهی و پشتیبانی',
-    text: 'تیم پاسخگویی و پیگیری کنارِ توست تا مسیر نذر همیشه روشن بماند.',
-    icon: (
+  ),
+  support: (
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M5 12a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         <rect x="3.5" y="12" width="3.5" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
         <rect x="17" y="12" width="3.5" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
       </svg>
-    ),
-  },
-  {
-    title: 'باشگاه مشارکت‌کنندگان',
-    text: 'با تداومِ مشارکت، امتیاز و ماموریت‌های ویژه برایت فعال می‌شود.',
-    icon: (
+  ),
+  club: (
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 4l2.2 4.5 5 .7-3.6 3.5.9 5L12 19l-4.4 2.4.9-5L4.8 9.2l5-.7L12 4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       </svg>
-    ),
-  },
-];
-
-const stats = [
-  { value: '۹۰٬۰۰۰+', label: 'مخاطب مستقیم' },
-  { value: '۷', label: 'کشور فعال' },
-  { value: '۳۰۰٬۰۰۰+', label: 'مخاطب غیرمستقیم' },
-  { value: '۴۷٬۰۰۰', label: 'جلد کتاب توزیع‌شده' },
-  { value: '۳۲', label: 'استان با کارگزار فرهنگی' },
-  { value: '۲٬۰۰۰+', label: 'معلمِ همراه' },
-];
-
-const faqItems = [
-  {
-    question: 'نذر امام دقیقاً چیست؟',
-    answer:
-      'نذر امام یعنی اختصاصِ درصدی از درآمدت (۱، ۳ یا ۵٪) به مسیرهای فرهنگیِ مشخص، به‌نیتِ سربازیِ امام زمان (عج). این مبلغ در طرحی که خودت انتخاب می‌کنی هزینه و گزارش می‌شود.',
-  },
-  {
-    question: 'پولِ من دقیقاً خرجِ چه می‌شود؟',
-    answer:
-      'هر طرح مسیرِ مصرفِ روشنی دارد؛ از نشرِ کلام امیرالمؤمنین در کشورهای دیگر تا چاپ و گردشِ کتاب میان نوجوانانِ مناطق محروم. گزارشِ اجرای هر طرح در دسترس قرار می‌گیرد.',
-  },
-  {
-    question: 'بعد از پرداخت چطور پیگیری کنم؟',
-    answer:
-      'پس از پرداختِ موفق، کد رهگیری دریافت می‌کنی و از پنل کاربری، وضعیتِ نذر و ریزِ واریزهایت را می‌بینی.',
-  },
-  {
-    question: 'می‌توانم به‌صورت ماهانه مشارکت کنم؟',
-    answer:
-      'بله؛ با کیف پول یک‌بار شارژ می‌کنی و مبلغِ نذر هر ماه به‌صورت منظم کسر می‌شود تا نیازی به پرداختِ دستیِ هر ماه نباشد.',
-  },
-  {
-    question: 'اگر هزینه‌ی یک طرح تکمیل شود چه می‌شود؟',
-    answer:
-      'طرحِ تکمیل‌شده از حالتِ مشارکت خارج (خاموش) می‌شود و طرح‌های فعالِ دیگر برای انتخاب نمایش داده می‌شوند.',
-  },
-  {
-    question: 'اگر نخواهم مسیرِ مشخصی انتخاب کنم؟',
-    answer:
-      'باکس آزاد دقیقاً برای همین است؛ مبلغ را می‌سپاری و تیم، آن را در اولویت‌دارترین مسیرهای فرهنگی هزینه می‌کند.',
-  },
-];
-
-function getPlanProgress(index: number): number {
-  const progress = [68, 46, 82, 0, 57];
-  return progress[index % progress.length];
-}
+  ),
+};
 
 function planVisualClass(slug: string): string {
   return `visual-${slug.replace(/[^a-z0-9-]/gi, '') || 'default'}`;
@@ -200,23 +120,11 @@ function GalleryImage({ asset, index }: { asset: GalleryAsset | null; index: num
 }
 
 export default async function Home() {
-  const [nazrTypes, introAssets, galleryAssets] = await Promise.all([
-    getPublicNazrTypes(),
-    getPublicGalleryAssets('intro'),
-    getPublicGalleryAssets('gallery'),
-  ]);
-  const activePlans = nazrTypes.filter((t) => t.isActive).length;
-  const videos = galleryAssets.filter(
-    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
-  );
-  const images = galleryAssets.filter((asset) => asset.type === 'image').slice(0, 4);
-  const heroVideo = introAssets.find(
-    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
-  ) ?? null;
-  const galleryVideo = videos[0] ?? null;
+  const homeData = await getPublicHomeData();
+  const { hero, plans, whyCards, stats, faqs, media, activePlans } = homeData;
   const galleryImageSlots = Array.from(
     { length: 4 },
-    (_, index) => images[index] ?? null,
+    (_, index) => media.galleryImages[index] ?? null,
   );
 
   return (
@@ -228,19 +136,22 @@ export default async function Home() {
           <div className="home-hero-content">
             <span className="home-eyebrow">
               <span className="home-eyebrow-dot" aria-hidden="true" />
-              سامانه‌ی شفافِ ثبت و پیگیریِ نذر
+              {hero.eyebrow}
             </span>
             <h1>
-              نذرِ امام؛
-              <br />
-              مسیرِ روشن برای نیت‌های ماندگار
+              {hero.titleLines.map((line, index) => (
+                <span key={line}>
+                  {line}
+                  {index < hero.titleLines.length - 1 ? <br /> : null}
+                </span>
+              ))}
             </h1>
-            <p>{heroLead}</p>
+            <p>{hero.lead}</p>
 
             <div className="home-percent-row" aria-label="درصد پیشنهادی نذر از درآمد">
               <span className="home-percent-label">درصدی از درآمدت را نذر کن:</span>
               <span className="home-percent-chips">
-                {percents.map((p) => (
+                {hero.percentOptions.map((p) => (
                   <span className="home-percent-chip" key={p}>
                     {p}
                   </span>
@@ -263,7 +174,7 @@ export default async function Home() {
           </div>
 
           <HomeVideo
-            asset={heroVideo}
+            asset={media.introVideo}
             className="home-video-card"
             emptyTitle="ویدئوی معرفی نذر امام"
             emptyDescription="کلیپ توضیح کلی ایده از بخش مدیریت رسانه‌ها ثبت می‌شود."
@@ -286,7 +197,7 @@ export default async function Home() {
                 key={card.title}
               >
                 <span className="home-feature-icon" aria-hidden="true">
-                  {card.icon}
+                  {whyIcons[card.icon]}
                 </span>
                 <h3>{card.title}</h3>
                 <p>{card.text}</p>
@@ -329,7 +240,7 @@ export default async function Home() {
 
           <div className="home-gallery-media-layout">
             <HomeVideo
-              asset={galleryVideo}
+              asset={media.galleryVideo}
               className="home-gallery-main"
               emptyTitle="ویدئوی گزارش اجرای طرح‌ها"
               emptyDescription="ویدئوهای اجرای طرح‌ها از بخش گالری مدیریت ثبت می‌شوند."
@@ -356,9 +267,9 @@ export default async function Home() {
           </div>
 
           <div className="home-plan-grid">
-            {nazrTypes.map((type, index) => {
+            {plans.map((type) => {
               const isActive = type.isActive;
-              const progress = getPlanProgress(index);
+              const progress = type.progressPercent;
               const meta = planLandingContent[type.slug];
               const accent = meta?.accent ?? 'green';
 
@@ -407,7 +318,7 @@ export default async function Home() {
           </div>
 
           <div className="home-faq-list">
-            {faqItems.map((item, i) => (
+            {faqs.map((item, i) => (
               <details className="home-faq-item" key={item.question} open={i === 0}>
                 <summary>
                   <span>{item.question}</span>

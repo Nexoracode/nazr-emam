@@ -292,6 +292,73 @@ type UpdateNazrTypeRequest = Partial<CreateNazrTypeRequest>;
 - `intro` فقط برای ویدیوی معرفی کلی نذر امام در بالای صفحه اصلی است؛ `gallery` برای تصاویر و ویدیوهای گزارش اجرا استفاده می‌شود.
 - برای رسانه با `type: "video"` مقدار `thumbnailUrl` هنگام ثبت در مدیریت الزامی است.
 
+### `GET /public/home`
+
+داده‌های عمومی صفحه اصلی. فرانت صفحه اصلی باید برای آمار، طرح‌ها، FAQ، مزیت‌ها و رسانه‌ها از این endpoint استفاده کند و مقدارهای نمایشی را داخل صفحه hardcode نکند.
+
+- **Auth:** عمومی
+- **پاسخ:** `200 PublicHomeData`
+- آمار اثرگذاری از داده‌های واقعی سامانه محاسبه می‌شود.
+- وضعیت فعال/خاموش طرح‌ها از `NazrType.isActive` می‌آید.
+- `progressPercent` هر طرح از نسبت نذرهای تاییدشده/در حال اجرا/تکمیل‌شده به کل نذرهای همان طرح محاسبه می‌شود.
+
+```ts
+type PublicHomeWhyIcon =
+  | "shield"
+  | "compass"
+  | "legacy"
+  | "wallet"
+  | "support"
+  | "club";
+
+interface PublicHomeHero {
+  eyebrow: string;
+  titleLines: string[];
+  lead: string;
+  percentOptions: string[];
+}
+
+interface PublicHomeWhyCard {
+  title: string;
+  text: string;
+  icon: PublicHomeWhyIcon;
+  featured?: boolean;
+}
+
+interface PublicHomeStat {
+  value: string;
+  label: string;
+}
+
+interface PublicHomeFaqItem {
+  question: string;
+  answer: string;
+}
+
+interface PublicHomePlan extends NazrType {
+  requestCount: number;
+  paidAmount: Money;
+  progressPercent: number;
+}
+
+interface PublicHomeMedia {
+  introVideo: GalleryAsset | null;
+  galleryVideo: GalleryAsset | null;
+  galleryImages: GalleryAsset[];
+}
+
+interface PublicHomeData {
+  hero: PublicHomeHero;
+  whyCards: PublicHomeWhyCard[];
+  stats: PublicHomeStat[];
+  faqs: PublicHomeFaqItem[];
+  plans: PublicHomePlan[];
+  media: PublicHomeMedia;
+  activePlans: number;
+  updatedAt: ISODate;
+}
+```
+
 ---
 
 # بخش ۴ — درخواست نذر

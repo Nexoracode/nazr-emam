@@ -17,6 +17,7 @@ import { NazrTypesModule } from './modules/nazr-types/nazr-types.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { PublicHomeModule } from './modules/public-home/public-home.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
@@ -37,6 +38,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
     NazrRequestsModule,
     PaymentsModule,
     ProfileModule,
+    PublicHomeModule,
     TicketsModule,
     NotificationsModule,
   ],
