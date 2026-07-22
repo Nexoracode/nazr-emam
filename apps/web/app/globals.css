@@ -5288,8 +5288,9 @@ input {
 .admin-plan-form-grid input:focus, .admin-plan-form-grid textarea:focus { border-color: var(--admin-primary); outline: 2px solid rgb(23 107 85 / 12%); outline-offset: 1px; }
 .admin-plan-description-field { grid-column: 1 / -1; }
 .admin-plan-description-field textarea { line-height: 1.9; min-height: 96px; resize: vertical; }
-.admin-plan-amount-field > div { align-items: center; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) auto; }
-.admin-plan-amount-field b { background: var(--admin-primary-soft); border-radius: 5px; color: var(--admin-primary-dark); font-size: 9px; padding: 8px 10px; }
+.admin-plan-amount-field > div { position: relative; }
+.admin-plan-amount-field input { padding-inline-start: 68px; }
+.admin-plan-amount-field b { border-inline-start: 1px solid var(--admin-border); color: var(--admin-primary-dark); font-size: 9px; font-weight: 700; inset-inline-end: 10px; line-height: 18px; padding-inline-start: 9px; pointer-events: none; position: absolute; top: 50%; transform: translateY(-50%); }
 .admin-plan-amount-field small { color: var(--admin-primary-dark); font-size: 8px; min-height: 14px; }
 .admin-plan-form-actions { align-items: center; border-top: 1px solid var(--admin-border); display: flex; gap: 8px; justify-content: flex-end; padding-top: 14px; }
 .admin-card-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
