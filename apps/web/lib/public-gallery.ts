@@ -1,6 +1,11 @@
 import type { GalleryAsset, GalleryAssetPlacement } from '@nazr-emam/shared';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// این ماژول سمت‌سرور اجرا می‌شود؛ در production آدرسِ داخلیِ کانتینر را ترجیح می‌دهد
+// (چون NEXT_PUBLIC_API_URL آنجا نسبیِ «/api» است و برای fetch سمت‌سرور کار نمی‌کند).
+const apiUrl =
+  process.env.INTERNAL_API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  'http://localhost:3001';
 
 export async function getPublicGalleryAssets(
   placement: GalleryAssetPlacement,
