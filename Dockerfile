@@ -25,11 +25,15 @@ WORKDIR /app
 ENV NODE_ENV=production
 # پیش‌فرضِ آدرسِ داخلی برای fetchهای سمت‌سرور در زمان اجرا (CapRover می‌تواند override کند).
 ENV INTERNAL_API_URL=http://localhost:3001
+# dns.lookup روی libuv threadpool اجرا می‌شود؛ فضای بیشتر تا کنارِ bcrypt/crypto صف نبندد.
+ENV UV_THREADPOOL_SIZE=64
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 COPY --from=builder /app/turbo.json ./turbo.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps ./apps
 COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 EXPOSE 3000 3001
-CMD ["npm", "run", "start"]
+CMD ["sh", "./docker-entrypoint.sh"]
