@@ -1,11 +1,17 @@
-import type { GalleryAsset } from '@nazr-emam/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { getPublicGalleryAssets } from '../../lib/public-gallery';
 import {
   getPublicNazrTypes,
   planLandingContent,
 } from '../../lib/public-nazr-types';
+
+/* ۴ تصویر سکشن گالریِ صفحه اصلی: دو تا از هر طرح. */
+const homeGalleryImages = [
+  { src: '/plans/nazr-royesh/1.jpg', title: 'نذر رویش' },
+  { src: '/plans/nazr-royesh/2.jpg', title: 'نذر رویش' },
+  { src: '/plans/niaz-rooz/1.jpg', title: 'نیاز روز' },
+  { src: '/plans/niaz-rooz/2.jpg', title: 'نیاز روز' },
+];
 
 /* ── محتوای واقعی صفحه اصلی (برگرفته از سند طرح نذر امام) ── */
 
@@ -119,89 +125,9 @@ function planVisualClass(slug: string): string {
 
 const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(n);
 
-const VIDEO_MIME_BY_EXT: Record<string, string> = {
-  mp4: 'video/mp4',
-  m4v: 'video/mp4',
-  webm: 'video/webm',
-  mov: 'video/quicktime',
-};
-
-function videoMimeType(url: string): string | undefined {
-  const ext = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase();
-  return ext ? VIDEO_MIME_BY_EXT[ext] : undefined;
-}
-
-function HomeVideo({
-  asset,
-  className,
-  emptyTitle,
-  emptyDescription,
-}: {
-  asset: GalleryAsset | null;
-  className: string;
-  emptyTitle: string;
-  emptyDescription: string;
-}) {
-  // پخش‌پذیری به fileUrl وابسته است نه به تصویر بندانگشتی؛ ویدئوی بدون poster هم باید پخش شود.
-  if (!asset?.fileUrl) {
-    return (
-      <div className={`${className} home-media-empty`}>
-        <span className="home-media-empty-icon" aria-hidden="true" />
-        <strong>{emptyTitle}</strong>
-        <small>{emptyDescription}</small>
-      </div>
-    );
-  }
-
-  return (
-    <figure className={`${className} has-media`}>
-      <video
-        className="home-video-player"
-        controls
-        playsInline
-        poster={asset.thumbnailUrl ?? undefined}
-        preload="metadata"
-      >
-        <source src={asset.fileUrl} type={videoMimeType(asset.fileUrl)} />
-        مرورگر شما امکان پخش این ویدئو را ندارد.
-      </video>
-    </figure>
-  );
-}
-
-function GalleryImage({ asset, index }: { asset: GalleryAsset | null; index: number }) {
-  if (!asset) {
-    return (
-      <div className="home-gallery-item is-empty">
-        <span>جای تصویر {faNumber(index + 1)}</span>
-        <small>تصویر را از مدیریت گالری اضافه کنید.</small>
-      </div>
-    );
-  }
-
-  return (
-    <figure className="home-gallery-item">
-      <img alt={asset.title} loading="lazy" src={asset.fileUrl} />
-      <figcaption>{asset.title}</figcaption>
-    </figure>
-  );
-}
-
 export default async function Home() {
-  const [nazrTypes, galleryAssets] = await Promise.all([
-    getPublicNazrTypes(),
-    getPublicGalleryAssets('gallery'),
-  ]);
+  const nazrTypes = await getPublicNazrTypes();
   const activePlans = nazrTypes.filter((t) => t.isActive).length;
-  const videos = galleryAssets.filter(
-    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
-  );
-  const images = galleryAssets.filter((asset) => asset.type === 'image').slice(0, 4);
-  const galleryVideo = videos[0] ?? null;
-  const galleryImageSlots = Array.from(
-    { length: 4 },
-    (_, index) => images[index] ?? null,
-  );
 
   return (
     <main className="home-page">
@@ -296,7 +222,7 @@ export default async function Home() {
       <section className="home-section home-section-light" id="gallery">
         <div className="home-container home-gallery-grid">
           <div className="home-section-heading home-gallery-heading">
-            <span className="home-eyebrow">گالری و ویدئو</span>
+            <span className="home-eyebrow">گالری</span>
             <h2>تا امروز چه کردیم؟</h2>
             <p>روایتِ تصویری از اجرای طرح‌ها؛ تا مسیرِ مشارکت از ثبت تا اجرا برایت لمس‌پذیر باشد.</p>
             <Link className="home-inline-link" href="/profile">
@@ -304,18 +230,14 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="home-gallery-media-layout">
-            <HomeVideo
-              asset={galleryVideo}
-              className="home-gallery-main"
-              emptyTitle="ویدئوی گزارش اجرای طرح‌ها"
-              emptyDescription="ویدئوهای اجرای طرح‌ها از بخش گالری مدیریت ثبت می‌شوند."
-            />
-            <div className="home-gallery-list" aria-label="تصاویر گالری">
-              {galleryImageSlots.map((asset, index) => (
-                <GalleryImage asset={asset} index={index} key={asset?.id ?? index} />
-              ))}
-            </div>
+          <div className="home-gallery-list" aria-label="تصاویر گالری">
+            {homeGalleryImages.map((img) => (
+              <figure className="home-gallery-item" key={img.src}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.src} alt={img.title} loading="lazy" />
+                <figcaption>{img.title}</figcaption>
+              </figure>
+            ))}
           </div>
         </div>
       </section>
