@@ -2346,13 +2346,13 @@ input {
   width: 44px;
 }
 
-.home-plan-cover.visual-circulating-waqf .home-plan-illustration {
+.home-plan-cover.visual-nazr-royesh .home-plan-illustration {
   border-radius: 8px;
   height: 70px;
   width: 86px;
 }
 
-.home-plan-cover.visual-circulating-waqf .home-plan-illustration::before {
+.home-plan-cover.visual-nazr-royesh .home-plan-illustration::before {
   border-radius: 6px;
   height: 52px;
   inset-block-start: 8px;
@@ -2360,18 +2360,12 @@ input {
   width: 60px;
 }
 
-.home-plan-cover.visual-nahj-lesson .home-plan-illustration::after {
-  transform: rotate(22deg);
-}
-
-.home-plan-cover.visual-free-box .home-plan-illustration {
+.home-plan-cover.visual-niaz-rooz .home-plan-illustration {
   border-radius: 9px;
 }
 
-.home-plan-cover.visual-support-team .home-plan-illustration::before {
-  height: 20px;
-  inset-block-start: 24px;
-  width: 48px;
+.home-plan-cover.visual-niaz-rooz .home-plan-illustration::after {
+  transform: rotate(22deg);
 }
 
 .home-plan-cover-label {
@@ -2532,6 +2526,11 @@ input {
 @media (max-width: 900px) {
   .home-hero-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* در موبایل اول ویدئو، بعد متن‌ها (طبق سند طرح). */
+  .home-hero-grid .home-video-card {
+    order: -1;
   }
 
   .home-gallery-media-layout {
