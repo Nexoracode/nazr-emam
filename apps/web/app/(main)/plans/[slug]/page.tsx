@@ -91,7 +91,7 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
         </div>
       </section>
 
-      {content.clipVideoUrl ? (
+      {content.clipVideoUrl && !content.clipPoints ? (
         <section className="plan-section plan-clip-section">
           <div className="home-container">
             <div className="plan-section-heading plan-section-heading-center">
@@ -176,6 +176,17 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
               <h2>{content.clipTitle}</h2>
               {content.clipDescription ? <p>{content.clipDescription}</p> : null}
             </div>
+            {content.clipVideoUrl ? (
+              <div className="plan-clip-frame">
+                <iframe
+                  src={content.clipVideoUrl}
+                  title={content.clipTitle ?? `ویدئوی معرفی ${plan.title}`}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            ) : null}
             <div className="plan-brief-card">
               {content.clipPoints.map((point) => (
                 <div key={point}>
