@@ -12,6 +12,7 @@ export type PlanAccent = 'green' | 'gold' | 'teal' | 'plum' | 'sand';
 export interface PlanLandingContent {
   accent: PlanAccent;
   tagline: string;
+  coverImage?: string;
   introduction: string;
   impactTitle: string;
   impactDescription: string;
@@ -41,6 +42,7 @@ export interface PlanLandingContent {
 export const planLandingContent: Record<string, PlanLandingContent> = {
   international: {
     accent: 'green',
+    coverImage: '/plans/international/cover.jpg',
     tagline: 'رسالت همه ما درجهان تشنه حقیقت، بیداری کشورها با کلام امیرالمومنین است.',
     introduction:
       'این هدف یک حرکت راهبردی برای بیداری امت‌ها و خروج جهان از سردرگمی‌های امروزی است. رسالت این است که هر فرد با هر توانی، نقش خود را در گسترش فرهنگ سربازی امام زمان (عج) ایفا کند. مشارکت شما، مسیر صدور کلام خدا و پیام نهج‌البلاغه را هموارتر کرده و زمینه‌ساز حرکتی جهانی برای آماده‌سازی ظهور خواهد بود.',
@@ -105,6 +107,7 @@ export const planLandingContent: Record<string, PlanLandingContent> = {
   },
   'nazr-royesh': {
     accent: 'gold',
+    coverImage: '/plans/nazr-royesh/cover.jpg',
     tagline:
       'سفیر نهج‌البلاغه‌ایم برای رویش آگاهی جامعه با پندهای امیرالمؤمنین در قالب‌های متنوع.',
     clipTitle: 'کلیپ معرفی نذر رویش',
@@ -167,7 +170,10 @@ export const planLandingContent: Record<string, PlanLandingContent> = {
   },
   'niaz-rooz': {
     accent: 'sand',
+    coverImage: '/plans/niaz-rooz/cover.jpg',
     tagline: 'من برام یاری امام زمان مهمه، هر کاری که رو زمین مونده.',
+    clipTitle: 'کلیپ معرفی نیاز روز',
+    clipVideoUrl: 'https://www.aparat.com/video/video/embed/videohash/qyvjjoq/vt/frame',
     introduction:
       'انتخاب اینکه پول من کجا هزینه بشه، به انتخاب شماست. یک‌وقت‌هایی نیاز است برای کودکان محروم وسایل آموزشی تهیه شود، یا تولید قالب‌های متنوع نهج‌البلاغه با رویکرد مهدویت، گاهی زیرساخت فرهنگیِ یک جریان کشوری در استان‌ها، یا یک عملیات مجازی وسیع و یا هر اتفاق مهمی که در کشور رخ می‌دهد. اولویت‌بندی این قسمت را به سید کاظم روح‌بخش می‌سپاریم.',
     impactTitle: 'چرا در این بخش مشارکت کنم؟',

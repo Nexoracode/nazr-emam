@@ -268,8 +268,16 @@ export default async function Home() {
                   href={`/plans/${encodeURIComponent(type.slug)}`}
                   key={type.id}
                 >
-                  <div className={`home-plan-cover ${planVisualClass(type.slug)}`} aria-hidden="true">
-                    <span className="home-plan-illustration" />
+                  <div
+                    className={`home-plan-cover ${planVisualClass(type.slug)}${meta?.coverImage ? ' has-cover' : ''}`}
+                    aria-hidden="true"
+                  >
+                    {meta?.coverImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="home-plan-cover-img" src={meta.coverImage} alt="" loading="lazy" />
+                    ) : (
+                      <span className="home-plan-illustration" />
+                    )}
                     <span className="home-plan-cover-label">{type.title}</span>
                     <span className="home-plan-badge">{isActive ? 'فعال' : 'تکمیل شد'}</span>
                   </div>
