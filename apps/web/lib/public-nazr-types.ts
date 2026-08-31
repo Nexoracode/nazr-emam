@@ -25,6 +25,7 @@ export interface PlanLandingContent {
   urgencyTitle?: string;
   urgencyDescription?: string;
   galleryTitle?: string;
+  galleryImages?: string[];
   faqs?: Array<{
     question: string;
     answer: string;
@@ -130,6 +131,13 @@ export const planLandingContent: Record<string, PlanLandingContent> = {
     urgencyDescription:
       'در هیاهوی این روزگار، غریبانه‌ترین و محروم‌ترین مسافرانِ جامعه‌ی ما، نوجوانان‌اند؛ همان جان‌های تشنه‌ای که در سایه‌ی غفلتِ مسئولان فرهنگی، در سکوتی سنگین رها شده‌اند. ما هنوز نتوانسته‌ایم زلالِ مفاهیم قرآن و حکمتِ نهج‌البلاغه را با زبانِ خودِ نوجوان به کامِ جانش بچشانیم. در این انفعال، خطری بزرگ در راه است؛ چراکه امیرالمؤمنین (ع) می‌فرماید: «قلب نوجوان را دریابید، پیش از آنکه دشمن او را برُباید.» ما باید امروز نوجوان را بسازیم تا فردا، آجر به آجرِ آینده‌ی این کشور و جهان با دست‌های او بنا شود؛ به‌ویژه رونق‌گرفتنِ خیمه‌ی ظهور و تربیتِ سربازانِ حقیقیِ امام زمان (عج)، تنها از مسیرِ تسخیرِ قلبِ همین نوجوانان می‌گذرد. اگر امروز این فرصت را از دست بدهیم، فردا نظاره‌گرِ ویرانیِ گریزناپذیرِ جامعه خواهیم بود.',
     galleryTitle: 'تا الان چیکار کردیم؟',
+    galleryImages: [
+      '/plans/nazr-royesh/1.jpg',
+      '/plans/nazr-royesh/2.jpg',
+      '/plans/nazr-royesh/3.jpg',
+      '/plans/nazr-royesh/4.jpg',
+      '/plans/nazr-royesh/5.jpg',
+    ],
     faqs: [
       {
         question: 'تا الان چه کار کردیم؟',
@@ -179,6 +187,16 @@ export const planLandingContent: Record<string, PlanLandingContent> = {
       },
     ],
     galleryTitle: 'تا الان چیکار کردیم؟',
+    galleryImages: [
+      '/plans/niaz-rooz/1.jpg',
+      '/plans/niaz-rooz/2.jpg',
+      '/plans/niaz-rooz/3.jpg',
+      '/plans/niaz-rooz/4.jpg',
+      '/plans/niaz-rooz/5.jpg',
+      '/plans/niaz-rooz/6.jpg',
+      '/plans/niaz-rooz/7.jpg',
+      '/plans/niaz-rooz/8.jpg',
+    ],
     faqs: [
       {
         question: 'چرا هرکدام از بخش‌های موردنیاز جعبه‌ی جدا برای مشارکت نشد؟',

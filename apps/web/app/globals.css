@@ -5417,3 +5417,27 @@ input {
 @media (max-width: 900px) {
   .home-video-embed { aspect-ratio: 16 / 9; }
 }
+
+/* ── گالریِ تصاویرِ صفحه‌ی طرح (masonry) ── */
+.plan-gallery-grid {
+  columns: 3 240px;
+  column-gap: 16px;
+  margin-top: 30px;
+}
+.plan-gallery-item {
+  margin: 0 0 16px;
+  break-inside: avoid;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--h-border, rgb(13 105 82 / 12%));
+  box-shadow: 0 1px 2px rgb(5 71 56 / 6%);
+  background: var(--h-surface, #fffdf6);
+}
+.plan-gallery-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+@media (max-width: 640px) {
+  .plan-gallery-grid { columns: 2 150px; column-gap: 12px; }
+}

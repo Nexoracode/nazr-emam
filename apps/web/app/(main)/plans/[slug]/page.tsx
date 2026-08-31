@@ -173,8 +173,24 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
             <div className="plan-section-heading plan-section-heading-center">
               <span className="home-eyebrow">گالری</span>
               <h2>{content.galleryTitle}</h2>
-              <p>گزارش‌های تصویری و ویدیویی اجرای همین طرح از بخش گالری مدیریت قابل تکمیل است.</p>
+              {!content.galleryImages?.length ? (
+                <p>گزارش‌های تصویری و ویدیویی اجرای همین طرح از بخش گالری مدیریت قابل تکمیل است.</p>
+              ) : null}
             </div>
+            {content.galleryImages?.length ? (
+              <div className="plan-gallery-grid">
+                {content.galleryImages.map((src, index) => (
+                  <figure className="plan-gallery-item" key={src}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={`${plan.title} — تصویر ${new Intl.NumberFormat('fa-IR').format(index + 1)}`}
+                      loading="lazy"
+                    />
+                  </figure>
+                ))}
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
