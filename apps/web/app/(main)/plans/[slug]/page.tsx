@@ -84,7 +84,7 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
               </div>
               <div>
                 <span>روش مشارکت</span>
-                <strong>پرداخت آنلاین یا ارسال رسید</strong>
+                <strong>پرداخت آنلاین امن</strong>
               </div>
             </div>
           </div>
@@ -147,7 +147,7 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
             <div>
               <span>۲</span>
               <strong>تکمیل پرداخت</strong>
-              <p>پرداخت را آنلاین انجام می‌دهی یا رسید را در ایتا می‌فرستی.</p>
+              <p>پرداخت را آنلاین و امن از درگاه زرین‌پال انجام می‌دهی.</p>
             </div>
             <div>
               <span>۳</span>

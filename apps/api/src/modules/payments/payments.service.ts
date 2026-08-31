@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -37,6 +38,8 @@ interface ZarinpalVerifyResponse {
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(NazrRequestEntity)
@@ -99,6 +102,11 @@ export class PaymentsService {
 
     const authority = response.data?.authority;
     if (response.data?.code !== 100 || !authority) {
+      this.logger.error(
+        `❌ ZarinPal request rejected — code: ${response.data?.code ?? 'null'}, message: ${
+          response.data?.message ?? ''
+        }, errors: ${JSON.stringify(response.errors ?? null)}`,
+      );
       await this.rejectPaymentAndCancelRequest(payment);
       throw new BadRequestException({
         statusCode: 400,
@@ -318,39 +326,71 @@ export class PaymentsService {
     }
   }
 
+  private async zarinpalFetch<T>(url: string, body: unknown): Promise<T> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      const text = await response.text();
+      try {
+        return JSON.parse(text) as T;
+      } catch {
+        this.logger.error(
+          `❌ ZarinPal returned non-JSON (${response.status}) from ${url}: ${text.slice(0, 300)}`,
+        );
+        throw new BadRequestException({
+          statusCode: 400,
+          code: 'ZARINPAL_REQUEST_FAILED',
+          message: 'شروع پرداخت آنلاین انجام نشد. لطفاً دوباره تلاش کنید',
+        });
+      }
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException) throw error;
+      const reason =
+        error instanceof Error && error.name === 'AbortError'
+          ? 'timeout (۱۵s) — احتمال مشکل DNS/شبکه به درگاه'
+          : error instanceof Error
+            ? error.message
+            : String(error);
+      this.logger.error(`❌ ZarinPal network error on ${url}: ${reason}`);
+      throw new BadRequestException({
+        statusCode: 400,
+        code: 'ZARINPAL_REQUEST_FAILED',
+        message: 'شروع پرداخت آنلاین انجام نشد. لطفاً دوباره تلاش کنید',
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   private async requestZarinpalAuthority(input: {
     amount: number;
     callbackUrl: string;
     description: string;
     mobile: string;
   }) {
-    const response = await fetch(this.zarinpalRequestUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        merchant_id: this.merchantId,
-        amount: input.amount,
-        callback_url: input.callbackUrl,
-        description: input.description,
-        metadata: { mobile: input.mobile },
-      }),
+    return this.zarinpalFetch<ZarinpalRequestResponse>(this.zarinpalRequestUrl, {
+      merchant_id: this.merchantId,
+      amount: input.amount,
+      callback_url: input.callbackUrl,
+      description: input.description,
+      metadata: { mobile: input.mobile },
     });
-
-    return (await response.json()) as ZarinpalRequestResponse;
   }
 
   private async verifyZarinpalPayment(authority: string, amount: number) {
-    const response = await fetch(this.zarinpalVerifyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        merchant_id: this.merchantId,
-        amount,
-        authority,
-      }),
+    return this.zarinpalFetch<ZarinpalVerifyResponse>(this.zarinpalVerifyUrl, {
+      merchant_id: this.merchantId,
+      amount,
+      authority,
     });
-
-    return (await response.json()) as ZarinpalVerifyResponse;
   }
 
   private toRial(amount: Money) {

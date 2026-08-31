@@ -36,7 +36,6 @@ const selectCls = (err: boolean) =>
   `${fieldCls(err)} appearance-none pl-9`;
 
 export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?: string }) {
-  const eitaaReceiptUrl = process.env.NEXT_PUBLIC_EITAA_RECEIPT_URL ?? 'https://eitaa.com/nazr_emam';
   const requestedNazrTypeId = initialNazrTypeId;
   const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
@@ -360,26 +359,16 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
           ) : (
             <div className="grid gap-3 rounded-lg border border-auth-card-border bg-auth-link-surface px-3 py-3">
               <p className="m-0 text-[11px] leading-6 text-auth-muted">
-                پرداخت را با یکی از روش‌های زیر ادامه دهید.
+                برای تکمیل نذر، پرداخت آنلاین را انجام دهید.
               </p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <a
-                  className="flex h-10 items-center justify-center rounded-lg border border-auth-link-border bg-auth-card text-[12px] font-bold text-auth-link transition hover:border-auth-link hover:text-auth-text"
-                  href={eitaaReceiptUrl}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  ارسال رسید در ایتا
-                </a>
-                <button
-                  className="h-10 cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
-                  disabled={isStartingPayment}
-                  onClick={handleOnlinePayment}
-                  type="button"
-                >
-                  {isStartingPayment ? 'در حال اتصال...' : 'پرداخت آنلاین زرین‌پال'}
-                </button>
-              </div>
+              <button
+                className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
+                disabled={isStartingPayment}
+                onClick={handleOnlinePayment}
+                type="button"
+              >
+                {isStartingPayment ? 'در حال اتصال...' : 'پرداخت آنلاین زرین‌پال'}
+              </button>
             </div>
           )}
         </form>
