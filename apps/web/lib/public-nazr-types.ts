@@ -22,6 +22,7 @@ export interface PlanLandingContent {
   clipTitle?: string;
   clipDescription?: string;
   clipPoints?: string[];
+  clipVideoUrl?: string;
   urgencyTitle?: string;
   urgencyDescription?: string;
   galleryTitle?: string;
@@ -105,6 +106,8 @@ export const planLandingContent: Record<string, PlanLandingContent> = {
     accent: 'gold',
     tagline:
       'سفیر نهج‌البلاغه‌ایم برای رویش آگاهی جامعه با پندهای امیرالمؤمنین در قالب‌های متنوع.',
+    clipTitle: 'کلیپ معرفی نذر رویش',
+    clipVideoUrl: 'https://www.aparat.com/video/video/embed/videohash/gpojj13/vt/frame',
     introduction:
       'نهج‌البلاغه معدن نکات نجات‌بخشی است که متأسفانه مردم آن را درک نکرده‌اند؛ درحالی‌که غربی‌ها از این نکات به نام خودشان استفاده می‌کنند. رهبر شهید امر کردند که ورود جدی به نشر نهج‌البلاغه داشته باشید و آگاهی جامعه و نسل جدید را به این سمت ببرید. متأسفانه متولی جدی در این حوزه وجود ندارد؛ بنابراین ما و شما سفیران نشر پیام‌های امیرالمؤمنین در مدارس، کتب درسی، خانه‌های قرآنی، هیئات، حلقات بسیج، درسنامه‌های بین مربیان و معلمان و ده‌ها قالب متنوع دیگر برای نوجوانان و بزرگسالان هستیم. ما اینجا سفیر نهج‌البلاغه‌ایم.',
     impactTitle: 'چرا در نذر رویش مشارکت کنم؟',

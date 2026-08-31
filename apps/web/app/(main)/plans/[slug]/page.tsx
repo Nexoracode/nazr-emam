@@ -91,6 +91,27 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
         </div>
       </section>
 
+      {content.clipVideoUrl ? (
+        <section className="plan-section plan-clip-section">
+          <div className="home-container">
+            <div className="plan-section-heading plan-section-heading-center">
+              <span className="home-eyebrow">کلیپ</span>
+              <h2>{content.clipTitle ?? 'ویدئوی معرفی طرح'}</h2>
+              {content.clipDescription ? <p>{content.clipDescription}</p> : null}
+            </div>
+            <div className="plan-clip-frame">
+              <iframe
+                src={content.clipVideoUrl}
+                title={content.clipTitle ?? `ویدئوی معرفی ${plan.title}`}
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="plan-section" id="about-plan">
         <div className="home-container plan-impact-layout">
           <div className="plan-section-heading">
