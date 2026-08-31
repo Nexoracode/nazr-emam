@@ -188,9 +188,8 @@ function GalleryImage({ asset, index }: { asset: GalleryAsset | null; index: num
 }
 
 export default async function Home() {
-  const [nazrTypes, introAssets, galleryAssets] = await Promise.all([
+  const [nazrTypes, galleryAssets] = await Promise.all([
     getPublicNazrTypes(),
-    getPublicGalleryAssets('intro'),
     getPublicGalleryAssets('gallery'),
   ]);
   const activePlans = nazrTypes.filter((t) => t.isActive).length;
@@ -198,9 +197,6 @@ export default async function Home() {
     (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
   );
   const images = galleryAssets.filter((asset) => asset.type === 'image').slice(0, 4);
-  const heroVideo = introAssets.find(
-    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
-  ) ?? null;
   const galleryVideo = videos[0] ?? null;
   const galleryImageSlots = Array.from(
     { length: 4 },
@@ -214,6 +210,7 @@ export default async function Home() {
         <div className="home-hero-bg" aria-hidden="true" />
         <div className="home-container home-hero-grid">
           <div className="home-hero-content">
+            <span className="home-bismillah">بسم الله الرحمن الرحیم</span>
             <span className="home-eyebrow">
               <span className="home-eyebrow-dot" aria-hidden="true" />
               سامانه‌ی شفافِ ثبت و پیگیریِ نذر
@@ -239,12 +236,15 @@ export default async function Home() {
             </p>
           </div>
 
-          <HomeVideo
-            asset={heroVideo}
-            className="home-video-card"
-            emptyTitle="ویدئوی معرفی نذر امام"
-            emptyDescription="کلیپ توضیح کلی ایده از بخش مدیریت رسانه‌ها ثبت می‌شود."
-          />
+          <div className="home-video-card home-video-embed" aria-label="ویدئوی معرفی نذر امام">
+            <iframe
+              src="https://www.aparat.com/video/video/embed/videohash/zpd0432/vt/frame"
+              title="ویدئوی معرفی نذر امام"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
         </div>
       </section>
 
