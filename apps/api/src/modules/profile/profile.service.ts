@@ -154,26 +154,34 @@ export class ProfileService {
   }
 
   async getSummary(userId: string): Promise<UserProfileSummary> {
-    const [profile, contributions, payments, club, unreadNotifications, openTickets] =
-      await Promise.all([
-        this.getDetails(userId),
-        this.getContributions(userId),
-        this.getPayments(userId, { page: 1, pageSize: 5 }),
-        this.getClub(userId),
-        this.notificationsRepo.count({
-          where: [
-            { userId, isRead: false },
-            { userId: IsNull(), isRead: false },
-          ],
-        }),
-        this.ticketsRepo.count({ where: { userId, status: 'open' } }),
-      ]);
+    const [
+      profile,
+      contributions,
+      payments,
+      totalPaidAmount,
+      club,
+      unreadNotifications,
+      openTickets,
+    ] = await Promise.all([
+      this.getDetails(userId),
+      this.getContributions(userId),
+      this.getPayments(userId, { page: 1, pageSize: 5 }),
+      this.getTotalPaidAmount(userId),
+      this.getClub(userId),
+      this.notificationsRepo.count({
+        where: [
+          { userId, isRead: false },
+          { userId: IsNull(), isRead: false },
+        ],
+      }),
+      this.ticketsRepo.count({ where: { userId, status: 'open' } }),
+    ]);
 
     return {
       profile,
       contributions,
       payments: {
-        totalPaidAmount: this.sumMoney(payments.items.map((p) => p.amount)),
+        totalPaidAmount,
         totalPayments: payments.total,
         recentPayments: payments.items,
       },
@@ -181,6 +189,14 @@ export class ProfileService {
       unreadNotifications,
       openTickets,
     };
+  }
+
+  private async getTotalPaidAmount(userId: string): Promise<Money> {
+    const paidPayments = await this.paymentsRepo.find({
+      where: { status: 'paid', nazrRequest: { userId } },
+      relations: { nazrRequest: true },
+    });
+    return this.sumMoney(paidPayments.map((payment) => payment.amount));
   }
 
   async getContributions(userId: string): Promise<UserContributionSummary> {
@@ -423,7 +439,10 @@ export class ProfileService {
       method: payment.method,
       status: payment.status,
       amount: payment.amount,
-      transactionReference: payment.transactionReference,
+      // فقط پرداختِ موفق، کد پیگیریِ واقعیِ زرین‌پال (ref_id) دارد؛ در حالت‌های
+      // دیگر مقدارِ ذخیره‌شده authorityِ داخلیِ درگاه است و نباید به‌عنوانِ
+      // «کد رهگیری» به کاربر نشان داده شود.
+      transactionReference: payment.status === 'paid' ? payment.transactionReference : null,
       receiptUrl: payment.receiptUrl,
       createdAt: payment.createdAt.toISOString(),
       updatedAt: payment.updatedAt.toISOString(),

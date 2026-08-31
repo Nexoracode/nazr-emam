@@ -917,7 +917,7 @@ function PaymentsPanel() {
               <div className="profile-list-info">
                 <ProfileRecentInfo label="روش" value={PAYMENT_METHOD_LABEL[payment.method]} />
                 <ProfileRecentInfo label="تاریخ" value={formatDate(payment.createdAt)} />
-                {payment.transactionReference && <ProfileRecentInfo label="کد تراکنش" value={payment.transactionReference} />}
+                {payment.transactionReference && <ProfileRecentInfo label="کد رهگیری زرین‌پال" value={payment.transactionReference} />}
               </div>
             </div>
           ))
