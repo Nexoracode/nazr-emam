@@ -5486,3 +5486,23 @@ input {
   position: relative;
   z-index: 1;
 }
+
+/* ── لوگوی آکادمی روح‌بخش در هدر (ماسکِ تِم‌آگاه) ── */
+.site-brand-logo {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 60px;
+  height: 33px;
+  background-color: #054738;
+  -webkit-mask: url("/logo-academy.png") center / contain no-repeat;
+  mask: url("/logo-academy.png") center / contain no-repeat;
+}
+:root[data-theme="dark"] .site-brand-logo,
+.dark-vars .site-brand-logo {
+  background-color: #d9b66f;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .site-brand-logo {
+    background-color: #d9b66f;
+  }
+}

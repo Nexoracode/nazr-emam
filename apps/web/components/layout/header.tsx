@@ -61,10 +61,8 @@ export function Header() {
   return (
     <header className="site-header">
       <div className="site-header-inner">
-        <Link href="/" className="site-brand" aria-label="نذر امام">
-          <span className="site-brand-mark" aria-hidden="true">
-            ن
-          </span>
+        <Link href="/" className="site-brand" aria-label="نذر امام — آکادمی روح‌بخش">
+          <span className="site-brand-logo" aria-hidden="true" />
           <span>نذر امام</span>
         </Link>
 
