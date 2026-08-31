@@ -5399,6 +5399,9 @@ input {
 .home-video-embed {
   padding: 0;
   display: block;
+  position: relative;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
   background: #05231b;
 }
 .home-video-embed::before { display: none; }
@@ -5410,4 +5413,7 @@ input {
   border: 0;
   border-radius: inherit;
   display: block;
+}
+@media (max-width: 900px) {
+  .home-video-embed { aspect-ratio: 16 / 9; }
 }
