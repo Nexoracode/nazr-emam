@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '../components/layout/theme-provider';
+import PersianNumerals from '../components/persian-numerals';
 
 export const metadata: Metadata = {
   title: 'نذر امام',
@@ -18,6 +19,7 @@ export default function RootLayout({
         <ThemeProvider>
           {children}
         </ThemeProvider>
+        <PersianNumerals />
       </body>
     </html>
   );
