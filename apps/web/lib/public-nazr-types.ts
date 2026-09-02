@@ -260,18 +260,28 @@ export const fallbackNazrTypes: NazrType[] = [
   },
 ];
 
+/**
+ * ترتیبِ نمایشِ طرح‌ها: «نیاز روز» همیشه بالا و پیش‌فرض است (در موبایل هم اول
+ * دیده می‌شود). ترتیبِ نسبیِ بقیه‌ی طرح‌ها حفظ می‌شود (sort در JS پایدار است).
+ */
+export function sortPlansForDisplay(types: NazrType[]): NazrType[] {
+  return [...types].sort(
+    (a, b) => (b.slug === 'niaz-rooz' ? 1 : 0) - (a.slug === 'niaz-rooz' ? 1 : 0),
+  );
+}
+
 export async function getPublicNazrTypes(): Promise<NazrType[]> {
   try {
     const response = await fetch(`${apiUrl}/nazr-types`, { cache: 'no-store' });
     if (response.ok) {
       const types = (await response.json()) as NazrType[];
-      if (types.length > 0) return types;
+      if (types.length > 0) return sortPlansForDisplay(types);
     }
   } catch {
     // The public pages remain available while the API is temporarily unavailable.
   }
 
-  return fallbackNazrTypes;
+  return sortPlansForDisplay(fallbackNazrTypes);
 }
 
 export function getPlanContent(slug: string, type: NazrType): PlanLandingContent {

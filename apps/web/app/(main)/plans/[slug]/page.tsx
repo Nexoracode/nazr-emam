@@ -74,43 +74,37 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
               </div>
             </div>
 
-            <div className="plan-hero-summary" aria-label="خلاصه طرح">
-              <span className="plan-summary-mark" aria-hidden="true">
-                {plan.title.slice(0, 1)}
-              </span>
-              <div>
-                <span>امکان پیگیری</span>
-                <strong>کد رهگیری و گزارش اجرا</strong>
+            {content.clipVideoUrl ? (
+              <div
+                className="home-video-card home-video-embed"
+                aria-label={content.clipTitle ?? `ویدئوی معرفی ${plan.title}`}
+              >
+                <iframe
+                  src={content.clipVideoUrl}
+                  title={content.clipTitle ?? `ویدئوی معرفی ${plan.title}`}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
               </div>
-              <div>
-                <span>روش مشارکت</span>
-                <strong>پرداخت آنلاین امن</strong>
+            ) : (
+              <div className="plan-hero-summary" aria-label="خلاصه طرح">
+                <span className="plan-summary-mark" aria-hidden="true">
+                  {plan.title.slice(0, 1)}
+                </span>
+                <div>
+                  <span>امکان پیگیری</span>
+                  <strong>کد رهگیری و گزارش اجرا</strong>
+                </div>
+                <div>
+                  <span>روش مشارکت</span>
+                  <strong>پرداخت آنلاین امن</strong>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
-
-      {content.clipVideoUrl ? (
-        <section className="plan-section plan-clip-section">
-          <div className="home-container">
-            <div className="plan-section-heading plan-section-heading-center">
-              <span className="home-eyebrow">کلیپ</span>
-              <h2>{content.clipTitle ?? 'ویدئوی معرفی طرح'}</h2>
-              {content.clipDescription ? <p>{content.clipDescription}</p> : null}
-            </div>
-            <div className="plan-clip-frame">
-              <iframe
-                src={content.clipVideoUrl}
-                title={content.clipTitle ?? `ویدئوی معرفی ${plan.title}`}
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-                loading="lazy"
-              />
-            </div>
-          </div>
-        </section>
-      ) : null}
 
       <section className="plan-section" id="about-plan">
         <div className="home-container plan-impact-layout">

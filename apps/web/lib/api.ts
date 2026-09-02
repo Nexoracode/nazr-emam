@@ -232,7 +232,12 @@ export function getMyNazrRequests(page = 1, pageSize = 12) {
 }
 
 export function getNazrTypes() {
-  return get<NazrType[]>('/nazr-types');
+  // «نیاز روز» همیشه بالا و پیش‌فرض (ترتیبِ نسبیِ بقیه حفظ می‌شود).
+  return get<NazrType[]>('/nazr-types').then((types) =>
+    [...types].sort(
+      (a, b) => (b.slug === 'niaz-rooz' ? 1 : 0) - (a.slug === 'niaz-rooz' ? 1 : 0),
+    ),
+  );
 }
 
 export function createNazrRequest(payload: CreateNazrRequest) {

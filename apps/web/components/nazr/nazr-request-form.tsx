@@ -39,7 +39,6 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
   const requestedNazrTypeId = initialNazrTypeId;
   const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
-  const [donorNationalCode, setDonorNationalCode] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -159,9 +158,6 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
     if (!currentUser) {
       errors.user = 'برای ثبت نذر باید وارد حساب کاربری شوید.';
     }
-    if (donorNationalCode.trim() && !/^\d{10}$/.test(donorNationalCode.trim())) {
-      errors.donorNationalCode = 'کد ملی باید ۱۰ رقم باشد.';
-    }
     if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
       errors.amount = 'مبلغ نذر معتبر نیست.';
     }
@@ -176,7 +172,6 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
 
     const payload: CreateNazrRequest = {
       nazrTypeId: selectedTypeId,
-      donorNationalCode: donorNationalCode.trim() || null,
       amount: { amount: normalizedAmount, currency: 'IRT' },
       note: note.trim() || null,
       isAnonymous,
@@ -282,7 +277,7 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
             )}
           </div>
 
-          <div className="grid items-start gap-3 sm:grid-cols-2">
+          <div className="grid items-start gap-3">
             <label className="grid content-start gap-1.5 text-right text-[11px] font-bold text-auth-text">
               <span>مبلغ نذر به تومان</span>
               <input
@@ -301,23 +296,6 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
               )}
               {fieldErrors.amount && (
                 <small className="text-[10px] text-danger">{fieldErrors.amount}</small>
-              )}
-            </label>
-
-            <label className="grid content-start gap-1.5 text-right text-[11px] font-bold text-auth-text">
-              <span>کد ملی اختیاری</span>
-              <input
-                className={fieldCls(Boolean(fieldErrors.donorNationalCode))}
-                dir="rtl"
-                inputMode="numeric"
-                maxLength={10}
-                onChange={(e) => setDonorNationalCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="اختیاری"
-                type="text"
-                value={donorNationalCode}
-              />
-              {fieldErrors.donorNationalCode && (
-                <small className="text-[10px] text-danger">{fieldErrors.donorNationalCode}</small>
               )}
             </label>
           </div>

@@ -248,10 +248,6 @@ export default async function Home() {
           <div className="home-section-heading">
             <span className="home-eyebrow">طرح‌ها</span>
             <h2>مسیرِ نذرت را انتخاب کن</h2>
-            <p>
-              طرح‌ها مستقیماً از سامانه خوانده می‌شوند؛ طرحی که هزینه‌اش تکمیل شود به حالت
-              خاموش نمایش داده می‌شود.
-            </p>
           </div>
 
           <div className="home-plan-grid">
@@ -331,7 +327,7 @@ export default async function Home() {
       <section className="home-cta-band">
         <div className="home-container home-cta-inner">
           <div>
-            <h2>همین امروز، نیتت را ماندگار کن</h2>
+            <h2>نیت کن، با خود امام زمان عهد ببند</h2>
             <p>انتخابِ طرح، ثبتِ نذر و دریافتِ کد رهگیری؛ در کمتر از چند دقیقه.</p>
           </div>
           <div className="home-actions">
