@@ -70,12 +70,6 @@ export const planLandingContent: Record<string, PlanLandingContent> = {
     clipVideoUrl: 'https://www.aparat.com/video/video/embed/videohash/oud8t3b/vt/frame',
     clipDescription:
       'در کلیپ معرفی، نکات اصلی طرح باید دلی و روشن گفته شود تا مخاطب بداند چرا این مسیر انتخاب شده، تا امروز چه اتفاقی افتاده و چشم‌انداز بعدی چیست.',
-    clipPoints: [
-      'چرا بین‌الملل را انتخاب کردیم',
-      'تا الان چه کارهایی انجام شده است',
-      'چشم‌انداز طرح و قدم‌های بعدی چیست',
-      'حیطه‌ی کشورها از هندوستان، پاکستان و شبه‌قاره تا آفریقا و اروپا',
-    ],
     galleryTitle: 'تا الان چیکار کردیم؟',
     faqs: [
       {

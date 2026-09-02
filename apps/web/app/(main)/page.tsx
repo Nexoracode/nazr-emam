@@ -114,11 +114,6 @@ const faqItems = [
   },
 ];
 
-function getPlanProgress(index: number): number {
-  const progress = [68, 46, 82, 0, 57];
-  return progress[index % progress.length];
-}
-
 function planVisualClass(slug: string): string {
   return `visual-${slug.replace(/[^a-z0-9-]/gi, '') || 'default'}`;
 }
@@ -251,9 +246,8 @@ export default async function Home() {
           </div>
 
           <div className="home-plan-grid">
-            {nazrTypes.map((type, index) => {
+            {nazrTypes.map((type) => {
               const isActive = type.isActive;
-              const progress = getPlanProgress(index);
               const meta = planLandingContent[type.slug];
               const accent = meta?.accent ?? 'green';
 
@@ -281,14 +275,6 @@ export default async function Home() {
                     {meta?.tagline ? <span className="home-plan-tagline">{meta.tagline}</span> : null}
                     <h3>{type.title}</h3>
                     <p>{type.description}</p>
-                    {isActive ? (
-                      <div
-                        className="home-plan-progress"
-                        aria-label={`پیشرفت ${faNumber(progress)} درصد`}
-                      >
-                        <span style={{ width: `${progress}%` }} />
-                      </div>
-                    ) : null}
                     <div className="home-plan-foot">
                       <span className="home-plan-link">{isActive ? 'مشاهده طرح ←' : 'مشاهده گزارش ←'}</span>
                     </div>
