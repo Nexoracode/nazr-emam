@@ -11,6 +11,7 @@ import type {
   GenerateMonthlyCallTasksRequest,
   GalleryAssetType,
   NazrRequestStatus,
+  PaymentMethod,
   PaymentStatus,
   UpdateCallTaskRequest,
   UpdateCrmProfileRequest,
@@ -99,8 +100,8 @@ export class AdminController {
 
   @ApiOperation({ summary: 'لیست مدیریتی پرداخت‌ها' })
   @Get('payments')
-  payments(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string, @Query('status') status?: PaymentStatus) {
-    return this.service.payments(Number(page) || 1, Number(pageSize) || 20, search, status);
+  payments(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string, @Query('status') status?: PaymentStatus, @Query('method') method?: PaymentMethod, @Query('nazrTypeId') nazrTypeId?: string) {
+    return this.service.payments(Number(page) || 1, Number(pageSize) || 20, search, status, method, nazrTypeId);
   }
 
   @ApiOperation({ summary: 'تایید پرداخت' })

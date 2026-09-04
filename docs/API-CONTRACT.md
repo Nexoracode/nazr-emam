@@ -931,7 +931,7 @@ interface InvitationCard {
   - اگر نوع نذر استفاده شده باشد: `409 NAZR_TYPE_IN_USE` و مدیر باید آن را غیرفعال کند.
 - `GET /admin/nazr-requests?page&pageSize&search&status` → `200 Paginated<NazrRequest>`
 - `PATCH /admin/nazr-requests/:id/status` با `UpdateNazrRequestStatus` → `200 NazrRequest`
-- `GET /admin/payments?page&pageSize&search&status` → `200 Paginated<AdminPayment>` (پرداخت + `nazrType`، `trackingCode`، `donorFullName` و `donorMobile`)
+- `GET /admin/payments?page&pageSize&search&status&method&nazrTypeId` → `200 Paginated<AdminPayment>` (پرداخت + `nazrType`، `trackingCode`، `donorFullName` و `donorMobile`؛ فیلترِ اختیاریِ `method` و `nazrTypeId`)
 - `POST /admin/payments/:id/approve` → `200 Payment`
 - `POST /admin/payments/:id/reject` با `{ reason?: string }` → `200 Payment`
 

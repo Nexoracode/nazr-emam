@@ -6,7 +6,7 @@ import type {
   GalleryAssetType,
 } from './profile';
 import type { NazrRequest, NazrRequestStatus, NazrType } from './nazr';
-import type { Payment, PaymentStatus } from './payments';
+import type { Payment, PaymentMethod, PaymentStatus } from './payments';
 import type { Ticket } from './support';
 
 /** پرداخت به‌همراه اطلاعات طرح و مخاطب برای نمایش در پنل مدیریت. */
@@ -191,4 +191,6 @@ export interface AdminPaymentQuery {
   pageSize?: number;
   search?: string;
   status?: PaymentStatus;
+  method?: PaymentMethod;
+  nazrTypeId?: ID;
 }

@@ -396,8 +396,8 @@ export function updateAdminNazrStatus(id: string, status: NazrRequestStatus, adm
   return patch<NazrRequest, { status: NazrRequestStatus; adminNote?: string }>(`/admin/nazr-requests/${id}/status`, { status, adminNote });
 }
 
-export function getAdminPayments(page = 1, pageSize = 30, search = '', status = '') {
-  return get<Paginated<AdminPayment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status })}`);
+export function getAdminPayments(page = 1, pageSize = 30, search = '', status = '', method = '', nazrTypeId = '') {
+  return get<Paginated<AdminPayment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status, method, nazrTypeId })}`);
 }
 
 export function setAdminPaymentStatus(id: string, status: Extract<PaymentStatus, 'paid' | 'rejected'>, reason?: string) {

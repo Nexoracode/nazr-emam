@@ -40,6 +40,7 @@ import type {
   NazrType,
   Paginated,
   Payment,
+  PaymentMethod,
   PaymentStatus,
   Ticket,
   TicketMessage,
@@ -291,14 +292,16 @@ export class AdminService implements OnModuleInit {
     return this.toNazrRequest(await this.requestsRepo.save(item!));
   }
 
-  async payments(page = 1, pageSize = 20, search = '', status?: PaymentStatus): Promise<Paginated<AdminPayment>> {
+  async payments(page = 1, pageSize = 20, search = '', status?: PaymentStatus, method?: PaymentMethod, nazrTypeId?: string): Promise<Paginated<AdminPayment>> {
     const [safePage, safeSize] = this.safePage(page, pageSize);
     const query = this.paymentsRepo
       .createQueryBuilder('payment')
       .leftJoinAndSelect('payment.nazrRequest', 'request')
       .leftJoinAndSelect('request.nazrType', 'nazrType');
-    if (search.trim()) query.where('(payment.transaction_reference LIKE :search OR request.tracking_code LIKE :search OR request.donor_mobile LIKE :search OR request.donor_full_name LIKE :search)', { search: `%${search.trim()}%` });
+    if (search.trim()) query.andWhere('(payment.transaction_reference LIKE :search OR request.tracking_code LIKE :search OR request.donor_mobile LIKE :search OR request.donor_full_name LIKE :search)', { search: `%${search.trim()}%` });
     if (status && ['pending', 'paid', 'rejected', 'refunded'].includes(status)) query.andWhere('payment.status = :status', { status });
+    if (method && ['online', 'card_to_card', 'cash'].includes(method)) query.andWhere('payment.method = :method', { method });
+    if (nazrTypeId) query.andWhere('request.nazr_type_id = :nazrTypeId', { nazrTypeId });
     const [items, total] = await query.orderBy('payment.created_at', 'DESC').skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
     return { items: items.map((item) => this.toAdminPayment(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
   }
