@@ -22,6 +22,9 @@ export interface AdminNazrTypeSummary extends NazrType {
   collectedAmount: Money;
   paidCount: number;
   requestCount: number;
+  /** پرتکرارترین مبلغِ واریزیِ موفق (مُد) و تعداد دفعاتِ آن. */
+  topAmount: Money | null;
+  topAmountCount: number;
 }
 
 export type CrmStage = 'new' | 'engaged' | 'recurring' | 'at_risk' | 'inactive';

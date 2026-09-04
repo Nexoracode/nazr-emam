@@ -245,11 +245,27 @@ export class AdminService implements OnModuleInit {
 
     return items.map((item) => {
       const paidList = paidByType.get(item.id) ?? [];
+      // مُد: پرتکرارترین مبلغِ واریزی (نرمال‌شده به تومان).
+      const counts = new Map<number, number>();
+      for (const money of paidList) {
+        const toman = money.currency === 'IRT' ? money.amount : Math.round(money.amount / 10);
+        counts.set(toman, (counts.get(toman) ?? 0) + 1);
+      }
+      let topAmountValue = 0;
+      let topAmountCount = 0;
+      for (const [value, count] of counts) {
+        if (count > topAmountCount) {
+          topAmountCount = count;
+          topAmountValue = value;
+        }
+      }
       return {
         ...this.toNazrType(item),
         collectedAmount: this.sumMoney(paidList),
         paidCount: paidList.length,
         requestCount: requestCountByType.get(item.id) ?? 0,
+        topAmount: topAmountCount > 0 ? { amount: topAmountValue, currency: 'IRT' as const } : null,
+        topAmountCount,
       };
     });
   }

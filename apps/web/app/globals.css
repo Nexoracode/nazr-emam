@@ -5091,6 +5091,7 @@ input {
 .admin-plan-metrics > div { background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 6px; padding: 8px; text-align: center; }
 .admin-plan-metrics small { color: var(--admin-muted); display: block; font-size: 8.5px; margin-bottom: 4px; }
 .admin-plan-metrics strong { font-size: 11px; }
+.admin-plan-metrics em { color: var(--admin-muted); display: block; font-size: 8.5px; font-style: normal; margin-top: 2px; }
 
 .admin-filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
 .admin-filter-bar input, .admin-filter-bar select { background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 6px; color: inherit; font-family: inherit; font-size: 12px; padding: 9px 12px; }
