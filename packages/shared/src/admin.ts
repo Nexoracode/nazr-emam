@@ -5,9 +5,24 @@ import type {
   GalleryAssetPlacement,
   GalleryAssetType,
 } from './profile';
-import type { NazrRequest, NazrRequestStatus } from './nazr';
+import type { NazrRequest, NazrRequestStatus, NazrType } from './nazr';
 import type { Payment, PaymentStatus } from './payments';
 import type { Ticket } from './support';
+
+/** پرداخت به‌همراه اطلاعات طرح و مخاطب برای نمایش در پنل مدیریت. */
+export interface AdminPayment extends Payment {
+  nazrType: { id: ID; title: string; slug: string } | null;
+  trackingCode: string | null;
+  donorFullName: string | null;
+  donorMobile: string | null;
+}
+
+/** طرح به‌همراه جمعِ واقعیِ پرداخت‌های موفق و تعداد نذر برای پنل مدیریت. */
+export interface AdminNazrTypeSummary extends NazrType {
+  collectedAmount: Money;
+  paidCount: number;
+  requestCount: number;
+}
 
 export type CrmStage = 'new' | 'engaged' | 'recurring' | 'at_risk' | 'inactive';
 export type CrmActivityType = 'call' | 'note' | 'payment' | 'ticket' | 'status';

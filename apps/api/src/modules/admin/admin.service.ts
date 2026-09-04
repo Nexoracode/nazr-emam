@@ -15,7 +15,9 @@ import {
 } from 'typeorm';
 import type {
   AdminDashboardSummary,
+  AdminNazrTypeSummary,
   AdminNotificationItem,
+  AdminPayment,
   AdminUserDetails,
   AdminUserListItem,
   CallTask,
@@ -220,9 +222,35 @@ export class AdminService implements OnModuleInit {
     return { items: items.map((item) => this.toNazrRequest(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
   }
 
-  async nazrTypes(): Promise<NazrType[]> {
+  async nazrTypes(): Promise<AdminNazrTypeSummary[]> {
     const items = await this.nazrTypesRepo.find({ order: { createdAt: 'DESC' } });
-    return items.map((item) => this.toNazrType(item));
+    const paidPayments = await this.paymentsRepo.find({ where: { status: 'paid' }, relations: { nazrRequest: true } });
+    const requestRows = await this.requestsRepo
+      .createQueryBuilder('request')
+      .select('request.nazr_type_id', 'nazrTypeId')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('request.nazr_type_id')
+      .getRawMany<{ nazrTypeId: string; count: string }>();
+    const requestCountByType = new Map(requestRows.map((row) => [row.nazrTypeId, Number(row.count)]));
+
+    const paidByType = new Map<string, Money[]>();
+    for (const payment of paidPayments) {
+      const typeId = payment.nazrRequest?.nazrTypeId;
+      if (!typeId) continue;
+      const list = paidByType.get(typeId) ?? [];
+      list.push(payment.amount);
+      paidByType.set(typeId, list);
+    }
+
+    return items.map((item) => {
+      const paidList = paidByType.get(item.id) ?? [];
+      return {
+        ...this.toNazrType(item),
+        collectedAmount: this.sumMoney(paidList),
+        paidCount: paidList.length,
+        requestCount: requestCountByType.get(item.id) ?? 0,
+      };
+    });
   }
 
   async createNazrType(payload: CreateNazrTypeRequest): Promise<NazrType> {
@@ -263,13 +291,16 @@ export class AdminService implements OnModuleInit {
     return this.toNazrRequest(await this.requestsRepo.save(item!));
   }
 
-  async payments(page = 1, pageSize = 20, search = '', status?: PaymentStatus): Promise<Paginated<Payment>> {
+  async payments(page = 1, pageSize = 20, search = '', status?: PaymentStatus): Promise<Paginated<AdminPayment>> {
     const [safePage, safeSize] = this.safePage(page, pageSize);
-    const query = this.paymentsRepo.createQueryBuilder('payment').leftJoinAndSelect('payment.nazrRequest', 'request');
-    if (search.trim()) query.where('(payment.transaction_reference LIKE :search OR request.tracking_code LIKE :search OR request.donor_mobile LIKE :search)', { search: `%${search.trim()}%` });
+    const query = this.paymentsRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.nazrRequest', 'request')
+      .leftJoinAndSelect('request.nazrType', 'nazrType');
+    if (search.trim()) query.where('(payment.transaction_reference LIKE :search OR request.tracking_code LIKE :search OR request.donor_mobile LIKE :search OR request.donor_full_name LIKE :search)', { search: `%${search.trim()}%` });
     if (status && ['pending', 'paid', 'rejected', 'refunded'].includes(status)) query.andWhere('payment.status = :status', { status });
     const [items, total] = await query.orderBy('payment.created_at', 'DESC').skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
-    return { items: items.map((item) => this.toPayment(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
+    return { items: items.map((item) => this.toAdminPayment(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
   }
 
   async setPaymentStatus(id: string, status: 'paid' | 'rejected', reason?: string): Promise<Payment> {
@@ -438,6 +469,18 @@ export class AdminService implements OnModuleInit {
 
   private toPayment(item: PaymentEntity): Payment {
     return { id: item.id, nazrRequestId: item.nazrRequestId, method: item.method, status: item.status, amount: item.amount, transactionReference: item.transactionReference, receiptUrl: item.receiptUrl, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
+  }
+
+  private toAdminPayment(item: PaymentEntity): AdminPayment {
+    const request = item.nazrRequest ?? null;
+    const nazrType = request?.nazrType ?? null;
+    return {
+      ...this.toPayment(item),
+      nazrType: nazrType ? { id: nazrType.id, title: nazrType.title, slug: nazrType.slug } : null,
+      trackingCode: request?.trackingCode ?? null,
+      donorFullName: request?.donorFullName ?? null,
+      donorMobile: request?.donorMobile ?? null,
+    };
   }
 
   private toTicket(item: TicketEntity): Ticket {

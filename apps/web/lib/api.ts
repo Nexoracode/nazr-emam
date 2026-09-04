@@ -1,6 +1,8 @@
 import type {
   AdminDashboardSummary,
+  AdminNazrTypeSummary,
   AdminNotificationItem,
+  AdminPayment,
   AdminUserDetails,
   AdminUserListItem,
   ApiError,
@@ -375,7 +377,7 @@ export function getAdminNazrRequests(page = 1, pageSize = 30, search = '', statu
 }
 
 export function getAdminNazrTypes() {
-  return get<NazrType[]>('/admin/nazr-types');
+  return get<AdminNazrTypeSummary[]>('/admin/nazr-types');
 }
 
 export function createAdminNazrType(payload: CreateNazrTypeRequest) {
@@ -395,7 +397,7 @@ export function updateAdminNazrStatus(id: string, status: NazrRequestStatus, adm
 }
 
 export function getAdminPayments(page = 1, pageSize = 30, search = '', status = '') {
-  return get<Paginated<Payment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status })}`);
+  return get<Paginated<AdminPayment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status })}`);
 }
 
 export function setAdminPaymentStatus(id: string, status: Extract<PaymentStatus, 'paid' | 'rejected'>, reason?: string) {

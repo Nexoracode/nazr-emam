@@ -5087,6 +5087,20 @@ input {
 .admin-plan-card footer { align-items: center; border-top: 1px solid var(--admin-border); display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; }
 .admin-plan-card footer strong { font-size: 10px; margin-inline-end: auto; }
 .admin-plan-card footer button { background: transparent; border: 0; color: var(--admin-primary); cursor: pointer; font-family: inherit; font-size: 9px; }
+.admin-plan-metrics { display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); margin-top: 12px; }
+.admin-plan-metrics > div { background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 6px; padding: 8px; text-align: center; }
+.admin-plan-metrics small { color: var(--admin-muted); display: block; font-size: 8.5px; margin-bottom: 4px; }
+.admin-plan-metrics strong { font-size: 11px; }
+
+.admin-filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.admin-filter-bar input, .admin-filter-bar select { background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 6px; color: inherit; font-family: inherit; font-size: 12px; padding: 9px 12px; }
+.admin-filter-bar input { flex: 1 1 240px; min-width: 0; }
+.admin-filter-bar select { flex: 0 0 auto; cursor: pointer; }
+
+.admin-pager { align-items: center; display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
+.admin-pager span { color: var(--admin-muted); font-size: 11px; }
+.admin-pager button { background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 6px; color: inherit; cursor: pointer; font-family: inherit; font-size: 11px; padding: 7px 16px; }
+.admin-pager button:disabled { cursor: not-allowed; opacity: 0.5; }
 .admin-drawer-backdrop { background: rgb(14 25 21 / 36%); inset: 0; position: fixed; z-index: 80; }
 .admin-drawer { background: var(--admin-surface); box-shadow: -18px 0 50px rgb(12 30 23 / 15%); height: 100%; inset-inline-end: 0; max-width: 560px; overflow-y: auto; position: absolute; width: min(100%, 560px); }
 .admin-drawer > header { align-items: center; border-bottom: 1px solid var(--admin-border); display: flex; justify-content: space-between; padding: 18px 20px; position: sticky; top: 0; background: #fff; z-index: 1; }

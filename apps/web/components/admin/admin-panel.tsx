@@ -1,10 +1,12 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type {
   AdminDashboardSummary,
+  AdminNazrTypeSummary,
   AdminNotificationItem,
+  AdminPayment,
   AdminUserDetails,
   AdminUserListItem,
   CallTask,
@@ -16,7 +18,8 @@ import type {
   NazrRequest,
   NazrRequestStatus,
   NazrType,
-  Payment,
+  Paginated,
+  PaymentStatus,
   Ticket,
 } from '@nazr-emam/shared';
 import {
@@ -132,6 +135,110 @@ function statusClass(value: string) {
   return 'is-neutral';
 }
 
+const PAGE_SIZE = 20;
+
+/** واکشیِ صفحه‌بندی‌شده با فیلترِ سمت‌سرور (جستجو + وضعیت) و دیبانس. */
+function usePagedList<T>(
+  fetcher: (page: number, search: string, status: string) => Promise<Paginated<T>>,
+) {
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [data, setData] = useState<Paginated<T> | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      setData(await fetcherRef.current(page, search, status));
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search, status]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void reload();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [reload]);
+
+  const changeSearch = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+  const changeStatus = (value: string) => {
+    setStatus(value);
+    setPage(1);
+  };
+
+  return { page, setPage, search, changeSearch, status, changeStatus, data, loading, reload };
+}
+
+function Pager({
+  data,
+  onPage,
+  loading,
+}: {
+  data: Paginated<unknown> | null;
+  onPage: (page: number) => void;
+  loading: boolean;
+}) {
+  if (!data || data.totalPages <= 1) return null;
+  return (
+    <div className="admin-pager">
+      <button disabled={loading || data.page <= 1} onClick={() => onPage(data.page - 1)} type="button">
+        قبلی
+      </button>
+      <span>
+        صفحه {data.page.toLocaleString('fa-IR')} از {data.totalPages.toLocaleString('fa-IR')} ·{' '}
+        {data.total.toLocaleString('fa-IR')} مورد
+      </span>
+      <button
+        disabled={loading || data.page >= data.totalPages}
+        onClick={() => onPage(data.page + 1)}
+        type="button"
+      >
+        بعدی
+      </button>
+    </div>
+  );
+}
+
+function FilterBar({
+  search,
+  onSearch,
+  placeholder,
+  status,
+  onStatus,
+  statusOptions,
+}: {
+  search: string;
+  onSearch: (value: string) => void;
+  placeholder: string;
+  status?: string;
+  onStatus?: (value: string) => void;
+  statusOptions?: { value: string; label: string }[];
+}) {
+  return (
+    <div className="admin-filter-bar">
+      <input onChange={(event) => onSearch(event.target.value)} placeholder={placeholder} value={search} />
+      {statusOptions && onStatus ? (
+        <select onChange={(event) => onStatus(event.target.value)} value={status}>
+          <option value="">همه وضعیت‌ها</option>
+          {statusOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </div>
+  );
+}
+
 export function AdminPanel() {
   const router = useRouter();
   const [active, setActive] = useState<AdminSection>('dashboard');
@@ -142,16 +249,15 @@ export function AdminPanel() {
   const [adminName, setAdminName] = useState('مدیر سامانه');
   const [dashboard, setDashboard] = useState<AdminDashboardSummary | null>(null);
   const [users, setUsers] = useState<AdminUserListItem[]>([]);
-  const [requests, setRequests] = useState<NazrRequest[]>([]);
-  const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [nazrTypes, setNazrTypes] = useState<AdminNazrTypeSummary[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [notifications, setNotifications] = useState<AdminNotificationItem[]>([]);
   const [gallery, setGallery] = useState<GalleryAsset[]>([]);
   const [callTasks, setCallTasks] = useState<CallTask[]>([]);
   const [selectedUser, setSelectedUser] = useState<AdminUserDetails | null>(null);
-  const [search, setSearch] = useState('');
 
+  // بخش‌های نذر/پرداخت/مخاطبان خودشان صفحه‌بندی و فیلترِ سمت‌سرور دارند؛ این
+  // refresh فقط داده‌های سبک و شمارنده‌ها را تازه می‌کند.
   const refresh = useCallback(async () => {
     setError('');
     try {
@@ -161,14 +267,12 @@ export function AdminPanel() {
         return;
       }
       setAdminName(me.fullName);
-      const [dashboardData, usersData, requestsData, typesData, paymentsData, ticketsData, notificationsData, galleryData, callsData] = await Promise.all([
-        getAdminDashboard(), getAdminUsers(), getAdminNazrRequests(), getAdminNazrTypes(), getAdminPayments(), getAdminTickets(), getAdminNotifications(), getAdminGallery(), getAdminCallTasks(),
+      const [dashboardData, usersData, typesData, ticketsData, notificationsData, galleryData, callsData] = await Promise.all([
+        getAdminDashboard(), getAdminUsers(), getAdminNazrTypes(), getAdminTickets(), getAdminNotifications(), getAdminGallery(), getAdminCallTasks(),
       ]);
       setDashboard(dashboardData);
       setUsers(usersData.items);
-      setRequests(requestsData.items);
       setNazrTypes(typesData);
-      setPayments(paymentsData.items);
       setTickets(ticketsData.items);
       setNotifications(notificationsData.items);
       setGallery(galleryData);
@@ -182,12 +286,17 @@ export function AdminPanel() {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const run = async (action: () => Promise<unknown>, message: string, reload = true) => {
+  const run = async (
+    action: () => Promise<unknown>,
+    message: string,
+    reload: boolean | (() => Promise<unknown>) = true,
+  ) => {
     setWorking(true); setError(''); setSuccess('');
     try {
       await action();
       setSuccess(message);
-      if (reload) await refresh();
+      if (reload === true) await refresh();
+      else if (typeof reload === 'function') await reload();
       return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'عملیات انجام نشد');
@@ -197,15 +306,11 @@ export function AdminPanel() {
 
   const changeSection = (section: AdminSection) => {
     setActive(section);
-    setSearch('');
     setError('');
     setSuccess('');
   };
 
   const selectUser = async (id: string) => setSelectedUser(await getAdminUser(id));
-
-  const filteredUsers = useMemo(() => users.filter((item) => `${item.fullName} ${item.mobile} ${item.tags.join(' ')}`.includes(search.trim())), [users, search]);
-  const filteredRequests = useMemo(() => requests.filter((item) => `${item.donorFullName} ${item.donorMobile} ${item.trackingCode} ${item.nazrType.title}`.includes(search.trim())), [requests, search]);
 
   if (loading) return <main className="admin-loading">در حال آماده‌سازی پنل مدیریت...</main>;
 
@@ -237,12 +342,11 @@ export function AdminPanel() {
         </header>
         {error ? <p className="admin-alert is-error">{error}</p> : null}
         {success ? <p className="admin-alert is-success">{success}</p> : null}
-        {active !== 'dashboard' && !['notifications', 'gallery', 'calls', 'tickets'].includes(active) ? <input className="admin-search" onChange={(event) => setSearch(event.target.value)} placeholder="جستجو در این بخش..." value={search} /> : null}
 
         {active === 'dashboard' && dashboard ? <Dashboard dashboard={dashboard} requests={dashboard.recentRequests} setActive={changeSection} /> : null}
-        {active === 'nazr' ? <NazrSection nazrTypes={nazrTypes} requests={filteredRequests} run={run} working={working} /> : null}
-        {active === 'users' ? <UsersSection users={filteredUsers} selected={selectedUser} select={selectUser} close={() => setSelectedUser(null)} run={run} working={working} /> : null}
-        {active === 'payments' ? <PaymentsSection payments={payments} run={run} working={working} /> : null}
+        {active === 'nazr' ? <NazrSection nazrTypes={nazrTypes} run={run} working={working} /> : null}
+        {active === 'users' ? <UsersSection selected={selectedUser} select={selectUser} close={() => setSelectedUser(null)} run={run} working={working} /> : null}
+        {active === 'payments' ? <PaymentsSection run={run} working={working} /> : null}
         {active === 'tickets' ? <TicketsSection tickets={tickets} run={run} working={working} /> : null}
         {active === 'notifications' ? <NotificationsSection items={notifications} users={users} run={run} working={working} /> : null}
         {active === 'gallery' ? <GallerySection items={gallery} nazrTypes={nazrTypes} run={run} working={working} /> : null}
@@ -263,12 +367,17 @@ function Dashboard({ dashboard, requests, setActive }: { dashboard: AdminDashboa
   </div>;
 }
 
-function NazrSection({ nazrTypes, requests, run, working }: { nazrTypes: NazrType[]; requests: NazrRequest[]; run: Runner; working: boolean }) {
+const requestStatusOptions = requestStatuses.map((value) => ({ value, label: requestLabels[value] }));
+
+function NazrSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrTypeSummary[]; run: Runner; working: boolean }) {
   const [showForm, setShowForm] = useState(false);
   const [suggestedAmount, setSuggestedAmount] = useState('');
   const suggestedAmountValue = useMemo(
     () => parseAmountInput(suggestedAmount),
     [suggestedAmount],
+  );
+  const requests = usePagedList<NazrRequest>(
+    useCallback((page, search, status) => getAdminNazrRequests(page, PAGE_SIZE, search, status), []),
   );
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const form = event.currentTarget; const data = new FormData(form);
@@ -279,18 +388,32 @@ function NazrSection({ nazrTypes, requests, run, working }: { nazrTypes: NazrTyp
   return <div className="admin-stack">
     <section className="admin-panel"><div className="admin-panel-head"><div><h2>طرح‌ها و انواع نذر</h2><p>{nazrTypes.length.toLocaleString('fa-IR')} طرح ثبت‌شده</p></div><button className="admin-primary" onClick={() => setShowForm((value) => !value)} type="button">افزودن طرح</button></div>
       {showForm ? <form className="admin-form-grid" onSubmit={submit}><input name="title" placeholder="عنوان طرح" required /><input dir="ltr" name="slug" placeholder="slug" required /><label className="admin-amount-field"><input dir="ltr" inputMode="numeric" name="amount" onChange={(event) => setSuggestedAmount(formatAmountInput(event.target.value))} placeholder="مبلغ پیشنهادی (تومان)" value={suggestedAmount} /><small>{amountToPersianWords(suggestedAmountValue)}</small></label><textarea name="description" placeholder="توضیحات طرح" required /><button className="admin-primary" disabled={working}>ثبت طرح</button></form> : null}
-      <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><footer><strong>{money(item.suggestedAmount)}</strong><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
+      <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><div className="admin-plan-metrics"><div><small>جمع واریزی موفق</small><strong>{money(item.collectedAmount)}</strong></div><div><small>تعداد نذر</small><strong>{item.requestCount.toLocaleString('fa-IR')}</strong></div><div><small>مبلغ پیشنهادی</small><strong>{money(item.suggestedAmount)}</strong></div></div><footer><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
     </section>
-    <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>بررسی و تغییر وضعیت فعالیت‌ها</p></div></div><RequestTable items={requests} editable run={run} working={working} /></section>
+    <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>{requests.data ? `${requests.data.total.toLocaleString('fa-IR')} نذر` : 'بررسی و تغییر وضعیت فعالیت‌ها'}</p></div></div>
+      <FilterBar search={requests.search} onSearch={requests.changeSearch} placeholder="جستجو با نام، موبایل یا کد رهگیری..." status={requests.status} onStatus={requests.changeStatus} statusOptions={requestStatusOptions} />
+      <RequestTable items={requests.data?.items ?? []} editable run={run} working={working} reload={requests.reload} loading={requests.loading} />
+      <Pager data={requests.data} onPage={requests.setPage} loading={requests.loading} />
+    </section>
   </div>;
 }
 
-function RequestTable({ items, editable = false, run, working }: { items: NazrRequest[]; editable?: boolean; run?: Runner; working?: boolean }) {
-  return <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>مخاطب</th><th>طرح</th><th>مبلغ</th><th>کد رهگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.donorFullName}</strong><small>{item.donorMobile}</small></td><td>{item.nazrType.title}</td><td>{money(item.amount)}</td><td dir="ltr">{item.trackingCode}</td><td>{date(item.createdAt)}</td><td>{editable && run ? <select disabled={working} onChange={(event) => void run(() => updateAdminNazrStatus(item.id, event.target.value as NazrRequestStatus), 'وضعیت نذر به‌روزرسانی شد')} value={item.status}>{requestStatuses.map((status) => <option key={status} value={status}>{requestLabels[status]}</option>)}</select> : <span className={`admin-status ${statusClass(item.status)}`}>{requestLabels[item.status]}</span>}</td></tr>)}</tbody></table>{!items.length ? <Empty /> : null}</div>;
+function RequestTable({ items, editable = false, run, working, reload, loading }: { items: NazrRequest[]; editable?: boolean; run?: Runner; working?: boolean; reload?: () => Promise<unknown>; loading?: boolean }) {
+  return <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>مخاطب</th><th>طرح</th><th>مبلغ</th><th>کد رهگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.donorFullName}</strong><small>{item.donorMobile}</small></td><td>{item.nazrType.title}</td><td>{money(item.amount)}</td><td dir="ltr">{item.trackingCode}</td><td>{date(item.createdAt)}</td><td>{editable && run ? <select disabled={working} onChange={(event) => void run(() => updateAdminNazrStatus(item.id, event.target.value as NazrRequestStatus), 'وضعیت نذر به‌روزرسانی شد', reload ?? true)} value={item.status}>{requestStatuses.map((status) => <option key={status} value={status}>{requestLabels[status]}</option>)}</select> : <span className={`admin-status ${statusClass(item.status)}`}>{requestLabels[item.status]}</span>}</td></tr>)}</tbody></table>{loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty /> : null}</div>;
 }
 
-function UsersSection({ users, selected, select, close, run, working }: { users: AdminUserListItem[]; selected: AdminUserDetails | null; select: (id: string) => Promise<void>; close: () => void; run: Runner; working: boolean }) {
-  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>مخاطبان</h2><p>پرونده ارتباطی و سوابق مشارکت</p></div><span className="admin-count">{users.length.toLocaleString('fa-IR')} نفر</span></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>نام و تماس</th><th>مرحله CRM</th><th>مشارکت</th><th>مجموع پرداخت</th><th>پیگیری بعدی</th><th></th></tr></thead><tbody>{users.map((item) => <tr key={item.id}><td><strong>{item.fullName}</strong><small>{item.mobile}{item.eitaNumber ? ` · ایتا: ${item.eitaNumber}` : ''}</small></td><td><span className={`admin-status ${item.crmStage === 'at_risk' ? 'is-warning' : 'is-neutral'}`}>{crmLabels[item.crmStage]}</span></td><td>{item.requestCount.toLocaleString('fa-IR')} نذر</td><td>{money(item.paidAmount)}</td><td>{date(item.nextFollowUpAt)}</td><td><button className="admin-text-action" onClick={() => void select(item.id)} type="button">پرونده</button></td></tr>)}</tbody></table></div>{selected ? <UserDrawer details={selected} close={close} refresh={select} run={run} working={working} /> : null}</section>;
+const stageOptions = Object.entries(crmLabels).map(([value, label]) => ({ value, label }));
+
+function UsersSection({ selected, select, close, run, working }: { selected: AdminUserDetails | null; select: (id: string) => Promise<void>; close: () => void; run: Runner; working: boolean }) {
+  const users = usePagedList<AdminUserListItem>(
+    useCallback((page, search, status) => getAdminUsers(page, PAGE_SIZE, search, status), []),
+  );
+  const items = users.data?.items ?? [];
+  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>مخاطبان</h2><p>پرونده ارتباطی و سوابق مشارکت</p></div><span className="admin-count">{users.data ? `${users.data.total.toLocaleString('fa-IR')} نفر` : ''}</span></div>
+    <FilterBar search={users.search} onSearch={users.changeSearch} placeholder="جستجو با نام، موبایل یا ایتا..." status={users.status} onStatus={users.changeStatus} statusOptions={stageOptions} />
+    <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>نام و تماس</th><th>مرحله CRM</th><th>مشارکت</th><th>مجموع پرداخت</th><th>پیگیری بعدی</th><th></th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.fullName}</strong><small>{item.mobile}{item.eitaNumber ? ` · ایتا: ${item.eitaNumber}` : ''}</small></td><td><span className={`admin-status ${item.crmStage === 'at_risk' ? 'is-warning' : 'is-neutral'}`}>{crmLabels[item.crmStage]}</span></td><td>{item.requestCount.toLocaleString('fa-IR')} نذر</td><td>{money(item.paidAmount)}</td><td>{date(item.nextFollowUpAt)}</td><td><button className="admin-text-action" onClick={() => void select(item.id)} type="button">پرونده</button></td></tr>)}</tbody></table>{users.loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty text="مخاطبی با این فیلتر یافت نشد." /> : null}</div>
+    <Pager data={users.data} onPage={users.setPage} loading={users.loading} />
+    {selected ? <UserDrawer details={selected} close={close} refresh={select} run={run} working={working} /> : null}</section>;
 }
 
 function UserDrawer({ details, close, refresh, run, working }: { details: AdminUserDetails; close: () => void; refresh: (id: string) => Promise<void>; run: Runner; working: boolean }) {
@@ -299,8 +422,19 @@ function UserDrawer({ details, close, refresh, run, working }: { details: AdminU
   return <div className="admin-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><aside className="admin-drawer"><header><div><h2>{details.user.fullName}</h2><p>{details.user.mobile}</p></div><button aria-label="بستن" onClick={close} type="button">×</button></header><div className="admin-drawer-body"><div className="admin-mini-stats"><span><small>تعداد نذر</small><strong>{details.user.requestCount.toLocaleString('fa-IR')}</strong></span><span><small>مجموع پرداخت</small><strong>{money(details.user.paidAmount)}</strong></span></div><form className="admin-form-stack" onSubmit={saveCrm}><h3>وضعیت ارتباط</h3><label>مرحله<select defaultValue={details.crm.stage} name="stage">{Object.entries(crmLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>برچسب‌ها<input defaultValue={details.crm.tags.join('، ')} name="tags" placeholder="همراه قدیمی، تماس ماهانه" /></label><label>مسئول پیگیری<input defaultValue={details.crm.assignedTo ?? ''} name="assignedTo" /></label><label>اقدام بعدی<input defaultValue={details.crm.nextFollowUpAt ? jalaliDateInput(details.crm.nextFollowUpAt) : ''} dir="ltr" inputMode="numeric" maxLength={10} name="nextFollowUpAt" placeholder="1405/02/03" /></label><label>یادداشت<textarea defaultValue={details.crm.note ?? ''} name="note" /></label><button className="admin-primary" disabled={working}>ذخیره پرونده</button></form><div className="admin-form-stack"><h3>ثبت فعالیت</h3><select onChange={(event) => setActivityType(event.target.value as CrmActivityType)} value={activityType}><option value="call">تماس</option><option value="note">یادداشت</option><option value="payment">پرداخت</option><option value="ticket">تیکت</option><option value="status">تغییر وضعیت</option></select><textarea onChange={(event) => setActivity(event.target.value)} placeholder="خلاصه گفتگو یا اقدام انجام‌شده" value={activity} /><button className="admin-secondary" disabled={!activity.trim() || working} onClick={() => void run(async () => { await addAdminCrmActivity(details.user.id, { type: activityType, summary: activity }); setActivity(''); await refresh(details.user.id); }, 'فعالیت ثبت شد')} type="button">ثبت در تاریخچه</button></div><div className="admin-timeline"><h3>تاریخچه CRM</h3>{details.activities.map((item) => <article key={item.id}><span></span><div><strong>{item.summary}</strong><small>{item.createdBy} · {date(item.createdAt)}</small></div></article>)}{!details.activities.length ? <Empty /> : null}</div></div></aside></div>;
 }
 
-function PaymentsSection({ payments, run, working }: { payments: Payment[]; run: Runner; working: boolean }) {
-  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده</p></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>شناسه درخواست</th><th>روش</th><th>مبلغ</th><th>مرجع تراکنش</th><th>تاریخ</th><th>وضعیت و اقدام</th></tr></thead><tbody>{payments.map((item) => <tr key={item.id}><td dir="ltr">{item.nazrRequestId.slice(0, 8)}</td><td>{item.method === 'online' ? 'آنلاین' : item.method === 'cash' ? 'نقدی' : 'کارت‌به‌کارت'}</td><td>{money(item.amount)}</td><td dir="ltr">{item.transactionReference ?? '—'}</td><td>{date(item.createdAt)}</td><td><div className="admin-inline-actions"><span className={`admin-status ${statusClass(item.status)}`}>{paymentLabels[item.status]}</span>{item.status === 'pending' ? <><button disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'paid'), 'پرداخت تأیید شد')} type="button">تأیید</button><button className="is-danger-text" disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'rejected', 'رد توسط مدیر'), 'پرداخت رد شد')} type="button">رد</button></> : null}</div></td></tr>)}</tbody></table>{!payments.length ? <Empty /> : null}</div></section>;
+const paymentStatusOptions = (Object.entries(paymentLabels) as [PaymentStatus, string][]).map(([value, label]) => ({ value, label }));
+const paymentMethodLabel = (method: AdminPayment['method']) => (method === 'online' ? 'آنلاین' : method === 'cash' ? 'نقدی' : 'کارت‌به‌کارت');
+
+function PaymentsSection({ run, working }: { run: Runner; working: boolean }) {
+  const payments = usePagedList<AdminPayment>(
+    useCallback((page, search, status) => getAdminPayments(page, PAGE_SIZE, search, status), []),
+  );
+  const items = payments.data?.items ?? [];
+  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>{payments.data ? `${payments.data.total.toLocaleString('fa-IR')} پرداخت` : 'کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده'}</p></div></div>
+    <FilterBar search={payments.search} onSearch={payments.changeSearch} placeholder="جستجو با کد رهگیری، موبایل یا مرجع تراکنش..." status={payments.status} onStatus={payments.changeStatus} statusOptions={paymentStatusOptions} />
+    <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>طرح</th><th>مخاطب</th><th>مبلغ</th><th>کد رهگیری</th><th>تاریخ</th><th>وضعیت و اقدام</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.nazrType?.title ?? '—'}</strong><small>{paymentMethodLabel(item.method)}</small></td><td><strong>{item.donorFullName ?? '—'}</strong><small>{item.donorMobile ?? ''}</small></td><td>{money(item.amount)}</td><td dir="ltr">{item.trackingCode ?? '—'}{item.transactionReference ? <small>زرین‌پال: {item.transactionReference}</small> : null}</td><td>{date(item.createdAt)}</td><td><div className="admin-inline-actions"><span className={`admin-status ${statusClass(item.status)}`}>{paymentLabels[item.status]}</span>{item.status === 'pending' ? <><button disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'paid'), 'پرداخت تأیید شد', payments.reload)} type="button">تأیید</button><button className="is-danger-text" disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'rejected', 'رد توسط مدیر'), 'پرداخت رد شد', payments.reload)} type="button">رد</button></> : null}</div></td></tr>)}</tbody></table>{payments.loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty /> : null}</div>
+    <Pager data={payments.data} onPage={payments.setPage} loading={payments.loading} />
+  </section>;
 }
 
 function TicketsSection({ tickets, run, working }: { tickets: Ticket[]; run: Runner; working: boolean }) {
@@ -560,5 +694,5 @@ function CallsSection({ items, run, working }: { items: CallTask[]; run: Runner;
   return <div className="admin-stack"><section className="admin-call-header"><div><h2>صف پیگیری ماهانه</h2><p>مخاطبان دارای پرداخت دوره‌ای را برای تماس این ماه آماده کنید.</p></div><div><input dir="ltr" inputMode="numeric" maxLength={7} onChange={(event) => setPeriod(event.target.value)} placeholder="1405/02" value={period} /><input dir="ltr" inputMode="numeric" maxLength={10} onChange={(event) => setDueDate(event.target.value)} placeholder="1405/02/03" value={dueDate} /><button className="admin-primary" disabled={working} onClick={() => void run(() => generateAdminCallTasks(period.replace('/', '-'), jalaliDateToIso(dueDate)), 'صف تماس ماهانه ساخته شد')} type="button">ساخت صف ماه</button></div></section><section className="admin-panel"><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>مخاطب</th><th>دوره</th><th>مبلغ مورد انتظار</th><th>سررسید</th><th>مسئول</th><th>نتیجه پیگیری</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.userFullName}</strong><small><a href={`tel:${item.userMobile}`}>{item.userMobile}</a></small></td><td dir="ltr">{item.period.replace('-', '/')}</td><td>{money(item.expectedAmount)}</td><td>{date(item.dueDate)}</td><td>{item.assignedTo ?? 'تخصیص‌نیافته'}</td><td><select disabled={working} onChange={(event) => void run(() => updateAdminCallTask(item.id, { status: event.target.value as CallTaskStatus }), 'نتیجه تماس ثبت شد')} value={item.status}>{Object.entries(callLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td></tr>)}</tbody></table>{!items.length ? <Empty text="هنوز پیگیری ماهانه‌ای ساخته نشده است." /> : null}</div></section></div>;
 }
 
-type Runner = (action: () => Promise<unknown>, message: string, reload?: boolean) => Promise<boolean>;
+type Runner = (action: () => Promise<unknown>, message: string, reload?: boolean | (() => Promise<unknown>)) => Promise<boolean>;
 function Empty({ text = 'موردی برای نمایش وجود ندارد.' }: { text?: string }) { return <p className="admin-empty">{text}</p>; }
