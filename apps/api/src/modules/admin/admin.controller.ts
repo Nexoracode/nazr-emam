@@ -63,8 +63,8 @@ export class AdminController {
 
   @ApiOperation({ summary: 'لیست مدیریتی نذرها' })
   @Get('nazr-requests')
-  requests(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string, @Query('status') status?: NazrRequestStatus) {
-    return this.service.requests(Number(page) || 1, Number(pageSize) || 20, search, status);
+  requests(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string, @Query('status') status?: NazrRequestStatus, @Query('nazrTypeId') nazrTypeId?: string, @Query('minAmount') minAmount?: string, @Query('maxAmount') maxAmount?: string, @Query('from') from?: string, @Query('to') to?: string, @Query('sort') sort?: string) {
+    return this.service.requests(Number(page) || 1, Number(pageSize) || 20, search, status, { nazrTypeId, minAmount: Number(minAmount) || 0, maxAmount: Number(maxAmount) || 0, from, to, sort });
   }
 
   @ApiOperation({ summary: 'لیست انواع نذر برای مدیریت' })
@@ -100,8 +100,8 @@ export class AdminController {
 
   @ApiOperation({ summary: 'لیست مدیریتی پرداخت‌ها' })
   @Get('payments')
-  payments(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string, @Query('status') status?: PaymentStatus, @Query('method') method?: PaymentMethod, @Query('nazrTypeId') nazrTypeId?: string) {
-    return this.service.payments(Number(page) || 1, Number(pageSize) || 20, search, status, method, nazrTypeId);
+  payments(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string, @Query('status') status?: PaymentStatus, @Query('method') method?: PaymentMethod, @Query('nazrTypeId') nazrTypeId?: string, @Query('minAmount') minAmount?: string, @Query('maxAmount') maxAmount?: string, @Query('from') from?: string, @Query('to') to?: string, @Query('sort') sort?: string) {
+    return this.service.payments(Number(page) || 1, Number(pageSize) || 20, search, status, method, nazrTypeId, { minAmount: Number(minAmount) || 0, maxAmount: Number(maxAmount) || 0, from, to, sort });
   }
 
   @ApiOperation({ summary: 'تایید پرداخت' })

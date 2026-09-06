@@ -372,8 +372,17 @@ export function addAdminCrmActivity(id: string, payload: CreateCrmActivityReques
   return post<CrmActivity, CreateCrmActivityRequest>(`/admin/users/${id}/activities`, payload);
 }
 
-export function getAdminNazrRequests(page = 1, pageSize = 30, search = '', status = '') {
-  return get<Paginated<NazrRequest>>(`/admin/nazr-requests?${adminQuery({ page, pageSize, search, status })}`);
+export type AdminListExtras = {
+  nazrTypeId?: string;
+  minAmount?: string | number;
+  maxAmount?: string | number;
+  from?: string;
+  to?: string;
+  sort?: string;
+};
+
+export function getAdminNazrRequests(page = 1, pageSize = 30, search = '', status = '', extra: AdminListExtras = {}) {
+  return get<Paginated<NazrRequest>>(`/admin/nazr-requests?${adminQuery({ page, pageSize, search, status, ...extra })}`);
 }
 
 export function getAdminNazrTypes() {
@@ -396,8 +405,8 @@ export function updateAdminNazrStatus(id: string, status: NazrRequestStatus, adm
   return patch<NazrRequest, { status: NazrRequestStatus; adminNote?: string }>(`/admin/nazr-requests/${id}/status`, { status, adminNote });
 }
 
-export function getAdminPayments(page = 1, pageSize = 30, search = '', status = '', method = '', nazrTypeId = '') {
-  return get<Paginated<AdminPayment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status, method, nazrTypeId })}`);
+export function getAdminPayments(page = 1, pageSize = 30, search = '', status = '', method = '', nazrTypeId = '', extra: AdminListExtras = {}) {
+  return get<Paginated<AdminPayment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status, method, nazrTypeId, ...extra })}`);
 }
 
 export function setAdminPaymentStatus(id: string, status: Extract<PaymentStatus, 'paid' | 'rejected'>, reason?: string) {

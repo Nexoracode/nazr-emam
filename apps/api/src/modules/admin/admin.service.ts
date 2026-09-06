@@ -12,6 +12,7 @@ import {
   IsNull,
   LessThanOrEqual,
   Repository,
+  SelectQueryBuilder,
 } from 'typeorm';
 import type {
   AdminDashboardSummary,
@@ -62,6 +63,16 @@ import { TicketEntity } from '../tickets/entities/ticket.entity';
 import { CallTaskEntity } from './entities/call-task.entity';
 import { CrmActivityEntity } from './entities/crm-activity.entity';
 import { CrmProfileEntity } from './entities/crm-profile.entity';
+
+/** فیلترها و مرتب‌سازیِ مشترکِ لیست‌های نذر و پرداخت در پنل مدیریت. */
+interface AdminListExtras {
+  nazrTypeId?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  from?: string;
+  to?: string;
+  sort?: string;
+}
 
 const CRM_STAGES: CrmStage[] = ['new', 'engaged', 'recurring', 'at_risk', 'inactive'];
 const CALL_STATUSES: CallTaskStatus[] = ['pending', 'contacted', 'promised', 'paid', 'unreachable', 'cancelled'];
@@ -215,13 +226,59 @@ export class AdminService implements OnModuleInit {
     return this.toActivity(item);
   }
 
-  async requests(page = 1, pageSize = 20, search = '', status?: NazrRequestStatus): Promise<Paginated<NazrRequest>> {
+  async requests(page = 1, pageSize = 20, search = '', status?: NazrRequestStatus, extra: AdminListExtras = {}): Promise<Paginated<NazrRequest>> {
     const [safePage, safeSize] = this.safePage(page, pageSize);
     const query = this.requestsRepo.createQueryBuilder('request').leftJoinAndSelect('request.nazrType', 'nazrType');
-    if (search.trim()) query.where('(request.tracking_code LIKE :search OR request.donor_full_name LIKE :search OR request.donor_mobile LIKE :search)', { search: `%${search.trim()}%` });
+    if (search.trim()) query.andWhere('(request.tracking_code LIKE :search OR request.donor_full_name LIKE :search OR request.donor_mobile LIKE :search)', { search: `%${search.trim()}%` });
     if (status && REQUEST_STATUSES.includes(status)) query.andWhere('request.status = :status', { status });
-    const [items, total] = await query.orderBy('request.created_at', 'DESC').skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
+    if (extra.nazrTypeId) query.andWhere('request.nazr_type_id = :nazrTypeId', { nazrTypeId: extra.nazrTypeId });
+    this.applyAmountAndDateFilters(query, 'request', extra);
+    this.applyListSort(query, 'request', extra.sort);
+    const [items, total] = await query.skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
     return { items: items.map((item) => this.toNazrRequest(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
+  }
+
+  /**
+   * مبلغ در ستون JSON ذخیره می‌شود؛ برای فیلتر و مرتب‌سازی مقدار عددی آن استخراج
+   * می‌شود. همه‌ی مبالغ سامانه با واحد تومان (IRT) ثبت می‌شوند.
+   */
+  private amountExpression(alias: string): string {
+    return `CAST(JSON_EXTRACT(${alias}.amount, '$.amount') AS DECIMAL(18,2))`;
+  }
+
+  private applyAmountAndDateFilters(
+    query: SelectQueryBuilder<NazrRequestEntity | PaymentEntity>,
+    alias: string,
+    extra: AdminListExtras,
+  ): void {
+    const amount = this.amountExpression(alias);
+    if (extra.minAmount && extra.minAmount > 0) query.andWhere(`${amount} >= :minAmount`, { minAmount: extra.minAmount });
+    if (extra.maxAmount && extra.maxAmount > 0) query.andWhere(`${amount} <= :maxAmount`, { maxAmount: extra.maxAmount });
+    const from = extra.from ? new Date(extra.from) : null;
+    const to = extra.to ? new Date(extra.to) : null;
+    if (from && !Number.isNaN(from.getTime())) query.andWhere(`${alias}.created_at >= :from`, { from });
+    if (to && !Number.isNaN(to.getTime())) query.andWhere(`${alias}.created_at <= :to`, { to });
+  }
+
+  /** پیش‌فرض همان «جدیدترین اول» است؛ مرتب‌سازی مبلغ فقط وقتی صریحاً خواسته شود. */
+  private applyListSort(
+    query: SelectQueryBuilder<NazrRequestEntity | PaymentEntity>,
+    alias: string,
+    sort?: string,
+  ): void {
+    switch (sort) {
+      case 'amount_asc':
+        query.orderBy(this.amountExpression(alias), 'ASC');
+        break;
+      case 'amount_desc':
+        query.orderBy(this.amountExpression(alias), 'DESC');
+        break;
+      case 'date_asc':
+        query.orderBy(`${alias}.created_at`, 'ASC');
+        break;
+      default:
+        query.orderBy(`${alias}.created_at`, 'DESC');
+    }
   }
 
   async nazrTypes(): Promise<AdminNazrTypeSummary[]> {
@@ -309,7 +366,7 @@ export class AdminService implements OnModuleInit {
     return this.toNazrRequest(await this.requestsRepo.save(item!));
   }
 
-  async payments(page = 1, pageSize = 20, search = '', status?: PaymentStatus, method?: PaymentMethod, nazrTypeId?: string): Promise<Paginated<AdminPayment>> {
+  async payments(page = 1, pageSize = 20, search = '', status?: PaymentStatus, method?: PaymentMethod, nazrTypeId?: string, extra: AdminListExtras = {}): Promise<Paginated<AdminPayment>> {
     const [safePage, safeSize] = this.safePage(page, pageSize);
     const query = this.paymentsRepo
       .createQueryBuilder('payment')
@@ -319,7 +376,9 @@ export class AdminService implements OnModuleInit {
     if (status && ['pending', 'paid', 'rejected', 'refunded'].includes(status)) query.andWhere('payment.status = :status', { status });
     if (method && ['online', 'card_to_card', 'cash'].includes(method)) query.andWhere('payment.method = :method', { method });
     if (nazrTypeId) query.andWhere('request.nazr_type_id = :nazrTypeId', { nazrTypeId });
-    const [items, total] = await query.orderBy('payment.created_at', 'DESC').skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
+    this.applyAmountAndDateFilters(query, 'payment', extra);
+    this.applyListSort(query, 'payment', extra.sort);
+    const [items, total] = await query.skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
     return { items: items.map((item) => this.toAdminPayment(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
   }
 

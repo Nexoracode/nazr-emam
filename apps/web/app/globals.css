@@ -5097,6 +5097,7 @@ input {
 .admin-filter-bar input, .admin-filter-bar select { background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 6px; color: inherit; font-family: inherit; font-size: 12px; padding: 9px 12px; }
 .admin-filter-bar input { flex: 1 1 240px; min-width: 0; }
 .admin-filter-bar select { flex: 0 0 auto; cursor: pointer; }
+.admin-filter-bar .admin-filter-narrow { flex: 0 0 auto; max-width: 150px; }
 
 .admin-pager { align-items: center; display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
 .admin-pager span { color: var(--admin-muted); font-size: 11px; }

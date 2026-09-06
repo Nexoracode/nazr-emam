@@ -51,6 +51,7 @@ import {
   updateAdminNazrType,
   uploadAdminGalleryFile,
 } from '../../lib/api';
+import type { AdminListExtras } from '../../lib/api';
 import {
   amountToPersianWords,
   formatAmountInput,
@@ -274,16 +275,25 @@ type FilterSelect = {
   options: { value: string; label: string }[];
 };
 
+type FilterInput = {
+  key: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+};
+
 function FilterBar({
   search,
   onSearch,
   placeholder,
   selects,
+  inputs,
 }: {
   search: string;
   onSearch: (value: string) => void;
   placeholder: string;
   selects?: FilterSelect[];
+  inputs?: FilterInput[];
 }) {
   return (
     <div className="admin-filter-bar">
@@ -298,8 +308,62 @@ function FilterBar({
           ))}
         </select>
       ))}
+      {inputs?.map((input) => (
+        <input
+          className="admin-filter-narrow"
+          dir="ltr"
+          inputMode="numeric"
+          key={input.key}
+          onChange={(event) => input.onChange(event.target.value)}
+          placeholder={input.placeholder}
+          value={input.value}
+        />
+      ))}
     </div>
   );
+}
+
+const sortOptions = [
+  { value: 'date_asc', label: 'قدیمی‌ترین' },
+  { value: 'amount_desc', label: 'مبلغ: زیاد به کم' },
+  { value: 'amount_asc', label: 'مبلغ: کم به زیاد' },
+];
+
+/** تاریخ شمسیِ واردشده را به ISO تبدیل می‌کند؛ ورودیِ ناقص نادیده گرفته می‌شود. */
+function safeJalaliIso(value: string, hour: number): string {
+  try {
+    return value.trim() ? jalaliDateToIso(value, hour) : '';
+  } catch {
+    return '';
+  }
+}
+
+function amountFilterValue(value: string): string | number {
+  const parsed = parseAmountInput(value);
+  return parsed > 0 ? parsed : '';
+}
+
+/** فیلترهای مشترکِ مبلغ/تاریخ/مرتب‌سازی را به پارامترهای API تبدیل می‌کند. */
+function listExtras(filters: Record<string, string>): AdminListExtras {
+  return {
+    minAmount: amountFilterValue(filters.minAmount ?? ''),
+    maxAmount: amountFilterValue(filters.maxAmount ?? ''),
+    from: safeJalaliIso(filters.from ?? '', 0),
+    to: safeJalaliIso(filters.to ?? '', 23),
+    sort: filters.sort ?? '',
+  };
+}
+
+function amountAndDateInputs(
+  filters: Record<string, string>,
+  setFilter: (key: string, value: string) => void,
+): FilterInput[] {
+  return [
+    { key: 'minAmount', value: filters.minAmount ?? '', onChange: (value) => setFilter('minAmount', formatAmountInput(value)), placeholder: 'حداقل مبلغ' },
+    { key: 'maxAmount', value: filters.maxAmount ?? '', onChange: (value) => setFilter('maxAmount', formatAmountInput(value)), placeholder: 'حداکثر مبلغ' },
+    { key: 'from', value: filters.from ?? '', onChange: (value) => setFilter('from', value), placeholder: 'از تاریخ ۱۴۰۵/۰۱/۰۱' },
+    { key: 'to', value: filters.to ?? '', onChange: (value) => setFilter('to', value), placeholder: 'تا تاریخ ۱۴۰۵/۱۲/۲۹' },
+  ];
 }
 
 export function AdminPanel() {
@@ -440,7 +504,7 @@ function NazrSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrTypeSumm
     [suggestedAmount],
   );
   const requests = usePagedList<NazrRequest>(
-    useCallback((page, search, filters) => getAdminNazrRequests(page, PAGE_SIZE, search, filters.status ?? ''), []),
+    useCallback((page, search, filters) => getAdminNazrRequests(page, PAGE_SIZE, search, filters.status ?? '', { nazrTypeId: filters.nazrTypeId ?? '', ...listExtras(filters) }), []),
   );
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const form = event.currentTarget; const data = new FormData(form);
@@ -454,10 +518,14 @@ function NazrSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrTypeSumm
       <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><div className="admin-plan-metrics"><div><small>جمع واریزی موفق</small><strong>{money(item.collectedAmount)}</strong></div><div><small>تعداد نذر</small><strong>{item.requestCount.toLocaleString('fa-IR')}</strong></div><div><small>پرتکرارترین مبلغ</small><strong>{item.topAmount ? money(item.topAmount) : '—'}</strong>{item.topAmountCount > 0 ? <em>{item.topAmountCount.toLocaleString('fa-IR')} بار</em> : null}</div></div><footer><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
     </section>
     <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>{requests.data ? `${requests.data.total.toLocaleString('fa-IR')} نذر` : 'بررسی و تغییر وضعیت فعالیت‌ها'}</p></div><ExportButton onExport={async () => {
-      const rows = await fetchAllPages((page) => getAdminNazrRequests(page, 200, requests.search, requests.filters.status ?? ''));
+      const rows = await fetchAllPages((page) => getAdminNazrRequests(page, 200, requests.search, requests.filters.status ?? '', { nazrTypeId: requests.filters.nazrTypeId ?? '', ...listExtras(requests.filters) }));
       downloadCsv('nazr-requests.csv', ['مخاطب', 'موبایل', 'طرح', 'مبلغ (تومان)', 'کد رهگیری', 'وضعیت', 'تاریخ'], rows.map((item) => [item.donorFullName, item.donorMobile, item.nazrType.title, tomanValue(item.amount), item.trackingCode, requestLabels[item.status], date(item.createdAt)]));
     }} /></div>
-      <FilterBar search={requests.search} onSearch={requests.changeSearch} placeholder="جستجو با نام، موبایل یا کد رهگیری..." selects={[{ key: 'status', value: requests.filters.status ?? '', onChange: (value) => requests.setFilter('status', value), allLabel: 'همه وضعیت‌ها', options: requestStatusOptions }]} />
+      <FilterBar search={requests.search} onSearch={requests.changeSearch} placeholder="جستجو با نام، موبایل یا کد رهگیری..." selects={[
+        { key: 'status', value: requests.filters.status ?? '', onChange: (value) => requests.setFilter('status', value), allLabel: 'همه وضعیت‌ها', options: requestStatusOptions },
+        { key: 'nazrTypeId', value: requests.filters.nazrTypeId ?? '', onChange: (value) => requests.setFilter('nazrTypeId', value), allLabel: 'همه طرح‌ها', options: nazrTypes.map((type) => ({ value: type.id, label: type.title })) },
+        { key: 'sort', value: requests.filters.sort ?? '', onChange: (value) => requests.setFilter('sort', value), allLabel: 'جدیدترین', options: sortOptions },
+      ]} inputs={amountAndDateInputs(requests.filters, requests.setFilter)} />
       <RequestTable items={requests.data?.items ?? []} editable run={run} working={working} reload={requests.reload} loading={requests.loading} />
       <Pager data={requests.data} onPage={requests.setPage} loading={requests.loading} />
     </section>
@@ -516,19 +584,20 @@ const paymentMethodLabel = (method: AdminPayment['method']) => (method === 'onli
 
 function PaymentsSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrTypeSummary[]; run: Runner; working: boolean }) {
   const payments = usePagedList<AdminPayment>(
-    useCallback((page, search, filters) => getAdminPayments(page, PAGE_SIZE, search, filters.status ?? '', filters.method ?? '', filters.nazrTypeId ?? ''), []),
+    useCallback((page, search, filters) => getAdminPayments(page, PAGE_SIZE, search, filters.status ?? '', filters.method ?? '', filters.nazrTypeId ?? '', listExtras(filters)), []),
   );
   const items = payments.data?.items ?? [];
   const planOptions = nazrTypes.map((type) => ({ value: type.id, label: type.title }));
   return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>{payments.data ? `${payments.data.total.toLocaleString('fa-IR')} پرداخت` : 'کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده'}</p></div><ExportButton onExport={async () => {
-      const rows = await fetchAllPages((page) => getAdminPayments(page, 200, payments.search, payments.filters.status ?? '', payments.filters.method ?? '', payments.filters.nazrTypeId ?? ''));
+      const rows = await fetchAllPages((page) => getAdminPayments(page, 200, payments.search, payments.filters.status ?? '', payments.filters.method ?? '', payments.filters.nazrTypeId ?? '', listExtras(payments.filters)));
       downloadCsv('payments.csv', ['طرح', 'مخاطب', 'موبایل', 'روش', 'مبلغ (تومان)', 'کد رهگیری', 'مرجع تراکنش', 'وضعیت', 'تاریخ'], rows.map((item) => [item.nazrType?.title ?? '', item.donorFullName ?? '', item.donorMobile ?? '', paymentMethodLabel(item.method), tomanValue(item.amount), item.trackingCode ?? '', item.transactionReference ?? '', paymentLabels[item.status], date(item.createdAt)]));
     }} /></div>
     <FilterBar search={payments.search} onSearch={payments.changeSearch} placeholder="جستجو با کد رهگیری، موبایل یا مرجع تراکنش..." selects={[
       { key: 'status', value: payments.filters.status ?? '', onChange: (value) => payments.setFilter('status', value), allLabel: 'همه وضعیت‌ها', options: paymentStatusOptions },
       { key: 'method', value: payments.filters.method ?? '', onChange: (value) => payments.setFilter('method', value), allLabel: 'همه روش‌ها', options: paymentMethodOptions },
       { key: 'nazrTypeId', value: payments.filters.nazrTypeId ?? '', onChange: (value) => payments.setFilter('nazrTypeId', value), allLabel: 'همه طرح‌ها', options: planOptions },
-    ]} />
+      { key: 'sort', value: payments.filters.sort ?? '', onChange: (value) => payments.setFilter('sort', value), allLabel: 'جدیدترین', options: sortOptions },
+    ]} inputs={amountAndDateInputs(payments.filters, payments.setFilter)} />
     <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>طرح</th><th>مخاطب</th><th>مبلغ</th><th>کد رهگیری</th><th>تاریخ</th><th>وضعیت و اقدام</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.nazrType?.title ?? '—'}</strong><small>{paymentMethodLabel(item.method)}</small></td><td><strong>{item.donorFullName ?? '—'}</strong><small>{item.donorMobile ?? ''}</small></td><td>{money(item.amount)}</td><td dir="ltr">{item.trackingCode ?? '—'}{item.transactionReference ? <small>زرین‌پال: {item.transactionReference}</small> : null}</td><td>{date(item.createdAt)}</td><td><div className="admin-inline-actions"><span className={`admin-status ${statusClass(item.status)}`}>{paymentLabels[item.status]}</span>{item.status === 'pending' ? <><button disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'paid'), 'پرداخت تأیید شد', payments.reload)} type="button">تأیید</button><button className="is-danger-text" disabled={working} onClick={() => void run(() => setAdminPaymentStatus(item.id, 'rejected', 'رد توسط مدیر'), 'پرداخت رد شد', payments.reload)} type="button">رد</button></> : null}</div></td></tr>)}</tbody></table>{payments.loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty /> : null}</div>
     <Pager data={payments.data} onPage={payments.setPage} loading={payments.loading} />
   </section>;
