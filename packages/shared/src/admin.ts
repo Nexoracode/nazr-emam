@@ -61,6 +61,8 @@ export interface AdminUserListItem {
   role: 'donor' | 'admin';
   requestCount: number;
   paidAmount: Money;
+  /** هدف شخصی که کاربر در پروفایلش نوشته است (در صورت وجود). */
+  motivationalTarget: string | null;
   lastActivityAt: ISODate;
   crmStage: CrmStage;
   tags: string[];

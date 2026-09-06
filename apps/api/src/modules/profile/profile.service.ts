@@ -47,6 +47,9 @@ const SUPPORTED_PLATFORMS: UserPlatform[] = [
   'other',
 ];
 
+/** نذری «موفق» است که پرداختش تأیید شده و وارد اجرا شده باشد. */
+const SUCCESSFUL_REQUEST_STATUSES: string[] = ['confirmed', 'in_progress', 'completed'];
+
 @Injectable()
 export class ProfileService {
   constructor(
@@ -205,13 +208,16 @@ export class ProfileService {
       relations: { nazrType: true },
       order: { createdAt: 'DESC' },
     });
-    const totalAmount = this.sumMoney(items.map((item) => item.amount));
+    // آمار مشارکت فقط بر پایه نذرهای موفق ساخته می‌شود؛ نذر لغوشده، ردشده یا
+    // منتظر پرداخت نباید در تعداد، مبلغ و سهم طرح‌ها حساب شود.
+    const successful = items.filter((item) => SUCCESSFUL_REQUEST_STATUSES.includes(item.status));
+    const totalAmount = this.sumMoney(successful.map((item) => item.amount));
     const byType = new Map<
       string,
       { nazrTypeId: string; title: string; count: number; totalAmount: Money }
     >();
 
-    for (const item of items) {
+    for (const item of successful) {
       const current =
         byType.get(item.nazrTypeId) ??
         {
@@ -226,7 +232,7 @@ export class ProfileService {
     }
 
     return {
-      totalRequests: items.length,
+      totalRequests: successful.length,
       completedRequests: items.filter((item) => item.status === 'completed').length,
       awaitingPaymentRequests: items.filter(
         (item) => item.status === 'awaiting_payment',

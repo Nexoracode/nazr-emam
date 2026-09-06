@@ -598,11 +598,8 @@ function UserDrawer({ details, close, refresh, run, working }: { details: AdminU
   const [activityType, setActivityType] = useState<CrmActivityType>('call'); const [activity, setActivity] = useState('');
   const saveCrm = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = new FormData(event.currentTarget); void run(async () => { await updateAdminCrm(details.user.id, { stage: String(data.get('stage')) as CrmStage, tags: String(data.get('tags')).split('،').map((item) => item.trim()).filter(Boolean), assignedTo: String(data.get('assignedTo')) || null, note: String(data.get('note')) || null, nextFollowUpAt: data.get('nextFollowUpAt') ? jalaliDateToIso(String(data.get('nextFollowUpAt'))) : null }); await refresh(details.user.id); }, 'پرونده CRM ذخیره شد'); };
   return <div className="admin-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><aside className="admin-drawer"><header><div><h2>{details.user.fullName}</h2><p>{details.user.mobile}</p></div><button aria-label="بستن" onClick={close} type="button">×</button></header><div className="admin-drawer-body"><div className="admin-mini-stats"><span><small>تعداد نذر</small><strong>{details.user.requestCount.toLocaleString('fa-IR')}</strong></span><span><small>مجموع پرداخت</small><strong>{money(details.user.paidAmount)}</strong></span></div>
+    {details.user.motivationalTarget ? <div className="admin-user-goal"><small>هدف شخصی کاربر</small><p>{details.user.motivationalTarget}</p></div> : null}
     <div className="admin-user-activity">
-      <section>
-        <h3>نذرهای کاربر ({details.requests.length.toLocaleString('fa-IR')})</h3>
-        {details.requests.length ? <ul>{details.requests.map((item) => <li key={item.id}><span>{item.nazrType.title}</span><b>{money(item.amount)}</b><small dir="ltr">{item.trackingCode}</small><em className={`admin-status ${statusClass(item.status)}`}>{requestLabels[item.status]}</em><time>{date(item.createdAt)}</time></li>)}</ul> : <Empty text="نذری ثبت نشده است." />}
-      </section>
       <section>
         <h3>پرداخت‌های کاربر ({details.payments.length.toLocaleString('fa-IR')})</h3>
         {details.payments.length ? <ul>{details.payments.map((item) => <li key={item.id}><span>{paymentMethodLabel(item.method)}</span><b>{money(item.amount)}</b><small dir="ltr">{item.transactionReference ?? '—'}</small><em className={`admin-status ${statusClass(item.status)}`}>{paymentLabels[item.status]}</em><time>{date(item.createdAt)}</time></li>)}</ul> : <Empty text="پرداختی ثبت نشده است." />}

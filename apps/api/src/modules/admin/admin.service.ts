@@ -550,7 +550,7 @@ export class AdminService implements OnModuleInit {
       this.requestsRepo.find({ where: { userId: user.id }, order: { updatedAt: 'DESC' } }),
       this.paymentsRepo.createQueryBuilder('payment').innerJoin('payment.nazrRequest', 'request').where('request.user_id = :id', { id: user.id }).andWhere('payment.status = :status', { status: 'paid' }).getMany(),
     ]);
-    return { id: user.id, fullName: user.fullName, mobile: user.mobile, eitaNumber: user.eitaNumber, activePlatforms: user.activePlatforms ?? [], role: user.role, requestCount: requests.length, paidAmount: this.sumMoney(payments.map((item) => item.amount)), lastActivityAt: (requests[0]?.updatedAt ?? user.createdAt).toISOString(), crmStage: crm.stage, tags: crm.tags ?? [], nextFollowUpAt: crm.nextFollowUpAt?.toISOString() ?? null, createdAt: user.createdAt.toISOString() };
+    return { id: user.id, fullName: user.fullName, mobile: user.mobile, eitaNumber: user.eitaNumber, activePlatforms: user.activePlatforms ?? [], role: user.role, requestCount: requests.length, paidAmount: this.sumMoney(payments.map((item) => item.amount)), motivationalTarget: user.motivationalTarget ?? null, lastActivityAt: (requests[0]?.updatedAt ?? user.createdAt).toISOString(), crmStage: crm.stage, tags: crm.tags ?? [], nextFollowUpAt: crm.nextFollowUpAt?.toISOString() ?? null, createdAt: user.createdAt.toISOString() };
   }
 
   private async getUser(id: string): Promise<UserEntity> {

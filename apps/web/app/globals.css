@@ -5114,6 +5114,10 @@ input {
 .admin-user-activity li time { color: var(--admin-muted); margin-inline-start: auto; }
 .admin-user-activity li em { font-style: normal; }
 
+.admin-user-goal { background: var(--admin-surface); border: 1px solid var(--admin-border); border-inline-start: 3px solid var(--admin-primary); border-radius: 6px; margin-bottom: 18px; padding: 10px 12px; }
+.admin-user-goal small { color: var(--admin-muted); display: block; font-size: 9px; margin-bottom: 5px; }
+.admin-user-goal p { font-size: 11px; line-height: 1.9; margin: 0; }
+
 .admin-drawer-compact { max-width: 420px; }
 .admin-muted-note { color: var(--admin-muted); font-size: 11px; margin: 0 0 14px; }
 .admin-drawer-backdrop { background: rgb(14 25 21 / 36%); inset: 0; position: fixed; z-index: 80; }
