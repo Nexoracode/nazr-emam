@@ -126,7 +126,8 @@ export class AdminService implements OnModuleInit {
       this.requestsRepo.count(),
       this.requestsRepo.count({ where: [{ status: 'submitted' }, { status: 'awaiting_payment' }, { status: 'payment_pending_review' }] }),
       this.paymentsRepo.count({ where: { status: 'pending' } }),
-      this.ticketsRepo.count({ where: [{ status: 'open' }, { status: 'answered' }] }),
+      // فقط تیکت‌های بی‌پاسخ؛ تیکتِ پاسخ‌داده‌شده (answered) دیگر در انتظار نیست.
+      this.ticketsRepo.count({ where: { status: 'open' } }),
       this.callTasksRepo.count({ where: { status: 'pending', dueDate: LessThanOrEqual(new Date()) } }),
       this.paymentsRepo.find({ where: { status: 'paid' } }),
       this.requestsRepo.find({ relations: { nazrType: true }, order: { createdAt: 'DESC' }, take: 6 }),

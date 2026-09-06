@@ -128,6 +128,64 @@ function jalaliDateToIso(value: string, hour = 9) {
   throw new Error('تاریخ شمسی واردشده معتبر نیست');
 }
 
+/** مقدار عددیِ مبلغ به تومان (برای ستون‌های قابل جمع‌زدن در اکسل). */
+function tomanValue(value?: { amount: number; currency: string } | null) {
+  if (!value) return 0;
+  return Math.round(value.currency === 'IRR' ? value.amount / 10 : value.amount);
+}
+
+/** همه‌ی صفحه‌های یک لیستِ صفحه‌بندی‌شده را برای خروجی گرفتن جمع می‌کند. */
+async function fetchAllPages<T>(fetcher: (page: number) => Promise<Paginated<T>>): Promise<T[]> {
+  const all: T[] = [];
+  let page = 1;
+  for (;;) {
+    const chunk = await fetcher(page);
+    all.push(...chunk.items);
+    if (!chunk.items.length || page >= chunk.totalPages || page >= 100) break;
+    page += 1;
+  }
+  return all;
+}
+
+function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+  const escape = (value: string | number) => {
+    const text = String(value ?? '');
+    return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  // BOM لازم است تا اکسل، فارسی را درست بخواند.
+  const csv = `﻿${[headers, ...rows].map((row) => row.map(escape).join(',')).join('\r\n')}`;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function ExportButton({ onExport }: { onExport: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      className="admin-secondary"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await onExport();
+        } finally {
+          setBusy(false);
+        }
+      }}
+      type="button"
+    >
+      {busy ? 'در حال آماده‌سازی...' : 'خروجی اکسل'}
+    </button>
+  );
+}
+
 function statusClass(value: string) {
   if (['paid', 'confirmed', 'completed', 'answered'].includes(value)) return 'is-success';
   if (['pending', 'awaiting_payment', 'payment_pending_review', 'open', 'promised'].includes(value)) return 'is-warning';
@@ -395,7 +453,10 @@ function NazrSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrTypeSumm
       {showForm ? <form className="admin-form-grid" onSubmit={submit}><input name="title" placeholder="عنوان طرح" required /><input dir="ltr" name="slug" placeholder="slug" required /><label className="admin-amount-field"><input dir="ltr" inputMode="numeric" name="amount" onChange={(event) => setSuggestedAmount(formatAmountInput(event.target.value))} placeholder="مبلغ پیشنهادی (تومان)" value={suggestedAmount} /><small>{amountToPersianWords(suggestedAmountValue)}</small></label><textarea name="description" placeholder="توضیحات طرح" required /><button className="admin-primary" disabled={working}>ثبت طرح</button></form> : null}
       <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><div className="admin-plan-metrics"><div><small>جمع واریزی موفق</small><strong>{money(item.collectedAmount)}</strong></div><div><small>تعداد نذر</small><strong>{item.requestCount.toLocaleString('fa-IR')}</strong></div><div><small>پرتکرارترین مبلغ</small><strong>{item.topAmount ? money(item.topAmount) : '—'}</strong>{item.topAmountCount > 0 ? <em>{item.topAmountCount.toLocaleString('fa-IR')} بار</em> : null}</div></div><footer><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
     </section>
-    <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>{requests.data ? `${requests.data.total.toLocaleString('fa-IR')} نذر` : 'بررسی و تغییر وضعیت فعالیت‌ها'}</p></div></div>
+    <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>{requests.data ? `${requests.data.total.toLocaleString('fa-IR')} نذر` : 'بررسی و تغییر وضعیت فعالیت‌ها'}</p></div><ExportButton onExport={async () => {
+      const rows = await fetchAllPages((page) => getAdminNazrRequests(page, 200, requests.search, requests.filters.status ?? ''));
+      downloadCsv('nazr-requests.csv', ['مخاطب', 'موبایل', 'طرح', 'مبلغ (تومان)', 'کد رهگیری', 'وضعیت', 'تاریخ'], rows.map((item) => [item.donorFullName, item.donorMobile, item.nazrType.title, tomanValue(item.amount), item.trackingCode, requestLabels[item.status], date(item.createdAt)]));
+    }} /></div>
       <FilterBar search={requests.search} onSearch={requests.changeSearch} placeholder="جستجو با نام، موبایل یا کد رهگیری..." selects={[{ key: 'status', value: requests.filters.status ?? '', onChange: (value) => requests.setFilter('status', value), allLabel: 'همه وضعیت‌ها', options: requestStatusOptions }]} />
       <RequestTable items={requests.data?.items ?? []} editable run={run} working={working} reload={requests.reload} loading={requests.loading} />
       <Pager data={requests.data} onPage={requests.setPage} loading={requests.loading} />
@@ -414,7 +475,10 @@ function UsersSection({ selected, select, close, run, working }: { selected: Adm
     useCallback((page, search, filters) => getAdminUsers(page, PAGE_SIZE, search, filters.stage ?? ''), []),
   );
   const items = users.data?.items ?? [];
-  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>مخاطبان</h2><p>پرونده ارتباطی و سوابق مشارکت</p></div><span className="admin-count">{users.data ? `${users.data.total.toLocaleString('fa-IR')} نفر` : ''}</span></div>
+  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>مخاطبان</h2><p>پرونده ارتباطی و سوابق مشارکت</p></div><span className="admin-count">{users.data ? `${users.data.total.toLocaleString('fa-IR')} نفر` : ''}</span><ExportButton onExport={async () => {
+      const rows = await fetchAllPages((page) => getAdminUsers(page, 200, users.search, users.filters.stage ?? ''));
+      downloadCsv('users.csv', ['نام', 'موبایل', 'ایتا', 'مرحله CRM', 'تعداد نذر', 'مجموع پرداخت (تومان)', 'پیگیری بعدی', 'تاریخ عضویت'], rows.map((item) => [item.fullName, item.mobile, item.eitaNumber ?? '', crmLabels[item.crmStage], item.requestCount, tomanValue(item.paidAmount), item.nextFollowUpAt ? date(item.nextFollowUpAt) : '', date(item.createdAt)]));
+    }} /></div>
     <FilterBar search={users.search} onSearch={users.changeSearch} placeholder="جستجو با نام، موبایل یا ایتا..." selects={[{ key: 'stage', value: users.filters.stage ?? '', onChange: (value) => users.setFilter('stage', value), allLabel: 'همه مراحل', options: stageOptions }]} />
     <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>نام و تماس</th><th>مرحله CRM</th><th>مشارکت</th><th>مجموع پرداخت</th><th>پیگیری بعدی</th><th></th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.fullName}</strong><small>{item.mobile}{item.eitaNumber ? ` · ایتا: ${item.eitaNumber}` : ''}</small></td><td><span className={`admin-status ${item.crmStage === 'at_risk' ? 'is-warning' : 'is-neutral'}`}>{crmLabels[item.crmStage]}</span></td><td>{item.requestCount.toLocaleString('fa-IR')} نذر</td><td>{money(item.paidAmount)}</td><td>{date(item.nextFollowUpAt)}</td><td><button className="admin-text-action" onClick={() => void select(item.id)} type="button">پرونده</button></td></tr>)}</tbody></table>{users.loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty text="مخاطبی با این فیلتر یافت نشد." /> : null}</div>
     <Pager data={users.data} onPage={users.setPage} loading={users.loading} />
@@ -424,7 +488,22 @@ function UsersSection({ selected, select, close, run, working }: { selected: Adm
 function UserDrawer({ details, close, refresh, run, working }: { details: AdminUserDetails; close: () => void; refresh: (id: string) => Promise<void>; run: Runner; working: boolean }) {
   const [activityType, setActivityType] = useState<CrmActivityType>('call'); const [activity, setActivity] = useState('');
   const saveCrm = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = new FormData(event.currentTarget); void run(async () => { await updateAdminCrm(details.user.id, { stage: String(data.get('stage')) as CrmStage, tags: String(data.get('tags')).split('،').map((item) => item.trim()).filter(Boolean), assignedTo: String(data.get('assignedTo')) || null, note: String(data.get('note')) || null, nextFollowUpAt: data.get('nextFollowUpAt') ? jalaliDateToIso(String(data.get('nextFollowUpAt'))) : null }); await refresh(details.user.id); }, 'پرونده CRM ذخیره شد'); };
-  return <div className="admin-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><aside className="admin-drawer"><header><div><h2>{details.user.fullName}</h2><p>{details.user.mobile}</p></div><button aria-label="بستن" onClick={close} type="button">×</button></header><div className="admin-drawer-body"><div className="admin-mini-stats"><span><small>تعداد نذر</small><strong>{details.user.requestCount.toLocaleString('fa-IR')}</strong></span><span><small>مجموع پرداخت</small><strong>{money(details.user.paidAmount)}</strong></span></div><form className="admin-form-stack" onSubmit={saveCrm}><h3>وضعیت ارتباط</h3><label>مرحله<select defaultValue={details.crm.stage} name="stage">{Object.entries(crmLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>برچسب‌ها<input defaultValue={details.crm.tags.join('، ')} name="tags" placeholder="همراه قدیمی، تماس ماهانه" /></label><label>مسئول پیگیری<input defaultValue={details.crm.assignedTo ?? ''} name="assignedTo" /></label><label>اقدام بعدی<input defaultValue={details.crm.nextFollowUpAt ? jalaliDateInput(details.crm.nextFollowUpAt) : ''} dir="ltr" inputMode="numeric" maxLength={10} name="nextFollowUpAt" placeholder="1405/02/03" /></label><label>یادداشت<textarea defaultValue={details.crm.note ?? ''} name="note" /></label><button className="admin-primary" disabled={working}>ذخیره پرونده</button></form><div className="admin-form-stack"><h3>ثبت فعالیت</h3><select onChange={(event) => setActivityType(event.target.value as CrmActivityType)} value={activityType}><option value="call">تماس</option><option value="note">یادداشت</option><option value="payment">پرداخت</option><option value="ticket">تیکت</option><option value="status">تغییر وضعیت</option></select><textarea onChange={(event) => setActivity(event.target.value)} placeholder="خلاصه گفتگو یا اقدام انجام‌شده" value={activity} /><button className="admin-secondary" disabled={!activity.trim() || working} onClick={() => void run(async () => { await addAdminCrmActivity(details.user.id, { type: activityType, summary: activity }); setActivity(''); await refresh(details.user.id); }, 'فعالیت ثبت شد')} type="button">ثبت در تاریخچه</button></div><div className="admin-timeline"><h3>تاریخچه CRM</h3>{details.activities.map((item) => <article key={item.id}><span></span><div><strong>{item.summary}</strong><small>{item.createdBy} · {date(item.createdAt)}</small></div></article>)}{!details.activities.length ? <Empty /> : null}</div></div></aside></div>;
+  return <div className="admin-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}><aside className="admin-drawer"><header><div><h2>{details.user.fullName}</h2><p>{details.user.mobile}</p></div><button aria-label="بستن" onClick={close} type="button">×</button></header><div className="admin-drawer-body"><div className="admin-mini-stats"><span><small>تعداد نذر</small><strong>{details.user.requestCount.toLocaleString('fa-IR')}</strong></span><span><small>مجموع پرداخت</small><strong>{money(details.user.paidAmount)}</strong></span></div>
+    <div className="admin-user-activity">
+      <section>
+        <h3>نذرهای کاربر ({details.requests.length.toLocaleString('fa-IR')})</h3>
+        {details.requests.length ? <ul>{details.requests.map((item) => <li key={item.id}><span>{item.nazrType.title}</span><b>{money(item.amount)}</b><small dir="ltr">{item.trackingCode}</small><em className={`admin-status ${statusClass(item.status)}`}>{requestLabels[item.status]}</em><time>{date(item.createdAt)}</time></li>)}</ul> : <Empty text="نذری ثبت نشده است." />}
+      </section>
+      <section>
+        <h3>پرداخت‌های کاربر ({details.payments.length.toLocaleString('fa-IR')})</h3>
+        {details.payments.length ? <ul>{details.payments.map((item) => <li key={item.id}><span>{paymentMethodLabel(item.method)}</span><b>{money(item.amount)}</b><small dir="ltr">{item.transactionReference ?? '—'}</small><em className={`admin-status ${statusClass(item.status)}`}>{paymentLabels[item.status]}</em><time>{date(item.createdAt)}</time></li>)}</ul> : <Empty text="پرداختی ثبت نشده است." />}
+      </section>
+      <section>
+        <h3>تیکت‌های کاربر ({details.tickets.length.toLocaleString('fa-IR')})</h3>
+        {details.tickets.length ? <ul>{details.tickets.map((item) => <li key={item.id}><span>{item.subject}</span><em className={`admin-status ${statusClass(item.status)}`}>{ticketLabels[item.status]}</em><time>{date(item.updatedAt)}</time></li>)}</ul> : <Empty text="تیکتی ثبت نشده است." />}
+      </section>
+    </div>
+    <form className="admin-form-stack" onSubmit={saveCrm}><h3>وضعیت ارتباط</h3><label>مرحله<select defaultValue={details.crm.stage} name="stage">{Object.entries(crmLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>برچسب‌ها<input defaultValue={details.crm.tags.join('، ')} name="tags" placeholder="همراه قدیمی، تماس ماهانه" /></label><label>مسئول پیگیری<input defaultValue={details.crm.assignedTo ?? ''} name="assignedTo" /></label><label>اقدام بعدی<input defaultValue={details.crm.nextFollowUpAt ? jalaliDateInput(details.crm.nextFollowUpAt) : ''} dir="ltr" inputMode="numeric" maxLength={10} name="nextFollowUpAt" placeholder="1405/02/03" /></label><label>یادداشت<textarea defaultValue={details.crm.note ?? ''} name="note" /></label><button className="admin-primary" disabled={working}>ذخیره پرونده</button></form><div className="admin-form-stack"><h3>ثبت فعالیت</h3><select onChange={(event) => setActivityType(event.target.value as CrmActivityType)} value={activityType}><option value="call">تماس</option><option value="note">یادداشت</option><option value="payment">پرداخت</option><option value="ticket">تیکت</option><option value="status">تغییر وضعیت</option></select><textarea onChange={(event) => setActivity(event.target.value)} placeholder="خلاصه گفتگو یا اقدام انجام‌شده" value={activity} /><button className="admin-secondary" disabled={!activity.trim() || working} onClick={() => void run(async () => { await addAdminCrmActivity(details.user.id, { type: activityType, summary: activity }); setActivity(''); await refresh(details.user.id); }, 'فعالیت ثبت شد')} type="button">ثبت در تاریخچه</button></div><div className="admin-timeline"><h3>تاریخچه CRM</h3>{details.activities.map((item) => <article key={item.id}><span></span><div><strong>{item.summary}</strong><small>{item.createdBy} · {date(item.createdAt)}</small></div></article>)}{!details.activities.length ? <Empty /> : null}</div></div></aside></div>;
 }
 
 const paymentStatusOptions = (Object.entries(paymentLabels) as [PaymentStatus, string][]).map(([value, label]) => ({ value, label }));
@@ -441,7 +520,10 @@ function PaymentsSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrType
   );
   const items = payments.data?.items ?? [];
   const planOptions = nazrTypes.map((type) => ({ value: type.id, label: type.title }));
-  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>{payments.data ? `${payments.data.total.toLocaleString('fa-IR')} پرداخت` : 'کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده'}</p></div></div>
+  return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>{payments.data ? `${payments.data.total.toLocaleString('fa-IR')} پرداخت` : 'کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده'}</p></div><ExportButton onExport={async () => {
+      const rows = await fetchAllPages((page) => getAdminPayments(page, 200, payments.search, payments.filters.status ?? '', payments.filters.method ?? '', payments.filters.nazrTypeId ?? ''));
+      downloadCsv('payments.csv', ['طرح', 'مخاطب', 'موبایل', 'روش', 'مبلغ (تومان)', 'کد رهگیری', 'مرجع تراکنش', 'وضعیت', 'تاریخ'], rows.map((item) => [item.nazrType?.title ?? '', item.donorFullName ?? '', item.donorMobile ?? '', paymentMethodLabel(item.method), tomanValue(item.amount), item.trackingCode ?? '', item.transactionReference ?? '', paymentLabels[item.status], date(item.createdAt)]));
+    }} /></div>
     <FilterBar search={payments.search} onSearch={payments.changeSearch} placeholder="جستجو با کد رهگیری، موبایل یا مرجع تراکنش..." selects={[
       { key: 'status', value: payments.filters.status ?? '', onChange: (value) => payments.setFilter('status', value), allLabel: 'همه وضعیت‌ها', options: paymentStatusOptions },
       { key: 'method', value: payments.filters.method ?? '', onChange: (value) => payments.setFilter('method', value), allLabel: 'همه روش‌ها', options: paymentMethodOptions },
