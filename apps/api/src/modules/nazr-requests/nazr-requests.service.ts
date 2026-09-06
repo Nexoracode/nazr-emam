@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomBytes } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { Repository } from 'typeorm';
 import type {
   CreateNazrRequest,
@@ -27,6 +27,12 @@ interface ValidatedCreateNazrRequest {
   note: string | null;
   isAnonymous: boolean;
 }
+
+/**
+ * الفبای کد رهگیری: بدون کاراکترهای مبهم (0/O و 1/I/L و U) تا هنگام خواندن،
+ * گفتن در تماس تلفنی یا تایپ‌کردن اشتباه نشود.
+ */
+const TRACKING_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 @Injectable()
 export class NazrRequestsService {
@@ -199,19 +205,24 @@ export class NazrRequestsService {
     });
   }
 
+  private randomTrackingCode(length: number): string {
+    let code = '';
+    for (let i = 0; i < length; i += 1) {
+      code += TRACKING_ALPHABET[randomInt(TRACKING_ALPHABET.length)];
+    }
+    return `NE-${code}`;
+  }
+
   private async createTrackingCode(): Promise<string> {
-    for (let i = 0; i < 5; i += 1) {
-      const code = `NE-${Date.now().toString(36).toUpperCase()}-${randomBytes(3)
-        .toString('hex')
-        .toUpperCase()}`;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      // بعد از چند برخوردِ پیاپی، طول را زیاد می‌کنیم تا تکرار عملاً غیرممکن شود.
+      const code = this.randomTrackingCode(attempt < 5 ? 6 : 8);
       const exists = await this.repo.exists({ where: { trackingCode: code } });
       if (!exists) {
         return code;
       }
     }
 
-    return `NE-${Date.now().toString(36).toUpperCase()}-${randomBytes(6)
-      .toString('hex')
-      .toUpperCase()}`;
+    return this.randomTrackingCode(10);
   }
 }
