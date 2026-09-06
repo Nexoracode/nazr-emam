@@ -24,6 +24,7 @@ import type {
   CallTask,
   CallTaskStatus,
   CreateCallTaskRequest,
+  CreateCardPaymentRequest,
   CreateCrmActivityRequest,
   CreateGalleryAssetRequest,
   CreateNotificationRequest,
@@ -380,6 +381,39 @@ export class AdminService implements OnModuleInit {
     this.applyListSort(query, 'payment', extra.sort);
     const [items, total] = await query.skip((safePage - 1) * safeSize).take(safeSize).getManyAndCount();
     return { items: items.map((item) => this.toAdminPayment(item)), page: safePage, pageSize: safeSize, total, totalPages: Math.ceil(total / safeSize) };
+  }
+
+  /**
+   * ثبت دستیِ پرداختِ کارت‌به‌کارت برای یک درخواستِ نذر. کاربر رسید را در ایتا
+   * می‌فرستد و مدیر پس از بررسی، پرداخت را اینجا ثبت می‌کند.
+   */
+  async createCardPayment(requestId: string, payload: CreateCardPaymentRequest): Promise<AdminPayment> {
+    const request = await this.requestsRepo.findOne({ where: { id: requestId }, relations: { nazrType: true } });
+    if (!request) this.notFound('NAZR_REQUEST_NOT_FOUND', 'درخواست نذر پیدا نشد');
+
+    const amount = payload.amount ?? request!.amount;
+    if (!amount || !Number.isFinite(amount.amount) || amount.amount <= 0) {
+      this.validation({ amount: 'مبلغ پرداخت معتبر نیست' });
+    }
+
+    const payment = await this.paymentsRepo.save(
+      this.paymentsRepo.create({
+        nazrRequestId: request!.id,
+        nazrRequest: request!,
+        method: 'card_to_card',
+        status: 'paid',
+        amount,
+        transactionReference: payload.reference?.trim() || null,
+        receiptUrl: null,
+      }),
+    );
+
+    request!.status = 'confirmed';
+    if (payload.note?.trim()) request!.adminNote = payload.note.trim();
+    await this.requestsRepo.save(request!);
+
+    payment.nazrRequest = request!;
+    return this.toAdminPayment(payment);
   }
 
   async setPaymentStatus(id: string, status: 'paid' | 'rejected', reason?: string): Promise<Payment> {

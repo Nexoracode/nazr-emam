@@ -11,6 +11,7 @@ import type {
   CallTaskStatus,
   ChangePasswordRequest,
   CreateCallTaskRequest,
+  CreateCardPaymentRequest,
   CreateCrmActivityRequest,
   CreateGalleryAssetRequest,
   CreateInvitationCardRequest,
@@ -407,6 +408,10 @@ export function updateAdminNazrStatus(id: string, status: NazrRequestStatus, adm
 
 export function getAdminPayments(page = 1, pageSize = 30, search = '', status = '', method = '', nazrTypeId = '', extra: AdminListExtras = {}) {
   return get<Paginated<AdminPayment>>(`/admin/payments?${adminQuery({ page, pageSize, search, status, method, nazrTypeId, ...extra })}`);
+}
+
+export function createAdminCardPayment(requestId: string, payload: CreateCardPaymentRequest) {
+  return post<AdminPayment, CreateCardPaymentRequest>(`/admin/nazr-requests/${requestId}/card-payment`, payload);
 }
 
 export function setAdminPaymentStatus(id: string, status: Extract<PaymentStatus, 'paid' | 'rejected'>, reason?: string) {

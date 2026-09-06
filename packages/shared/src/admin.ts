@@ -17,6 +17,16 @@ export interface AdminPayment extends Payment {
   donorMobile: string | null;
 }
 
+/**
+ * ثبت دستیِ پرداختِ کارت‌به‌کارت توسط مدیر برای یک درخواستِ نذر.
+ * رسید از طریق ایتا برای تیم ارسال می‌شود و مدیر بعد از بررسی آن را ثبت می‌کند.
+ */
+export interface CreateCardPaymentRequest {
+  amount?: Money | null;
+  reference?: string | null;
+  note?: string | null;
+}
+
 /** طرح به‌همراه جمعِ واقعیِ پرداخت‌های موفق و تعداد نذر برای پنل مدیریت. */
 export interface AdminNazrTypeSummary extends NazrType {
   collectedAmount: Money;

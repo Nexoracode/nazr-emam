@@ -35,7 +35,15 @@ const textAreaCls = (err: boolean) =>
 const selectCls = (err: boolean) =>
   `${fieldCls(err)} appearance-none pl-9`;
 
+// اطلاعات کارت‌به‌کارت از env می‌آید؛ اگر تنظیم نشده باشد این روش نمایش داده نمی‌شود.
+const cardNumber = process.env.NEXT_PUBLIC_CARD_TO_CARD_NUMBER ?? '';
+const cardHolder = process.env.NEXT_PUBLIC_CARD_TO_CARD_HOLDER ?? '';
+const eitaaId = process.env.NEXT_PUBLIC_EITAA_ID ?? '';
+const cardToCardEnabled = Boolean(cardNumber && eitaaId);
+
 export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?: string }) {
+  const [showCardDetails, setShowCardDetails] = useState(false);
+  const [cardCopied, setCardCopied] = useState(false);
   const requestedNazrTypeId = initialNazrTypeId;
   const [nazrTypes, setNazrTypes] = useState<NazrType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
@@ -337,7 +345,9 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
           ) : (
             <div className="grid gap-3 rounded-lg border border-auth-card-border bg-auth-link-surface px-3 py-3">
               <p className="m-0 text-[11px] leading-6 text-auth-muted">
-                برای تکمیل نذر، پرداخت آنلاین را انجام دهید.
+                {cardToCardEnabled
+                  ? 'برای تکمیل نذر، یکی از روش‌های پرداخت زیر را انتخاب کنید.'
+                  : 'برای تکمیل نذر، پرداخت آنلاین را انجام دهید.'}
               </p>
               <button
                 className="h-10 w-full cursor-pointer rounded-lg bg-auth-accent text-[12px] font-semibold text-auth-btn-text shadow-auth-action transition hover:bg-auth-accent-dark disabled:opacity-70"
@@ -347,6 +357,56 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
               >
                 {isStartingPayment ? 'در حال اتصال...' : 'پرداخت آنلاین زرین‌پال'}
               </button>
+
+              {cardToCardEnabled && (
+                <>
+                  <button
+                    className="h-10 w-full cursor-pointer rounded-lg border border-auth-link-border bg-auth-card text-[12px] font-bold text-auth-link transition hover:border-auth-link hover:text-auth-text"
+                    onClick={() => setShowCardDetails((value) => !value)}
+                    type="button"
+                  >
+                    {showCardDetails ? 'بستن کارت به کارت' : 'پرداخت کارت به کارت'}
+                  </button>
+
+                  {showCardDetails && (
+                    <div className="grid gap-2 rounded-lg border border-auth-card-border bg-auth-card px-3 py-3 text-[11px] leading-6 text-auth-text">
+                      <p className="m-0 text-auth-muted">
+                        مبلغ نذر را به کارت زیر واریز کنید، سپس تصویر رسید را همراه کد رهگیری
+                        به آیدی ایتای ما بفرستید تا نذرتان ثبت و تأیید شود.
+                      </p>
+                      <div className="flex items-center justify-between gap-2 rounded-lg bg-auth-link-surface px-2 py-2">
+                        <span dir="ltr" className="font-bold tracking-wider">{cardNumber}</span>
+                        <button
+                          className="shrink-0 cursor-pointer rounded-md border border-auth-link-border px-2 py-1 text-[10px] font-bold text-auth-link"
+                          onClick={() => {
+                            void navigator.clipboard?.writeText(cardNumber);
+                            setCardCopied(true);
+                            setTimeout(() => setCardCopied(false), 2000);
+                          }}
+                          type="button"
+                        >
+                          {cardCopied ? 'کپی شد' : 'کپی'}
+                        </button>
+                      </div>
+                      {cardHolder && <p className="m-0">به نام: {cardHolder}</p>}
+                      <p className="m-0">
+                        ارسال رسید در ایتا:{' '}
+                        <a
+                          className="font-bold text-auth-link"
+                          href={`https://eitaa.com/${eitaaId.replace('@', '')}`}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {eitaaId}
+                        </a>
+                      </p>
+                      <p className="m-0 text-auth-muted">
+                        کد رهگیری نذر شما: <span dir="ltr">{createdRequest.trackingCode}</span>
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </form>

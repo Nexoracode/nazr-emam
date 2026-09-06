@@ -25,6 +25,7 @@ import type {
 import {
   addAdminCrmActivity,
   closeTicket,
+  createAdminCardPayment,
   createAdminGallery,
   createAdminNazrType,
   createAdminNotification,
@@ -533,7 +534,47 @@ function NazrSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrTypeSumm
 }
 
 function RequestTable({ items, editable = false, run, working, reload, loading }: { items: NazrRequest[]; editable?: boolean; run?: Runner; working?: boolean; reload?: () => Promise<unknown>; loading?: boolean }) {
-  return <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>مخاطب</th><th>طرح</th><th>مبلغ</th><th>کد رهگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.donorFullName}</strong><small>{item.donorMobile}</small></td><td>{item.nazrType.title}</td><td>{money(item.amount)}</td><td dir="ltr">{item.trackingCode}</td><td>{date(item.createdAt)}</td><td>{editable && run ? <select disabled={working} onChange={(event) => void run(() => updateAdminNazrStatus(item.id, event.target.value as NazrRequestStatus), 'وضعیت نذر به‌روزرسانی شد', reload ?? true)} value={item.status}>{requestStatuses.map((status) => <option key={status} value={status}>{requestLabels[status]}</option>)}</select> : <span className={`admin-status ${statusClass(item.status)}`}>{requestLabels[item.status]}</span>}</td></tr>)}</tbody></table>{loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty /> : null}</div>;
+  const [cardFor, setCardFor] = useState<NazrRequest | null>(null);
+  return <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>مخاطب</th><th>طرح</th><th>مبلغ</th><th>کد رهگیری</th><th>تاریخ</th><th>وضعیت</th>{editable ? <th>کارت‌به‌کارت</th> : null}</tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.donorFullName}</strong><small>{item.donorMobile}</small></td><td>{item.nazrType.title}</td><td>{money(item.amount)}</td><td dir="ltr">{item.trackingCode}</td><td>{date(item.createdAt)}</td><td>{editable && run ? <select disabled={working} onChange={(event) => void run(() => updateAdminNazrStatus(item.id, event.target.value as NazrRequestStatus), 'وضعیت نذر به‌روزرسانی شد', reload ?? true)} value={item.status}>{requestStatuses.map((status) => <option key={status} value={status}>{requestLabels[status]}</option>)}</select> : <span className={`admin-status ${statusClass(item.status)}`}>{requestLabels[item.status]}</span>}</td>{editable ? <td><button className="admin-text-action" disabled={working} onClick={() => setCardFor(item)} type="button">ثبت واریز</button></td> : null}</tr>)}</tbody></table>{loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty /> : null}
+    {cardFor && run ? <CardPaymentModal request={cardFor} close={() => setCardFor(null)} run={run} working={Boolean(working)} reload={reload} /> : null}
+  </div>;
+}
+
+/** ثبت دستیِ واریزِ کارت‌به‌کارت پس از دریافت رسید در ایتا. */
+function CardPaymentModal({ request, close, run, working, reload }: { request: NazrRequest; close: () => void; run: Runner; working: boolean; reload?: () => Promise<unknown> }) {
+  const [amount, setAmount] = useState(formatAmountInput(String(request.amount.amount)));
+  const [reference, setReference] = useState('');
+  const [note, setNote] = useState('');
+  const amountValue = parseAmountInput(amount);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const done = await run(
+      () => createAdminCardPayment(request.id, {
+        amount: amountValue > 0 ? { amount: amountValue, currency: request.amount.currency } : null,
+        reference: reference.trim() || null,
+        note: note.trim() || null,
+      }),
+      'واریز کارت‌به‌کارت ثبت شد',
+      reload ?? true,
+    );
+    if (done) close();
+  };
+
+  return <div className="admin-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
+    <aside className="admin-drawer admin-drawer-compact">
+      <header><div><h2>ثبت واریز کارت‌به‌کارت</h2><p>{request.donorFullName} · {request.nazrType.title}</p></div><button aria-label="بستن" onClick={close} type="button">×</button></header>
+      <div className="admin-drawer-body">
+        <p className="admin-muted-note">کد رهگیری نذر: <span dir="ltr">{request.trackingCode}</span></p>
+        <form className="admin-form-stack" onSubmit={submit}>
+          <label>مبلغ واریزی (تومان)<input dir="ltr" inputMode="numeric" onChange={(event) => setAmount(formatAmountInput(event.target.value))} value={amount} /><small>{amountToPersianWords(amountValue)}</small></label>
+          <label>شماره پیگیری / ۴ رقم آخر کارت<input dir="ltr" onChange={(event) => setReference(event.target.value)} placeholder="اختیاری" value={reference} /></label>
+          <label>یادداشت مدیر<textarea onChange={(event) => setNote(event.target.value)} placeholder="اختیاری" value={note} /></label>
+          <button className="admin-primary" disabled={working || amountValue <= 0} type="submit">ثبت واریز و تأیید نذر</button>
+        </form>
+      </div>
+    </aside>
+  </div>;
 }
 
 const stageOptions = Object.entries(crmLabels).map(([value, label]) => ({ value, label }));

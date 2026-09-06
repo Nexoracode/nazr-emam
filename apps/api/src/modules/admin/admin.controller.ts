@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiTa
 import type {
   CallTaskStatus,
   CreateCallTaskRequest,
+  CreateCardPaymentRequest,
   CreateCrmActivityRequest,
   CreateGalleryAssetRequest,
   CreateNotificationRequest,
@@ -99,6 +100,12 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'لیست مدیریتی پرداخت‌ها' })
+  @ApiOperation({ summary: 'ثبت دستی پرداخت کارت‌به‌کارت برای یک درخواست نذر' })
+  @Post('nazr-requests/:id/card-payment')
+  createCardPayment(@Param('id') id: string, @Body() body: CreateCardPaymentRequest) {
+    return this.service.createCardPayment(id, body);
+  }
+
   @Get('payments')
   payments(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string, @Query('status') status?: PaymentStatus, @Query('method') method?: PaymentMethod, @Query('nazrTypeId') nazrTypeId?: string, @Query('minAmount') minAmount?: string, @Query('maxAmount') maxAmount?: string, @Query('from') from?: string, @Query('to') to?: string, @Query('sort') sort?: string) {
     return this.service.payments(Number(page) || 1, Number(pageSize) || 20, search, status, method, nazrTypeId, { minAmount: Number(minAmount) || 0, maxAmount: Number(maxAmount) || 0, from, to, sort });

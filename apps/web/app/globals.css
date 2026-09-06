@@ -5113,6 +5113,9 @@ input {
 .admin-user-activity li small { color: var(--admin-muted); }
 .admin-user-activity li time { color: var(--admin-muted); margin-inline-start: auto; }
 .admin-user-activity li em { font-style: normal; }
+
+.admin-drawer-compact { max-width: 420px; }
+.admin-muted-note { color: var(--admin-muted); font-size: 11px; margin: 0 0 14px; }
 .admin-drawer-backdrop { background: rgb(14 25 21 / 36%); inset: 0; position: fixed; z-index: 80; }
 .admin-drawer { background: var(--admin-surface); box-shadow: -18px 0 50px rgb(12 30 23 / 15%); height: 100%; inset-inline-end: 0; max-width: 560px; overflow-y: auto; position: absolute; width: min(100%, 560px); }
 .admin-drawer > header { align-items: center; border-bottom: 1px solid var(--admin-border); display: flex; justify-content: space-between; padding: 18px 20px; position: sticky; top: 0; background: #fff; z-index: 1; }
