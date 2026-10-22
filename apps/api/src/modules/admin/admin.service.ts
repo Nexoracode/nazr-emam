@@ -78,6 +78,9 @@ interface AdminListExtras {
 const CRM_STAGES: CrmStage[] = ['new', 'engaged', 'recurring', 'at_risk', 'inactive'];
 const CALL_STATUSES: CallTaskStatus[] = ['pending', 'contacted', 'promised', 'paid', 'unreachable', 'cancelled'];
 const REQUEST_STATUSES: NazrRequestStatus[] = ['draft', 'submitted', 'awaiting_payment', 'payment_pending_review', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected'];
+/** نذر «موفق»: پرداختش تأیید شده و وارد اجرا شده است. تلاش‌های ناموفق پرداخت،
+ * نذر را cancelled می‌کنند و نباید در شمارش مشارکت بیایند. */
+const SUCCESSFUL_REQUEST_STATUSES: NazrRequestStatus[] = ['confirmed', 'in_progress', 'completed'];
 const IMAGE_MAX_SIZE = 10 * 1024 * 1024;
 const VIDEO_MAX_SIZE = 150 * 1024 * 1024;
 const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
@@ -289,6 +292,7 @@ export class AdminService implements OnModuleInit {
       .createQueryBuilder('request')
       .select('request.nazr_type_id', 'nazrTypeId')
       .addSelect('COUNT(*)', 'count')
+      .where('request.status IN (:...statuses)', { statuses: SUCCESSFUL_REQUEST_STATUSES })
       .groupBy('request.nazr_type_id')
       .getRawMany<{ nazrTypeId: string; count: string }>();
     const requestCountByType = new Map(requestRows.map((row) => [row.nazrTypeId, Number(row.count)]));
@@ -550,7 +554,7 @@ export class AdminService implements OnModuleInit {
       this.requestsRepo.find({ where: { userId: user.id }, order: { updatedAt: 'DESC' } }),
       this.paymentsRepo.createQueryBuilder('payment').innerJoin('payment.nazrRequest', 'request').where('request.user_id = :id', { id: user.id }).andWhere('payment.status = :status', { status: 'paid' }).getMany(),
     ]);
-    return { id: user.id, fullName: user.fullName, mobile: user.mobile, eitaNumber: user.eitaNumber, activePlatforms: user.activePlatforms ?? [], role: user.role, requestCount: requests.length, paidAmount: this.sumMoney(payments.map((item) => item.amount)), motivationalTarget: user.motivationalTarget ?? null, lastActivityAt: (requests[0]?.updatedAt ?? user.createdAt).toISOString(), crmStage: crm.stage, tags: crm.tags ?? [], nextFollowUpAt: crm.nextFollowUpAt?.toISOString() ?? null, createdAt: user.createdAt.toISOString() };
+    return { id: user.id, fullName: user.fullName, mobile: user.mobile, eitaNumber: user.eitaNumber, activePlatforms: user.activePlatforms ?? [], role: user.role, requestCount: requests.filter((item) => SUCCESSFUL_REQUEST_STATUSES.includes(item.status)).length, paidAmount: this.sumMoney(payments.map((item) => item.amount)), motivationalTarget: user.motivationalTarget ?? null, lastActivityAt: (requests[0]?.updatedAt ?? user.createdAt).toISOString(), crmStage: crm.stage, tags: crm.tags ?? [], nextFollowUpAt: crm.nextFollowUpAt?.toISOString() ?? null, createdAt: user.createdAt.toISOString() };
   }
 
   private async getUser(id: string): Promise<UserEntity> {

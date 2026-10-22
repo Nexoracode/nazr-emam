@@ -136,17 +136,46 @@ function tomanValue(value?: { amount: number; currency: string } | null) {
   return Math.round(value.currency === 'IRR' ? value.amount / 10 : value.amount);
 }
 
+/** سلولِ متنیِ اکسل: صفرِ ابتدایِ موبایل/کد رهگیری و قالبِ تاریخ را حفظ می‌کند
+ *  (بدون این کار اکسل «۰۹۱۲…» را عدد می‌خواند و صفرِ اول را می‌اندازد). */
+function textCell(value?: string | number | null) {
+  const text = String(value ?? '').trim().replace(/"/g, '');
+  return text ? `="${text}"` : '';
+}
+
+/** تاریخ شمسیِ عددی (۱۴۰۴/۰۴/۰۳) به‌شکلِ متن، تا در اکسل قابل مرتب‌سازی بماند. */
+function dateCell(value?: string | null) {
+  if (!value) return '';
+  return textCell(jalaliDateInput(value));
+}
+
+const EXPORT_PAGE_LIMIT = 100;
+
 /** همه‌ی صفحه‌های یک لیستِ صفحه‌بندی‌شده را برای خروجی گرفتن جمع می‌کند. */
-async function fetchAllPages<T>(fetcher: (page: number) => Promise<Paginated<T>>): Promise<T[]> {
+async function fetchAllPages<T>(
+  fetcher: (page: number) => Promise<Paginated<T>>,
+): Promise<{ rows: T[]; truncated: boolean }> {
   const all: T[] = [];
   let page = 1;
+  let truncated = false;
   for (;;) {
     const chunk = await fetcher(page);
     all.push(...chunk.items);
-    if (!chunk.items.length || page >= chunk.totalPages || page >= 100) break;
+    if (!chunk.items.length || page >= chunk.totalPages) break;
+    if (page >= EXPORT_PAGE_LIMIT) {
+      truncated = true;
+      break;
+    }
     page += 1;
   }
-  return all;
+  return { rows: all, truncated };
+}
+
+/** اگر لیست از سقفِ خروجی بزرگ‌تر بود، کاربر باید بداند خروجی کامل نیست. */
+function warnIfTruncated(truncated: boolean) {
+  if (truncated) {
+    window.alert('تعداد ردیف‌ها از سقفِ خروجی بیشتر بود و فایل کامل نیست. با فیلترِ تاریخ یا وضعیت، بازه را کوچک‌تر کنید.');
+  }
 }
 
 function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
@@ -516,11 +545,12 @@ function NazrSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrTypeSumm
   return <div className="admin-stack">
     <section className="admin-panel"><div className="admin-panel-head"><div><h2>طرح‌ها و انواع نذر</h2><p>{nazrTypes.length.toLocaleString('fa-IR')} طرح ثبت‌شده</p></div><button className="admin-primary" onClick={() => setShowForm((value) => !value)} type="button">افزودن طرح</button></div>
       {showForm ? <form className="admin-form-grid" onSubmit={submit}><input name="title" placeholder="عنوان طرح" required /><input dir="ltr" name="slug" placeholder="slug" required /><label className="admin-amount-field"><input dir="ltr" inputMode="numeric" name="amount" onChange={(event) => setSuggestedAmount(formatAmountInput(event.target.value))} placeholder="مبلغ پیشنهادی (تومان)" value={suggestedAmount} /><small>{amountToPersianWords(suggestedAmountValue)}</small></label><textarea name="description" placeholder="توضیحات طرح" required /><button className="admin-primary" disabled={working}>ثبت طرح</button></form> : null}
-      <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><div className="admin-plan-metrics"><div><small>جمع واریزی موفق</small><strong>{money(item.collectedAmount)}</strong></div><div><small>تعداد نذر</small><strong>{item.requestCount.toLocaleString('fa-IR')}</strong></div><div><small>پرتکرارترین مبلغ</small><strong>{item.topAmount ? money(item.topAmount) : '—'}</strong>{item.topAmountCount > 0 ? <em>{item.topAmountCount.toLocaleString('fa-IR')} بار</em> : null}</div></div><footer><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
+      <div className="admin-card-grid">{nazrTypes.map((item) => <article className="admin-plan-card" key={item.id}><div><span className={`admin-status ${item.isActive ? 'is-success' : 'is-neutral'}`}>{item.isActive ? 'فعال' : 'غیرفعال'}</span><h3>{item.title}</h3><p>{item.description}</p></div><div className="admin-plan-metrics"><div><small>جمع واریزی موفق</small><strong>{money(item.collectedAmount)}</strong></div><div><small>تعداد نذر موفق</small><strong>{item.requestCount.toLocaleString('fa-IR')}</strong></div><div><small>پرتکرارترین مبلغ</small><strong>{item.topAmount ? money(item.topAmount) : '—'}</strong>{item.topAmountCount > 0 ? <em>{item.topAmountCount.toLocaleString('fa-IR')} بار</em> : null}</div></div><footer><button onClick={() => void run(() => updateAdminNazrType(item.id, { isActive: !item.isActive }), item.isActive ? 'طرح غیرفعال شد' : 'طرح فعال شد')} type="button">{item.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}</button>{item.isActive ? <button className="is-danger-text" onClick={() => void run(() => deleteAdminNazrType(item.id), 'طرح حذف شد')} type="button">حذف</button> : null}</footer></article>)}</div>
     </section>
     <section className="admin-panel"><div className="admin-panel-head"><div><h2>درخواست‌های نذر</h2><p>{requests.data ? `${requests.data.total.toLocaleString('fa-IR')} نذر` : 'بررسی و تغییر وضعیت فعالیت‌ها'}</p></div><ExportButton onExport={async () => {
-      const rows = await fetchAllPages((page) => getAdminNazrRequests(page, 200, requests.search, requests.filters.status ?? '', { nazrTypeId: requests.filters.nazrTypeId ?? '', ...listExtras(requests.filters) }));
-      downloadCsv('nazr-requests.csv', ['مخاطب', 'موبایل', 'طرح', 'مبلغ (تومان)', 'کد رهگیری', 'وضعیت', 'تاریخ'], rows.map((item) => [item.donorFullName, item.donorMobile, item.nazrType.title, tomanValue(item.amount), item.trackingCode, requestLabels[item.status], date(item.createdAt)]));
+      const { rows, truncated } = await fetchAllPages((page) => getAdminNazrRequests(page, 200, requests.search, requests.filters.status ?? '', { nazrTypeId: requests.filters.nazrTypeId ?? '', ...listExtras(requests.filters) }));
+      downloadCsv('nazr-requests.csv', ['مخاطب', 'موبایل', 'طرح', 'مبلغ (تومان)', 'کد رهگیری', 'وضعیت', 'تاریخ'], rows.map((item) => [item.donorFullName, textCell(item.donorMobile), item.nazrType.title, tomanValue(item.amount), textCell(item.trackingCode), requestLabels[item.status], dateCell(item.createdAt)]));
+      warnIfTruncated(truncated);
     }} /></div>
       <FilterBar search={requests.search} onSearch={requests.changeSearch} placeholder="جستجو با نام، موبایل یا کد رهگیری..." selects={[
         { key: 'status', value: requests.filters.status ?? '', onChange: (value) => requests.setFilter('status', value), allLabel: 'همه وضعیت‌ها', options: requestStatusOptions },
@@ -585,11 +615,12 @@ function UsersSection({ selected, select, close, run, working }: { selected: Adm
   );
   const items = users.data?.items ?? [];
   return <section className="admin-panel"><div className="admin-panel-head"><div><h2>مخاطبان</h2><p>پرونده ارتباطی و سوابق مشارکت</p></div><span className="admin-count">{users.data ? `${users.data.total.toLocaleString('fa-IR')} نفر` : ''}</span><ExportButton onExport={async () => {
-      const rows = await fetchAllPages((page) => getAdminUsers(page, 200, users.search, users.filters.stage ?? ''));
-      downloadCsv('users.csv', ['نام', 'موبایل', 'ایتا', 'مرحله CRM', 'تعداد نذر', 'مجموع پرداخت (تومان)', 'پیگیری بعدی', 'تاریخ عضویت'], rows.map((item) => [item.fullName, item.mobile, item.eitaNumber ?? '', crmLabels[item.crmStage], item.requestCount, tomanValue(item.paidAmount), item.nextFollowUpAt ? date(item.nextFollowUpAt) : '', date(item.createdAt)]));
+      const { rows, truncated } = await fetchAllPages((page) => getAdminUsers(page, 200, users.search, users.filters.stage ?? ''));
+      downloadCsv('users.csv', ['نام', 'موبایل', 'ایتا', 'مرحله CRM', 'تعداد نذر موفق', 'مجموع پرداخت موفق (تومان)', 'پیگیری بعدی', 'تاریخ عضویت'], rows.map((item) => [item.fullName, textCell(item.mobile), textCell(item.eitaNumber), crmLabels[item.crmStage], item.requestCount, tomanValue(item.paidAmount), dateCell(item.nextFollowUpAt), dateCell(item.createdAt)]));
+      warnIfTruncated(truncated);
     }} /></div>
     <FilterBar search={users.search} onSearch={users.changeSearch} placeholder="جستجو با نام، موبایل یا ایتا..." selects={[{ key: 'stage', value: users.filters.stage ?? '', onChange: (value) => users.setFilter('stage', value), allLabel: 'همه مراحل', options: stageOptions }]} />
-    <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>نام و تماس</th><th>مرحله CRM</th><th>مشارکت</th><th>مجموع پرداخت</th><th>پیگیری بعدی</th><th></th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.fullName}</strong><small>{item.mobile}{item.eitaNumber ? ` · ایتا: ${item.eitaNumber}` : ''}</small></td><td><span className={`admin-status ${item.crmStage === 'at_risk' ? 'is-warning' : 'is-neutral'}`}>{crmLabels[item.crmStage]}</span></td><td>{item.requestCount.toLocaleString('fa-IR')} نذر</td><td>{money(item.paidAmount)}</td><td>{date(item.nextFollowUpAt)}</td><td><button className="admin-text-action" onClick={() => void select(item.id)} type="button">پرونده</button></td></tr>)}</tbody></table>{users.loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty text="مخاطبی با این فیلتر یافت نشد." /> : null}</div>
+    <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>نام و تماس</th><th>مرحله CRM</th><th>مشارکت</th><th>مجموع پرداخت</th><th>پیگیری بعدی</th><th></th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.fullName}</strong><small>{item.mobile}{item.eitaNumber ? ` · ایتا: ${item.eitaNumber}` : ''}</small></td><td><span className={`admin-status ${item.crmStage === 'at_risk' ? 'is-warning' : 'is-neutral'}`}>{crmLabels[item.crmStage]}</span></td><td>{item.requestCount.toLocaleString('fa-IR')} نذر موفق</td><td>{money(item.paidAmount)}</td><td>{date(item.nextFollowUpAt)}</td><td><button className="admin-text-action" onClick={() => void select(item.id)} type="button">پرونده</button></td></tr>)}</tbody></table>{users.loading && !items.length ? <p className="admin-empty">در حال بارگذاری...</p> : !items.length ? <Empty text="مخاطبی با این فیلتر یافت نشد." /> : null}</div>
     <Pager data={users.data} onPage={users.setPage} loading={users.loading} />
     {selected ? <UserDrawer details={selected} close={close} refresh={select} run={run} working={working} /> : null}</section>;
 }
@@ -627,8 +658,9 @@ function PaymentsSection({ nazrTypes, run, working }: { nazrTypes: AdminNazrType
   const items = payments.data?.items ?? [];
   const planOptions = nazrTypes.map((type) => ({ value: type.id, label: type.title }));
   return <section className="admin-panel"><div className="admin-panel-head"><div><h2>واریزها و پرداخت‌ها</h2><p>{payments.data ? `${payments.data.total.toLocaleString('fa-IR')} پرداخت` : 'کنترل پرداخت‌های آنلاین و رسیدهای ثبت‌شده'}</p></div><ExportButton onExport={async () => {
-      const rows = await fetchAllPages((page) => getAdminPayments(page, 200, payments.search, payments.filters.status ?? '', payments.filters.method ?? '', payments.filters.nazrTypeId ?? '', listExtras(payments.filters)));
-      downloadCsv('payments.csv', ['طرح', 'مخاطب', 'موبایل', 'روش', 'مبلغ (تومان)', 'کد رهگیری', 'مرجع تراکنش', 'وضعیت', 'تاریخ'], rows.map((item) => [item.nazrType?.title ?? '', item.donorFullName ?? '', item.donorMobile ?? '', paymentMethodLabel(item.method), tomanValue(item.amount), item.trackingCode ?? '', item.transactionReference ?? '', paymentLabels[item.status], date(item.createdAt)]));
+      const { rows, truncated } = await fetchAllPages((page) => getAdminPayments(page, 200, payments.search, payments.filters.status ?? '', payments.filters.method ?? '', payments.filters.nazrTypeId ?? '', listExtras(payments.filters)));
+      downloadCsv('payments.csv', ['طرح', 'مخاطب', 'موبایل', 'روش', 'مبلغ (تومان)', 'کد رهگیری', 'مرجع تراکنش', 'وضعیت', 'تاریخ'], rows.map((item) => [item.nazrType?.title ?? '', item.donorFullName ?? '', textCell(item.donorMobile), paymentMethodLabel(item.method), tomanValue(item.amount), textCell(item.trackingCode), textCell(item.transactionReference), paymentLabels[item.status], dateCell(item.createdAt)]));
+      warnIfTruncated(truncated);
     }} /></div>
     <FilterBar search={payments.search} onSearch={payments.changeSearch} placeholder="جستجو با کد رهگیری، موبایل یا مرجع تراکنش..." selects={[
       { key: 'status', value: payments.filters.status ?? '', onChange: (value) => payments.setFilter('status', value), allLabel: 'همه وضعیت‌ها', options: paymentStatusOptions },
