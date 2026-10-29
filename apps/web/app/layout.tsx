@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { ThemeProvider } from '../components/layout/theme-provider';
 import PersianNumerals from '../components/persian-numerals';
@@ -37,6 +38,14 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
       <body>
+      {/*
+        رویداد beforeinstallprompt ممکن است قبل از hydrate شدن React شلیک شود؛
+        این اسکریپت آن را زودهنگام می‌گیرد تا دکمه نصب روی اندروید درست کار کند.
+      */}
+      <Script
+        id="pwa-install-prompt-capture"
+        strategy="beforeInteractive"
+      >{`window.__pwaInstallPrompt=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaInstallPrompt=e;});`}</Script>
         <ThemeProvider>
           {children}
         </ThemeProvider>
