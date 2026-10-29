@@ -57,6 +57,20 @@ export class NazrRequestEntity {
   })
   donorNationalCode!: string | null;
 
+  @Column({ name: 'donor_first_name', length: 80, nullable: true })
+  donorFirstName!: string | null;
+
+  @Column({ name: 'donor_last_name', length: 80, nullable: true })
+  donorLastName!: string | null;
+
+  @Column({
+    name: 'donor_gender',
+    type: 'enum',
+    enum: ['male', 'female'],
+    nullable: true,
+  })
+  donorGender!: 'male' | 'female' | null;
+
   @Column({ type: 'json' })
   amount!: Money;
 
@@ -65,6 +79,12 @@ export class NazrRequestEntity {
 
   @Column({ name: 'is_anonymous', default: false })
   isAnonymous!: boolean;
+
+  @Column({ name: 'is_monthly_fixed', default: false })
+  isMonthlyFixed!: boolean;
+
+  @Column({ name: 'wants_monthly_follow_up', default: false })
+  wantsMonthlyFollowUp!: boolean;
 
   @Column({
     type: 'enum',

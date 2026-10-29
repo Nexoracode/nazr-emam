@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CrmModule } from '../../crm/crm.module';
 import { NazrRequestEntity } from '../nazr-requests/entities/nazr-request.entity';
 import { WalletTransactionEntity } from '../profile/entities/wallet-transaction.entity';
 import { WalletEntity } from '../profile/entities/wallet.entity';
@@ -10,6 +11,7 @@ import { PaymentsService } from './payments.service';
 
 @Module({
   imports: [
+    CrmModule,
     TypeOrmModule.forFeature([
       NazrRequestEntity,
       PaymentEntity,

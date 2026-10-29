@@ -2868,6 +2868,24 @@ input {
   width: 36px;
 }
 
+/* کانال ایتا در پروفایل کاربر */
+.profile-eitaa-card {
+  padding: 18px 20px;
+}
+
+.profile-eitaa-avatar {
+  border-radius: 12px;
+  font-size: 10px;
+  height: 40px;
+  width: 44px;
+}
+
+/* نشان تعهد ماهانه در جدول نذرهای ادمین */
+.admin-monthly-badges {
+  color: var(--primary, #0d6952);
+  font-weight: 700;
+}
+
 .profile-sidebar-title {
   color: var(--heading, var(--foreground));
   font-size: 13px;

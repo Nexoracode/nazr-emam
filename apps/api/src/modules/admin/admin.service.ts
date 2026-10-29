@@ -62,6 +62,7 @@ import { GalleryAssetEntity } from '../profile/entities/gallery-asset.entity';
 import { WalletEntity } from '../profile/entities/wallet.entity';
 import { TicketEntity } from '../tickets/entities/ticket.entity';
 import { CallTaskEntity } from './entities/call-task.entity';
+import { CrmSyncService } from '../../crm/crm-sync.service';
 import { CrmActivityEntity } from './entities/crm-activity.entity';
 import { CrmProfileEntity } from './entities/crm-profile.entity';
 
@@ -121,6 +122,7 @@ export class AdminService implements OnModuleInit {
     @InjectRepository(CrmProfileEntity) private readonly crmRepo: Repository<CrmProfileEntity>,
     @InjectRepository(CrmActivityEntity) private readonly activitiesRepo: Repository<CrmActivityEntity>,
     @InjectRepository(CallTaskEntity) private readonly callTasksRepo: Repository<CallTaskEntity>,
+    private readonly crmSync: CrmSyncService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -416,6 +418,8 @@ export class AdminService implements OnModuleInit {
     if (payload.note?.trim()) request!.adminNote = payload.note.trim();
     await this.requestsRepo.save(request!);
 
+    await this.crmSync.syncByPaymentId(payment.id);
+
     payment.nazrRequest = request!;
     return this.toAdminPayment(payment);
   }
@@ -427,7 +431,9 @@ export class AdminService implements OnModuleInit {
     item!.nazrRequest.status = status === 'paid' ? 'confirmed' : 'cancelled';
     if (status === 'rejected' && reason?.trim()) item!.nazrRequest.adminNote = reason.trim();
     await this.requestsRepo.save(item!.nazrRequest);
-    return this.toPayment(await this.paymentsRepo.save(item!));
+    const saved = await this.paymentsRepo.save(item!);
+    if (status === 'paid') await this.crmSync.syncByPaymentId(saved.id);
+    return this.toPayment(saved);
   }
 
   async tickets(page = 1, pageSize = 20): Promise<Paginated<Ticket>> {
@@ -525,10 +531,46 @@ export class AdminService implements OnModuleInit {
   async generateCallTasks(period: string, dueDateValue: string): Promise<{ created: number }> {
     this.validatePeriod(period);
     const dueDate = this.requiredDate(dueDateValue, 'dueDate');
+
     const wallets = await this.walletsRepo.find({ where: { isMonthlyDeductionEnabled: true }, relations: { user: true } });
-    const existing = await this.callTasksRepo.find({ where: { period, userId: In(wallets.map((wallet) => wallet.userId)) } });
+    const monthlyNazrs = await this.requestsRepo.find({
+      where: [
+        { wantsMonthlyFollowUp: true, status: 'confirmed' },
+        { wantsMonthlyFollowUp: true, status: 'in_progress' },
+        { wantsMonthlyFollowUp: true, status: 'completed' },
+      ],
+      relations: { user: true },
+      order: { createdAt: 'DESC' },
+    });
+
+    const candidates = new Map<string, { user: UserEntity; expectedAmount: Money | null }>();
+    for (const wallet of wallets) {
+      if (wallet.userId) candidates.set(wallet.userId, { user: wallet.user, expectedAmount: wallet.monthlyDeductionAmount });
+    }
+    for (const nazr of monthlyNazrs) {
+      if (nazr.userId && !candidates.has(nazr.userId)) {
+        candidates.set(nazr.userId, { user: nazr.user!, expectedAmount: nazr.amount });
+      }
+    }
+
+    const existing = await this.callTasksRepo.find({ where: { period, userId: In([...candidates.keys()]) } });
     const existingIds = new Set(existing.map((item) => item.userId));
-    const tasks = wallets.filter((wallet) => !existingIds.has(wallet.userId)).map((wallet) => this.callTasksRepo.create({ userId: wallet.userId, user: wallet.user, period, dueDate, expectedAmount: wallet.monthlyDeductionAmount, status: 'pending', assignedTo: null, note: null, outcome: null, contactedAt: null }));
+    const tasks = [...candidates.entries()]
+      .filter(([userId]) => !existingIds.has(userId))
+      .map(([userId, candidate]) =>
+        this.callTasksRepo.create({
+          userId,
+          user: candidate.user,
+          period,
+          dueDate,
+          expectedAmount: candidate.expectedAmount,
+          status: 'pending',
+          assignedTo: null,
+          note: null,
+          outcome: null,
+          contactedAt: null,
+        }),
+      );
     if (tasks.length) await this.callTasksRepo.save(tasks);
     return { created: tasks.length };
   }
@@ -577,7 +619,7 @@ export class AdminService implements OnModuleInit {
   }
 
   private toNazrRequest(item: NazrRequestEntity): NazrRequest {
-    return { id: item.id, trackingCode: item.trackingCode, userId: item.userId, nazrType: this.toNazrType(item.nazrType), donorFullName: item.donorFullName, donorMobile: item.donorMobile, donorNationalCode: item.donorNationalCode, amount: item.amount, note: item.note, isAnonymous: item.isAnonymous, status: item.status, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
+    return { id: item.id, trackingCode: item.trackingCode, userId: item.userId, nazrType: this.toNazrType(item.nazrType), donorFullName: item.donorFullName, donorFirstName: item.donorFirstName, donorLastName: item.donorLastName, donorGender: item.donorGender, donorMobile: item.donorMobile, donorNationalCode: item.donorNationalCode, amount: item.amount, note: item.note, isAnonymous: item.isAnonymous, isMonthlyFixed: item.isMonthlyFixed, wantsMonthlyFollowUp: item.wantsMonthlyFollowUp, status: item.status, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() };
   }
 
   private toNazrType(item: NazrTypeEntity): NazrType {

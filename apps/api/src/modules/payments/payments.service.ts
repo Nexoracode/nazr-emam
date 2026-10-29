@@ -15,6 +15,7 @@ import type {
   StartWalletChargeResponse,
   User,
 } from '@nazr-emam/shared';
+import { CrmSyncService } from '../../crm/crm-sync.service';
 import { NazrRequestEntity } from '../nazr-requests/entities/nazr-request.entity';
 import { WalletTransactionEntity } from '../profile/entities/wallet-transaction.entity';
 import { WalletEntity } from '../profile/entities/wallet.entity';
@@ -51,6 +52,7 @@ export class PaymentsService {
     @InjectRepository(WalletTransactionEntity)
     private readonly walletTransactionsRepo: Repository<WalletTransactionEntity>,
     private readonly dataSource: DataSource,
+    private readonly crmSync: CrmSyncService,
   ) {}
 
   async startOnlinePayment(
@@ -210,12 +212,18 @@ export class PaymentsService {
       payment.nazrRequest.status = 'confirmed';
       await this.nazrRequestsRepo.save(payment.nazrRequest);
       await this.paymentsRepo.save(payment);
+      await this.syncPaidNazrToCrm(payment.id);
       return `${this.frontendUrl}/dashboard?payment=paid`;
     }
 
     payment.status = 'rejected';
     await this.rejectPaymentAndCancelRequest(payment);
     return `${this.frontendUrl}/dashboard?payment=failed`;
+  }
+
+  /** پس از پرداخت موفق، نذر و پرداخت را (در صورت فعال‌بودن) به CRM24 می‌فرستد. */
+  private async syncPaidNazrToCrm(paymentId: string): Promise<void> {
+    await this.crmSync.syncByPaymentId(paymentId);
   }
 
   private async handleWalletChargeCallback(

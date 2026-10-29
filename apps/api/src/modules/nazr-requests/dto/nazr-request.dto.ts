@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type {
   CreateNazrRequest,
+  DonorGender,
   Money,
   NazrRequest,
   NazrRequestStatus,
@@ -28,11 +29,16 @@ export class NazrRequestDto implements NazrRequest {
   @ApiPropertyOptional({ nullable: true }) userId!: string | null;
   @ApiProperty({ type: NazrTypeInRequestDto }) nazrType!: NazrType;
   @ApiProperty() donorFullName!: string;
+  @ApiPropertyOptional({ nullable: true }) donorFirstName!: string | null;
+  @ApiPropertyOptional({ nullable: true }) donorLastName!: string | null;
+  @ApiPropertyOptional({ enum: ['male', 'female'], nullable: true }) donorGender!: DonorGender | null;
   @ApiProperty() donorMobile!: string;
   @ApiPropertyOptional({ nullable: true }) donorNationalCode!: string | null;
   @ApiProperty({ type: MoneyDto }) amount!: Money;
   @ApiPropertyOptional({ nullable: true }) note!: string | null;
   @ApiProperty() isAnonymous!: boolean;
+  @ApiProperty() isMonthlyFixed!: boolean;
+  @ApiProperty() wantsMonthlyFollowUp!: boolean;
   @ApiProperty() status!: NazrRequestStatus;
   @ApiProperty() createdAt!: string;
   @ApiProperty() updatedAt!: string;
@@ -45,6 +51,15 @@ export class CreateNazrRequestDto implements CreateNazrRequest {
   @ApiPropertyOptional({ nullable: true })
   donorNationalCode?: string | null;
 
+  @ApiPropertyOptional({ example: 'مهدی' })
+  donorFirstName?: string | null;
+
+  @ApiPropertyOptional({ example: 'روح‌بخش' })
+  donorLastName?: string | null;
+
+  @ApiPropertyOptional({ enum: ['male', 'female'] })
+  donorGender?: DonorGender | null;
+
   @ApiProperty({ type: MoneyDto })
   amount!: Money;
 
@@ -53,6 +68,18 @@ export class CreateNazrRequestDto implements CreateNazrRequest {
 
   @ApiPropertyOptional({ default: false })
   isAnonymous?: boolean;
+
+  @ApiPropertyOptional({
+    default: false,
+    description: 'تعهد پرداخت همین مبلغ در هر ماه',
+  })
+  isMonthlyFixed?: boolean;
+
+  @ApiPropertyOptional({
+    default: false,
+    description: 'افزودن به لیست پیگیری ماهانه پشتیبان',
+  })
+  wantsMonthlyFollowUp?: boolean;
 }
 
 export class PaginatedNazrRequestDto implements Paginated<NazrRequest> {

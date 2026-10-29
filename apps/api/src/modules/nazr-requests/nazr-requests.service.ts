@@ -21,11 +21,16 @@ import { NazrTypeEntity } from '../nazr-types/entities/nazr-type.entity';
 interface ValidatedCreateNazrRequest {
   nazrTypeId: string;
   donorFullName: string;
+  donorFirstName: string | null;
+  donorLastName: string | null;
+  donorGender: 'male' | 'female' | null;
   donorMobile: string;
   donorNationalCode: string | null;
   amount: Money;
   note: string | null;
   isAnonymous: boolean;
+  isMonthlyFixed: boolean;
+  wantsMonthlyFollowUp: boolean;
 }
 
 /**
@@ -66,11 +71,16 @@ export class NazrRequestsService {
       nazrTypeId: nazrType.id,
       nazrType,
       donorFullName: body.donorFullName,
+      donorFirstName: body.donorFirstName,
+      donorLastName: body.donorLastName,
+      donorGender: body.donorGender,
       donorMobile: body.donorMobile,
       donorNationalCode: body.donorNationalCode,
       amount: body.amount,
       note: body.note,
-      isAnonymous: body.isAnonymous ?? false,
+      isAnonymous: body.isAnonymous,
+      isMonthlyFixed: body.isMonthlyFixed,
+      wantsMonthlyFollowUp: body.wantsMonthlyFollowUp,
       status: 'awaiting_payment',
       adminNote: null,
     });
@@ -107,6 +117,11 @@ export class NazrRequestsService {
       userId: r.userId,
       nazrType: this.toNazrTypeDto(r.nazrType),
       donorFullName: r.donorFullName,
+      donorFirstName: r.donorFirstName,
+      donorLastName: r.donorLastName,
+      donorGender: r.donorGender,
+      isMonthlyFixed: r.isMonthlyFixed,
+      wantsMonthlyFollowUp: r.wantsMonthlyFollowUp,
       donorMobile: r.donorMobile,
       donorNationalCode: r.donorNationalCode,
       amount: r.amount,
@@ -137,7 +152,16 @@ export class NazrRequestsService {
   ): ValidatedCreateNazrRequest {
     const fields: Record<string, string> = {};
     const nazrTypeId = payload?.nazrTypeId?.trim();
-    const donorFullName = user.fullName;
+    const donorFirstName = payload?.donorFirstName?.trim() || null;
+    const donorLastName = payload?.donorLastName?.trim() || null;
+    const donorGender =
+      payload?.donorGender === 'male' || payload?.donorGender === 'female'
+        ? payload.donorGender
+        : null;
+    const donorFullName =
+      donorFirstName && donorLastName
+        ? `${donorFirstName} ${donorLastName}`
+        : user.fullName;
     const donorMobile = user.mobile;
     const donorNationalCode = payload?.donorNationalCode?.trim() || null;
     const note = payload?.note?.trim() || null;
@@ -145,6 +169,18 @@ export class NazrRequestsService {
 
     if (!nazrTypeId) {
       fields.nazrTypeId = 'انتخاب نوع نذر الزامی است';
+    }
+
+    if (!donorFirstName || donorFirstName.length < 2) {
+      fields.donorFirstName = 'نام معتبر نیست';
+    }
+
+    if (!donorLastName || donorLastName.length < 2) {
+      fields.donorLastName = 'نام خانوادگی معتبر نیست';
+    }
+
+    if (!donorGender) {
+      fields.donorGender = 'انتخاب جنسیت الزامی است';
     }
 
     if (!donorFullName || donorFullName.length < 2) {
@@ -175,11 +211,16 @@ export class NazrRequestsService {
     return {
       nazrTypeId,
       donorFullName: validatedFullName,
+      donorFirstName,
+      donorLastName,
+      donorGender,
       donorMobile: validatedMobile,
       donorNationalCode,
       amount,
       note,
       isAnonymous: Boolean(payload?.isAnonymous),
+      isMonthlyFixed: Boolean(payload?.isMonthlyFixed),
+      wantsMonthlyFollowUp: Boolean(payload?.wantsMonthlyFollowUp),
     };
   }
 

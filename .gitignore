@@ -12,3 +12,4 @@ npm-debug.log*
 *.log
 apps/api/uploads/
 Dockerfile.local
+.DS_Store

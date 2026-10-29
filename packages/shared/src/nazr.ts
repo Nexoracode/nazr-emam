@@ -32,12 +32,19 @@ export type NazrRequestStatus =
   | 'cancelled'
   | 'rejected';
 
+export type DonorGender = 'male' | 'female';
+
 export interface CreateNazrRequest {
   nazrTypeId: ID;
   donorNationalCode?: string | null;
+  donorFirstName?: string | null;
+  donorLastName?: string | null;
+  donorGender?: DonorGender | null;
   amount: Money;
   note?: string | null;
   isAnonymous?: boolean;
+  isMonthlyFixed?: boolean;
+  wantsMonthlyFollowUp?: boolean;
 }
 
 export interface NazrRequest {
@@ -46,11 +53,16 @@ export interface NazrRequest {
   userId: ID | null;
   nazrType: NazrType;
   donorFullName: string;
+  donorFirstName: string | null;
+  donorLastName: string | null;
+  donorGender: DonorGender | null;
   donorMobile: string;
   donorNationalCode: string | null;
   amount: Money;
   note: string | null;
   isAnonymous: boolean;
+  isMonthlyFixed: boolean;
+  wantsMonthlyFollowUp: boolean;
   status: NazrRequestStatus;
   createdAt: ISODate;
   updatedAt: ISODate;

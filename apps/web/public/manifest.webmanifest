@@ -1,0 +1,44 @@
+{
+  "name": "نذر امام",
+  "short_name": "نذر امام",
+  "description": "سامانه ثبت، پرداخت و پیگیری نذر — آکادمی روح‌بخش",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f4ec",
+  "theme_color": "#0d6952",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ثبت نذر جدید",
+      "url": "/nazr/new",
+      "description": "ثبت نذر و مشارکت در طرح‌ها"
+    },
+    {
+      "name": "مشارکت‌های من",
+      "url": "/dashboard",
+      "description": "پیگیری نذرها و پرداخت‌ها"
+    }
+  ]
+}

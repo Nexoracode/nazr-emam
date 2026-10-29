@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from '../auth/entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
+import { CrmModule } from '../../crm/crm.module';
 import { NazrRequestEntity } from '../nazr-requests/entities/nazr-request.entity';
 import { NazrTypeEntity } from '../nazr-types/entities/nazr-type.entity';
 import { NotificationEntity } from '../notifications/entities/notification.entity';
@@ -17,6 +18,7 @@ import { CrmProfileEntity } from './entities/crm-profile.entity';
 
 @Module({
   imports: [
+    CrmModule,
     AuthModule,
     TypeOrmModule.forFeature([
       UserEntity,

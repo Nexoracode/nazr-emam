@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
+import { CrmModule } from './crm/crm.module';
 import { AppService } from './app.service';
 import { RolesGuard } from './common/guards/roles.guard';
 import authConfig from './config/auth.config';
@@ -32,6 +33,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
         configService.getOrThrow('database'),
     }),
     AuthModule,
+    CrmModule,
     AdminModule,
     NazrTypesModule,
     NazrRequestsModule,

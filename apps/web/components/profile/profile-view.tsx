@@ -103,6 +103,9 @@ const PLATFORM_OPTIONS: Array<{ id: UserPlatform; label: string }> = [
   { id: 'other', label: 'سایر' },
 ];
 
+/** کانال ایتای سایت — اگر env ست نشده باشد کارت نمایش داده نمی‌شود. */
+const eitaaChannelUrl = process.env.NEXT_PUBLIC_EITAA_CHANNEL_URL ?? '';
+
 const TICKET_STATUS_LABEL: Record<Ticket['status'], string> = {
   open: 'در انتظار پاسخ',
   answered: 'پاسخ داده شده',
@@ -819,6 +822,22 @@ function AccountPanel({
           </div>
         </form>
       </section>
+      {eitaaChannelUrl ? (
+        <section className="surface-card profile-eitaa-card">
+          <div className="account-heading">
+            <div className="account-identity">
+              <span className="profile-avatar profile-eitaa-avatar" aria-hidden="true">ایتا</span>
+              <div>
+                <h2 className="card-title">کانال ایتا نذر امام</h2>
+                <p className="profile-muted">گزارش اجرای نذرها و اخبار طرح‌ها را در کانال دنبال کنید.</p>
+              </div>
+            </div>
+            <a className="btn-primary" href={eitaaChannelUrl} rel="noreferrer" target="_blank">
+              عضویت در کانال
+            </a>
+          </div>
+        </section>
+      ) : null}
       <ChangePasswordCard />
     </div>
   );

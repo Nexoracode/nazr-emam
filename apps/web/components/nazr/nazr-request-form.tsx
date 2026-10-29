@@ -51,6 +51,11 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
   const [note, setNote] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [gender, setGender] = useState<'' | 'male' | 'female'>('');
+  const [isMonthlyFixed, setIsMonthlyFixed] = useState(false);
+  const [wantsMonthlyFollowUp, setWantsMonthlyFollowUp] = useState(false);
   const [loadingTypes, setLoadingTypes] = useState(true);
   const [loadingUser, setLoadingUser] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -166,6 +171,9 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
     if (!currentUser) {
       errors.user = 'برای ثبت نذر باید وارد حساب کاربری شوید.';
     }
+    if (firstName.trim().length < 2) errors.donorFirstName = 'نام معتبر نیست.';
+    if (lastName.trim().length < 2) errors.donorLastName = 'نام خانوادگی معتبر نیست.';
+    if (!gender) errors.donorGender = 'انتخاب جنسیت الزامی است.';
     if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
       errors.amount = 'مبلغ نذر معتبر نیست.';
     }
@@ -181,8 +189,13 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
     const payload: CreateNazrRequest = {
       nazrTypeId: selectedTypeId,
       amount: { amount: normalizedAmount, currency: 'IRT' },
+      donorFirstName: firstName.trim(),
+      donorLastName: lastName.trim(),
+      donorGender: gender === 'male' || gender === 'female' ? gender : null,
       note: note.trim() || null,
       isAnonymous,
+      isMonthlyFixed,
+      wantsMonthlyFollowUp,
     };
 
     setIsSubmitting(true);
@@ -285,6 +298,59 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
             )}
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid content-start gap-1.5 text-right text-[11px] font-bold text-auth-text">
+              <span>نام</span>
+              <input
+                className={fieldCls(Boolean(fieldErrors.donorFirstName))}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="مثلا محمد"
+                type="text"
+                value={firstName}
+              />
+              {fieldErrors.donorFirstName && (
+                <small className="text-[10px] text-danger">{fieldErrors.donorFirstName}</small>
+              )}
+            </label>
+            <label className="grid content-start gap-1.5 text-right text-[11px] font-bold text-auth-text">
+              <span>نام خانوادگی</span>
+              <input
+                className={fieldCls(Boolean(fieldErrors.donorLastName))}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="مثلا احمدی"
+                type="text"
+                value={lastName}
+              />
+              {fieldErrors.donorLastName && (
+                <small className="text-[10px] text-danger">{fieldErrors.donorLastName}</small>
+              )}
+            </label>
+          </div>
+
+          <label className="grid gap-1.5 text-right text-[11px] font-bold text-auth-text">
+            <span>جنسیت</span>
+            <span className="relative block">
+              <select
+                className={selectCls(Boolean(fieldErrors.donorGender))}
+                onChange={(e) => setGender(e.target.value as '' | 'male' | 'female')}
+                value={gender}
+              >
+                <option value="">انتخاب کنید</option>
+                <option value="male">آقا</option>
+                <option value="female">خانم</option>
+              </select>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-auth-muted"
+              >
+                ▾
+              </span>
+            </span>
+            {fieldErrors.donorGender && (
+              <small className="text-[10px] text-danger">{fieldErrors.donorGender}</small>
+            )}
+          </label>
+
           <div className="grid items-start gap-3">
             <label className="grid content-start gap-1.5 text-right text-[11px] font-bold text-auth-text">
               <span>مبلغ نذر به تومان</span>
@@ -320,6 +386,26 @@ export function NazrRequestForm({ initialNazrTypeId = '' }: { initialNazrTypeId?
             {fieldErrors.note && (
               <small className="text-[10px] text-danger">{fieldErrors.note}</small>
             )}
+          </label>
+
+          <label className="flex cursor-pointer items-center gap-2 text-[11px] text-auth-text">
+            <input
+              checked={isMonthlyFixed}
+              className="h-3.5 w-3.5 accent-auth-accent"
+              onChange={(e) => setIsMonthlyFixed(e.target.checked)}
+              type="checkbox"
+            />
+            <span>هر ماه همین مبلغ را واریز می‌کنم (تعهد پرداخت ماهانه)</span>
+          </label>
+
+          <label className="flex cursor-pointer items-center gap-2 text-[11px] text-auth-text">
+            <input
+              checked={wantsMonthlyFollowUp}
+              className="h-3.5 w-3.5 accent-auth-accent"
+              onChange={(e) => setWantsMonthlyFollowUp(e.target.checked)}
+              type="checkbox"
+            />
+            <span>مایل هستم هر ماه پشتیبان برای پیگیری پرداخت با من تماس بگیرد</span>
           </label>
 
           <label className="flex cursor-pointer items-center gap-2 text-[11px] text-auth-text">
