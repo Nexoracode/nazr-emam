@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import InstallAppButton from '../../components/install-app-button';
 import {
   getPublicNazrTypes,
   planLandingContent,
@@ -323,6 +324,7 @@ export default async function Home() {
             <Link className="home-btn home-btn-ghost" href="/dashboard">
               پیگیری وضعیت
             </Link>
+            <InstallAppButton />
           </div>
         </div>
       </section>

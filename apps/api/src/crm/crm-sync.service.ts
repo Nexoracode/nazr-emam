@@ -59,10 +59,12 @@ export class CrmSyncService {
 
       const contactId = await this.upsertContact(nazr);
       if (!contactId) return;
+      const serviceId = await this.nazrServiceId();
 
       await this.client.create('Payments', {
         relatedcontact: contactId,
-        amount_currency_value: this.tomanAmount(nazr.amount),
+        ...(serviceId ? { related_to: serviceId } : {}),
+        amount_currency_value: this.rialAmount(nazr.amount),
         paymentsstatus: 'در انتظار پرداخت',
         paymenttype: 'نذر امام',
         cf_1764: 'نذر امام',
@@ -91,9 +93,13 @@ export class CrmSyncService {
       const contactId = await this.upsertContact(nazr);
       if (!contactId) return;
 
+      // vtiger در update همه‌ی فیلدهای اجباری (از جمله related_to) را دوباره
+      // می‌خواهد؛ بنابراین همیشه با مقدار کامل فرستاده می‌شوند.
+      const serviceId = await this.nazrServiceId();
       const paidFields = {
         relatedcontact: contactId,
-        amount_currency_value: this.tomanAmount(payment.amount),
+        ...(serviceId ? { related_to: serviceId } : {}),
+        amount_currency_value: this.rialAmount(payment.amount),
         paymentsstatus: 'پرداخت شده',
         paymentsmode:
           payment.method === 'card_to_card' ? 'کارت به کارت' : 'پرداخت آنلاین',
@@ -115,11 +121,7 @@ export class CrmSyncService {
         await this.client.update('Payments', { id: existing[0].id, ...paidFields });
         this.logger.log(`پرداخت CRM به‌روزرسانی شد: ${nazr.trackingCode} → ${existing[0].id}`);
       } else {
-        const serviceId = await this.nazrServiceId();
-        const created = await this.client.create<CrmIdResponse>('Payments', {
-          ...paidFields,
-          ...(serviceId ? { related_to: serviceId } : {}),
-        });
+        const created = await this.client.create<CrmIdResponse>('Payments', paidFields);
         this.logger.log(`پرداخت CRM ساخته شد: ${nazr.trackingCode} → ${created.id}`);
       }
     } catch (error) {
@@ -169,8 +171,12 @@ export class CrmSyncService {
     return PLAN_INTENT_BY_SLUG[nazr.nazrType.slug] ?? null;
   }
 
-  private tomanAmount(amount: { amount: number; currency: 'IRR' | 'IRT' }): number {
-    return amount.currency === 'IRR' ? Math.round(amount.amount / 10) : amount.amount;
+  /**
+   * ارز پایه CRM «ریال» است (نرخ ۱) و کاربران با ارز نمایش «تومان» (نرخ ۰٫۱)
+   * می‌بینند؛ پس مقدار باید به ریال ذخیره شود تا نمایشِ تومانی درست باشد.
+   */
+  private rialAmount(amount: { amount: number; currency: 'IRR' | 'IRT' }): number {
+    return amount.currency === 'IRT' ? amount.amount * 10 : amount.amount;
   }
 
   /** تاریخ شمسی YYYY-MM-DD برای فیلد تاریخ دریافت در CRM. */

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { logout } from '../../lib/api';
 import { useAuth } from '../../lib/use-auth';
+import InstallAppButton from '../install-app-button';
 import { useTheme } from './theme-provider';
 
 const navLinks = [
@@ -78,6 +79,8 @@ export function Header() {
           <Link className="site-cta" href="/nazr/new">
             شرکت در نذر
           </Link>
+
+          <InstallAppButton variant="icon" />
 
           <button
             onClick={cycleTheme}

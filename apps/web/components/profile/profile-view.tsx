@@ -822,9 +822,17 @@ function AccountPanel({
           </div>
         </form>
       </section>
+      <ChangePasswordCard />
+    </div>
+  );
+}
+
+function ContributionsPanel({ nazrs, summary }: { nazrs: NazrRequest[]; summary: UserProfileSummary }) {
+  return (
+    <div className="profile-stack contributions-stack">
       {eitaaChannelUrl ? (
         <section className="surface-card profile-eitaa-card">
-          <div className="account-heading">
+          <div className="contributions-heading">
             <div className="account-identity">
               <span className="profile-avatar profile-eitaa-avatar" aria-hidden="true">ایتا</span>
               <div>
@@ -838,14 +846,6 @@ function AccountPanel({
           </div>
         </section>
       ) : null}
-      <ChangePasswordCard />
-    </div>
-  );
-}
-
-function ContributionsPanel({ nazrs, summary }: { nazrs: NazrRequest[]; summary: UserProfileSummary }) {
-  return (
-    <div className="profile-stack contributions-stack">
       <section className="surface-card contributions-overview">
         <div className="contributions-heading">
           <div>

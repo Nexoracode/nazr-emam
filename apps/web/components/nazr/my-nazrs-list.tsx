@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { NazrRequest, NazrRequestStatus, Paginated } from '@nazr-emam/shared';
 import { getMyNazrRequests } from '../../lib/api';
 
@@ -30,8 +30,12 @@ const STATUS_COLOR: Record<NazrRequestStatus, string> = {
   rejected: 'badge-danger',
 };
 
+const eitaaChannelUrl = process.env.NEXT_PUBLIC_EITAA_CHANNEL_URL ?? '';
+
 export function MyNazrsList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justPaid = searchParams.get('payment') === 'paid';
   const [data, setData] = useState<Paginated<NazrRequest> | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -61,6 +65,22 @@ export function MyNazrsList() {
           + ثبت نذر جدید
         </Link>
       </div>
+
+      {justPaid ? (
+        <div className="surface-card payment-success-eitaa">
+          <p style={{ margin: 0, color: 'var(--heading)', fontWeight: 700, fontSize: 14 }}>
+            ✅ نذر شما با موفقیت پرداخت شد. متشکریم!
+          </p>
+          {eitaaChannelUrl ? (
+            <p style={{ margin: '10px 0 0', fontSize: 12, lineHeight: 2 }}>
+              گزارش اجرای نذرها را در کانال ایتا دنبال کنید:{' '}
+              <a href={eitaaChannelUrl} rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 700 }} target="_blank">
+                عضویت در کانال ایتا نذر امام
+              </a>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {loading && (
         <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '40px 0' }}>در حال بارگذاری...</p>

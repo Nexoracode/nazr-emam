@@ -2868,6 +2868,99 @@ input {
   width: 36px;
 }
 
+/* دکمه نصب وب‌اپ */
+.install-app-btn {
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--h-accent, #b98d2f) 45%, transparent);
+  border-radius: 10px;
+  color: var(--h-accent, #b98d2f);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 7px;
+  padding: 9px 16px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.install-app-btn:hover {
+  background: color-mix(in srgb, var(--h-accent, #b98d2f) 12%, transparent);
+}
+
+.install-app-btn.is-icon {
+  background: transparent;
+  border-color: var(--h-border, #e5ddca);
+  border-radius: 10px;
+  color: var(--h-text, #2c2417);
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+}
+
+.install-app-btn.is-icon:hover {
+  background: color-mix(in srgb, var(--h-accent, #b98d2f) 12%, transparent);
+  color: var(--h-accent, #b98d2f);
+}
+
+.dark-vars .install-app-btn.is-icon,
+[data-theme='dark'] .install-app-btn.is-icon {
+  color: var(--h-text, #f3efe4);
+}
+
+.install-app-overlay {
+  align-items: center;
+  background: rgba(15, 20, 16, 0.55);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 90;
+}
+
+.install-app-dialog {
+  background: var(--h-surface, #fffdf6);
+  border: 1px solid var(--h-border, #e5ddca);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+  max-width: 380px;
+  padding: 22px;
+}
+
+.install-app-dialog h3 {
+  color: var(--h-heading, #054738);
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+
+.install-app-dialog ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-inline-start: 18px;
+}
+
+.install-app-dialog li {
+  color: var(--h-text, #2c2417);
+  font-size: 12px;
+  line-height: 2;
+}
+
+.install-app-close {
+  background: var(--h-accent, #b98d2f);
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 16px;
+  padding: 10px 0;
+  width: 100%;
+}
+
 /* کانال ایتا در پروفایل کاربر */
 .profile-eitaa-card {
   padding: 18px 20px;
@@ -2878,6 +2971,14 @@ input {
   font-size: 10px;
   height: 40px;
   width: 44px;
+}
+
+/* کارت موفقیت پس از پرداخت */
+.payment-success-eitaa {
+  border: 1px solid color-mix(in srgb, var(--h-accent, #b98d2f) 40%, transparent);
+  border-radius: 12px;
+  margin-top: 14px;
+  padding: 14px 16px;
 }
 
 /* نشان تعهد ماهانه در جدول نذرهای ادمین */
