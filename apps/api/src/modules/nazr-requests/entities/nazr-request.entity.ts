@@ -57,10 +57,12 @@ export class NazrRequestEntity {
   })
   donorNationalCode!: string | null;
 
-  @Column({ name: 'donor_first_name', length: 80, nullable: true })
+  // نوع صریح لازم است: اتحادی string|null در reflect به Object تبدیل می‌شود و
+  // TypeORM بدون type صریح موقع بوت می‌شکند.
+  @Column({ name: 'donor_first_name', type: 'varchar', length: 80, nullable: true })
   donorFirstName!: string | null;
 
-  @Column({ name: 'donor_last_name', length: 80, nullable: true })
+  @Column({ name: 'donor_last_name', type: 'varchar', length: 80, nullable: true })
   donorLastName!: string | null;
 
   @Column({
