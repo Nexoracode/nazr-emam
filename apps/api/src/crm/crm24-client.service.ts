@@ -107,4 +107,18 @@ export class Crm24ClientService {
       element: JSON.stringify(element),
     });
   }
+
+  /** به‌روزرسانی رکورد موجود؛ element باید id رکورد را داشته باشد. */
+  async update<T = Record<string, unknown>>(
+    module: string,
+    element: { id: string } & Record<string, unknown>,
+  ): Promise<T> {
+    await this.login();
+    return this.send<T>({
+      operation: 'update',
+      sessionName: this.sessionName!,
+      elementType: module,
+      element: JSON.stringify(element),
+    });
+  }
 }

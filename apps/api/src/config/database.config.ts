@@ -13,6 +13,10 @@ export default registerAs(
     database: process.env.DB_DATABASE ?? 'nazr',
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     autoLoadEntities: true,
+    migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+    // مایگریشن‌ها در هر بوت خودکار اجرا می‌شوند (idempotent) — deploy بدون
+    // دستِ آزادِ DB_SYNCHRONIZE در محیط production هم schema را جلو می‌برد.
+    migrationsRun: true,
     synchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
     logging: toBoolean(process.env.DB_LOGGING, false),
   }),

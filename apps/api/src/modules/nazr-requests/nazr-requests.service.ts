@@ -15,6 +15,7 @@ import type {
   User,
 } from '@nazr-emam/shared';
 import { isValidIranMobile } from '@nazr-emam/shared';
+import { CrmSyncService } from '../../crm/crm-sync.service';
 import { NazrRequestEntity } from './entities/nazr-request.entity';
 import { NazrTypeEntity } from '../nazr-types/entities/nazr-type.entity';
 
@@ -46,6 +47,7 @@ export class NazrRequestsService {
     private readonly repo: Repository<NazrRequestEntity>,
     @InjectRepository(NazrTypeEntity)
     private readonly nazrTypesRepo: Repository<NazrTypeEntity>,
+    private readonly crmSync: CrmSyncService,
   ) {}
 
   async create(
@@ -85,7 +87,9 @@ export class NazrRequestsService {
       adminNote: null,
     });
 
-    return this.toDto(await this.repo.save(request));
+    const saved = await this.repo.save(request);
+    await this.crmSync.syncNewNazr(saved.id);
+    return this.toDto(saved);
   }
 
   async getMine(

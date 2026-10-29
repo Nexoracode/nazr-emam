@@ -16,7 +16,8 @@ export function getCrmConfigFromEnv(): CrmConfig | null {
   const baseUrl = process.env.CRM_BASE_URL?.trim() || '';
   const username = process.env.CRM_USERNAME?.trim() || '';
   const accessKey = process.env.CRM_ACCESS_KEY?.trim() || '';
-  const assignedUserId = process.env.CRM_ASSIGNED_USER_ID?.trim() || '19x1';
+  // ارجاع پیش‌فرض: احمد گوهری اقدم
+  const assignedUserId = process.env.CRM_ASSIGNED_USER_ID?.trim() || '19x27';
   const timeoutMs = Number(process.env.CRM_TIMEOUT_MS ?? 15000);
   if (!baseUrl || !username || !accessKey) {
     return null;
