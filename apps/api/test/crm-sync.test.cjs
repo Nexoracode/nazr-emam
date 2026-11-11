@@ -70,6 +70,10 @@ test('duplicate CRM contacts are resolved only when a single name matches the do
   const service = new CrmSyncService(client, {}, {}, {});
   const donor = { donorMobile: '09000000000', donorFullName: 'یک فرد' };
   assert.equal(await service.upsertContact(donor), 'c1');
+  contacts[1].firstname = contacts[0].firstname;
+  await assert.rejects(service.upsertContact(donor), /بررسی دستی/);
+  contacts[0].cf_1756 = 'بله';
+  assert.equal(await service.upsertContact(donor), 'c1');
   await assert.rejects(service.upsertContact({ ...donor, donorFullName: 'نام دیگری' }), /بررسی دستی/);
 });
 

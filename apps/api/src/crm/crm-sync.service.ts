@@ -242,8 +242,8 @@ export class CrmSyncService implements OnModuleInit, OnModuleDestroy {
 
   private async findOrCreateContact(nazr: NazrRequestEntity, mobile: string): Promise<string> {
     const national = mobile.slice(1);
-    const rows = await this.client.query<{ id: string; mobile: string; firstname: string; lastname: string }>(
-      `SELECT id,mobile,firstname,lastname FROM Contacts WHERE mobile LIKE '%${national}' LIMIT 100;`,
+    const rows = await this.client.query<{ id: string; mobile: string; firstname: string; lastname: string; cf_1756: string }>(
+      `SELECT id,mobile,firstname,lastname,cf_1756 FROM Contacts WHERE mobile LIKE '%${national}' LIMIT 100;`,
     );
     const formats = new Set([mobile, national, '98' + national, '0098' + national]);
     const matches = rows.filter(row => formats.has(row.mobile.replace(/[^0-9]/g, '')));
@@ -254,6 +254,10 @@ export class CrmSyncService implements OnModuleInit, OnModuleDestroy {
       const fullName = normalize(nazr.donorFullName);
       const named = matches.filter(row => normalize((row.firstname || '') + (row.lastname || '')) === fullName);
       if (fullName && named.length === 1) return named[0].id;
+      // Duplicate records for the same full name and mobile: prefer the
+      // contact CRM explicitly designates for Nazr, only when unique.
+      const nazrProfiles = named.filter(row => row.cf_1756 === 'بله');
+      if (fullName && nazrProfiles.length === 1) return nazrProfiles[0].id;
       throw new Error('چند مخاطب با شماره یکسان؛ بررسی دستی هویت لازم است');
     }
 
