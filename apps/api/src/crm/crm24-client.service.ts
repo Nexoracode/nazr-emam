@@ -55,8 +55,20 @@ export class Crm24ClientService {
 
   async login(): Promise<void> {
     if (this.sessionName) return;
-    this.loginInFlight ??= this.openSession().finally(() => { this.loginInFlight = undefined; });
+    this.loginInFlight ??= this.establishSession().finally(() => { this.loginInFlight = undefined; });
     return this.loginInFlight;
+  }
+
+  private async establishSession(): Promise<void> {
+    try {
+      await this.openSession();
+    } catch (error) {
+      // Another integration using the same account can replace our challenge
+      // between getchallenge and login. Retry the handshake once.
+      if (!(error instanceof Error) || !/invalid username or password/i.test(error.message)) throw error;
+      await new Promise(resolve => setTimeout(resolve, 250 + Math.random() * 500));
+      await this.openSession();
+    }
   }
 
   private async openSession(): Promise<void> {

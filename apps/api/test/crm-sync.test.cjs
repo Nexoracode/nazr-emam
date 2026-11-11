@@ -93,3 +93,14 @@ test('an existing settled CRM amount conflict cannot be overwritten during retry
   await service.syncByPaymentId('p');
   assert.match(logged, /مغایرت رکورد مالی/);
 });
+
+test('a challenge displaced by another integration gets one new handshake', async () => {
+  const client = new Crm24ClientService({});
+  let calls = 0;
+  client.openSession = async () => {
+    if (++calls === 1) throw new Error('CRM24: Invalid username or password');
+    client.sessionName = 'test';
+  };
+  await Promise.all([client.login(), client.login()]);
+  assert.equal(calls, 2);
+});
