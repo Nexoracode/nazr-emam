@@ -60,3 +60,32 @@ test('reconciliation recovers a missed payment, keeps its date and avoids duplic
   assert.equal(remote[0].paymentsstatus, 'پرداخت شده');
   assert.equal(remote[0].datereceived, '1405/08/07');
 });
+
+test('duplicate CRM contacts are resolved only when a single name matches the donor', async () => {
+  const contacts = [
+    { id: 'c1', mobile: '+989000000000', firstname: 'یک', lastname: 'فرد' },
+    { id: 'c2', mobile: '09000000000', firstname: 'دیگر', lastname: 'فرد' },
+  ];
+  const client = { query: async () => contacts, create: () => assert.fail() };
+  const service = new CrmSyncService(client, {}, {}, {});
+  const donor = { donorMobile: '09000000000', donorFullName: 'یک فرد' };
+  assert.equal(await service.upsertContact(donor), 'c1');
+  await assert.rejects(service.upsertContact({ ...donor, donorFullName: 'نام دیگری' }), /بررسی دستی/);
+});
+
+test('an existing settled CRM amount conflict cannot be overwritten during retry', async () => {
+  const payment = { id: 'p', status: 'paid', amount: { currency: 'IRT', amount: 42 },
+    nazrRequest: { id: 'n', trackingCode: 'NE-ABC123' } };
+  const client = {
+    query: async () => [{ id: 'c', paymentsstatus: 'پرداخت شده', cf_1764: 'نذر امام', amount_currency_value: '410' }],
+    update: async () => assert.fail(), create: async () => assert.fail(),
+  };
+  const runner = { connect: async () => {}, release: async () => {}, query: async () => [{ locked: 1 }] };
+  const service = new CrmSyncService(client, { enabled: true }, {
+    findOne: async () => payment, manager: { connection: { createQueryRunner: () => runner } },
+  }, {});
+  let logged;
+  service.logger.error = message => { logged = message; };
+  await service.syncByPaymentId('p');
+  assert.match(logged, /مغایرت رکورد مالی/);
+});
