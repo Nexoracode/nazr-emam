@@ -11,6 +11,7 @@ import { CrmConfigService } from './crm.config';
 export class Crm24ClientService {
   private readonly logger = new Logger(Crm24ClientService.name);
   private sessionName: string | null = null;
+  private loginInFlight?: Promise<void>;
 
   constructor(private readonly crmConfig: CrmConfigService) {}
 
@@ -34,13 +35,13 @@ export class Crm24ClientService {
         success: boolean;
         result?: T;
         message?: string;
-        error?: { message?: string };
+        error?: { message?: string; code?: string };
       };
       if (!json.success) {
         const message = json.error?.message ?? json.message ?? 'unknown CRM error';
         // نشست منقضی شده — یک‌بار تمدید و تلاش مجدد.
-        if (/session|auth/i.test(message) && retryOnAuth) {
-          this.sessionName = null;
+        if (/session/i.test(`${json.error?.code ?? ''} ${message}`) && retryOnAuth) {
+          if (this.sessionName === params.sessionName) this.sessionName = null;
           await this.login();
           return this.send({ ...params, sessionName: this.sessionName! }, false);
         }
@@ -54,6 +55,11 @@ export class Crm24ClientService {
 
   async login(): Promise<void> {
     if (this.sessionName) return;
+    this.loginInFlight ??= this.openSession().finally(() => { this.loginInFlight = undefined; });
+    return this.loginInFlight;
+  }
+
+  private async openSession(): Promise<void> {
     const config = this.crmConfig.config;
     if (!config) throw new Error('CRM24 غیرفعال است');
 
