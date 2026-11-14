@@ -7,10 +7,12 @@ import { UserEntity } from './entities/user.entity';
 import { AuthGuard } from './guards/auth.guard';
 import { AuthService } from './auth.service';
 import { SmsService } from './sms.service';
+import { CrmModule } from '../../crm/crm.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([OtpCodeEntity, RefreshTokenEntity, UserEntity]),
+    CrmModule,
   ],
   controllers: [AuthController],
   providers: [AuthGuard, AuthService, SmsService],

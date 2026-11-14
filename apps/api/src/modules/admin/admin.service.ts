@@ -433,6 +433,7 @@ export class AdminService implements OnModuleInit {
     await this.requestsRepo.save(item!.nazrRequest);
     const saved = await this.paymentsRepo.save(item!);
     if (status === 'paid') await this.crmSync.syncByPaymentId(saved.id);
+    else await this.crmSync.syncNewNazr(item!.nazrRequest.id);
     return this.toPayment(saved);
   }
 

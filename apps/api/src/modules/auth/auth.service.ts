@@ -33,6 +33,7 @@ import { SmsService } from './sms.service';
 import { OtpCodeEntity } from './entities/otp-code.entity';
 import { RefreshTokenEntity } from './entities/refresh-token.entity';
 import { UserEntity } from './entities/user.entity';
+import { CrmSyncService } from '../../crm/crm-sync.service';
 
 export const ACCESS_TOKEN_COOKIE = 'accessToken';
 export const REFRESH_TOKEN_COOKIE = 'refreshToken';
@@ -69,6 +70,7 @@ export class AuthService {
     private readonly otpCodesRepository: Repository<OtpCodeEntity>,
     private readonly configService: ConfigService,
     private readonly smsService: SmsService,
+    private readonly crmSync: CrmSyncService,
   ) {}
 
   async register(payload: RegisterRequest): Promise<IssuedAuthTokens> {
@@ -387,6 +389,9 @@ export class AuthService {
   }
 
   private async createAuthResponse(user: UserEntity): Promise<IssuedAuthTokens> {
+    // Authentication stays available when CRM is slow or offline. The full
+    // scheduled scan retries persisted donors, including OTP registrations.
+    void this.crmSync.syncUser(user.id);
     const refreshToken = this.createToken();
     const refreshTokenHash = this.hashToken(refreshToken);
     const session: Session = {

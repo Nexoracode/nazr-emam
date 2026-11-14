@@ -10,6 +10,7 @@ export interface CrmConfig {
   accessKey: string;
   assignedUserId: string;
   timeoutMs: number;
+  reviewTrackingCodes: string[];
 }
 
 export function getCrmConfigFromEnv(): CrmConfig | null {
@@ -19,10 +20,12 @@ export function getCrmConfigFromEnv(): CrmConfig | null {
   // ارجاع پیش‌فرض: احمد گوهری اقدم
   const assignedUserId = process.env.CRM_ASSIGNED_USER_ID?.trim() || '19x27';
   const timeoutMs = Number(process.env.CRM_TIMEOUT_MS ?? 15000);
+  const reviewTrackingCodes = (process.env.CRM_REVIEW_TRACKING_CODES ?? '')
+    .split(',').map(code => code.trim()).filter(Boolean);
   if (!baseUrl || !username || !accessKey) {
     return null;
   }
-  return { baseUrl, username, accessKey, assignedUserId, timeoutMs };
+  return { baseUrl, username, accessKey, assignedUserId, timeoutMs, reviewTrackingCodes };
 }
 
 @Injectable()

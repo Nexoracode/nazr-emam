@@ -322,6 +322,7 @@ export class PaymentsService {
       await this.nazrRequestsRepo.save(payment.nazrRequest);
     }
     await this.paymentsRepo.save(payment);
+    if (payment.nazrRequest) await this.crmSync.syncNewNazr(payment.nazrRequest.id);
   }
 
   private ensureGatewayEnabled() {
