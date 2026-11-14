@@ -126,13 +126,16 @@ function fixture({ requests = [], users = [], payments = [], contacts = [], remo
   const writes = [];
   const client = {
     query: async sql => {
-      if (sql.includes('FROM Contacts')) return contacts;
+      if (sql.includes('FROM Contacts')) {
+        const id = sql.match(/WHERE id='([^']+)'/);
+        return id ? contacts.filter(c => c.id === id[1]) : contacts;
+      }
       if (sql.includes('FROM Services')) return [{ id: 'service' }];
       return remote.filter(row => sql.includes(`'${row.tracking_code}'`));
     },
     create: async (module, fields) => {
       writes.push({ module, ...fields });
-      const row = { ...fields, id: 'created-' + writes.length };
+      const row = { ...fields, id: (module === 'Contacts' ? '12x' : '36x') + writes.length };
       (module === 'Contacts' ? contacts : remote).push(row);
       return row;
     },
@@ -216,7 +219,7 @@ test('a request snapshot cannot downgrade an already settled CRM payment', async
 test('cancellation is repaired but an unsafe historical amount is held without fabrication', async () => {
   const cancelled = { ...requestFixture(), status: 'cancelled' };
   const unsafe = { ...requestFixture('n2', 'NE-DEF456'), amount: { amount: 8e38, currency: 'IRT' } };
-  const f = fixture({ requests: [cancelled, unsafe], remote: [{ id: 'crm', tracking_code: cancelled.trackingCode, paymentsstatus: 'در انتظار پرداخت', cf_1764: 'نذر امام', amount_currency_value: 1200 }] });
+  const f = fixture({ requests: [cancelled, unsafe], contacts: [{ id: '12x9', mobile: cancelled.donorMobile, lastname: 'تست', cf_1756: 'بله' }], remote: [{ id: 'crm', relatedcontact: '12x9', tracking_code: cancelled.trackingCode, paymentsstatus: 'در انتظار پرداخت', cf_1764: 'نذر امام', amount_currency_value: 1200 }] });
   await f.service.reconcileRequests();
   assert.equal(f.remote.length, 1);
   assert.equal(f.remote[0].paymentsstatus, 'لغو شده');
@@ -267,4 +270,29 @@ test('Arabic and Persian formatted contact numbers reuse the original contact', 
     assert.equal(await f.service.upsertContact(requestFixture()), 'existing');
     assert.equal(f.writes.length, 0);
   }
+});
+
+test('an unpaid cancellation retains its existing verified link even with ambiguous same-phone profiles', async () => {
+  const request = { ...requestFixture(), status: 'cancelled', donorFullName: 'نام سایت قدیمی' };
+  const contacts = [
+    { id: '12x7', mobile: request.donorMobile, lastname: 'پرونده اول', cf_1756: 'بله' },
+    { id: '12x8', mobile: request.donorMobile, lastname: 'پرونده دوم', cf_1756: 'بله' },
+  ];
+  const original = { id: '36x9', relatedcontact: '12x7', assigned_user_id: 'original-owner', tracking_code: request.trackingCode, paymentsstatus: 'در انتظار پرداخت', cf_1764: 'نذر امام', amount_currency_value: 1200 };
+  const f = fixture({ requests: [request], contacts, remote: [original] });
+  await f.service.reconcileRequests();
+  assert.equal(original.paymentsstatus, 'لغو شده');
+  assert.equal(original.relatedcontact, '12x7');
+  assert.equal(original.assigned_user_id, 'original-owner');
+  assert.equal(f.contacts.length, 2);
+  assert.equal(f.remote.length, 1);
+});
+
+test('an existing unpaid link with a different phone is held without changing status or identity', async () => {
+  const request = { ...requestFixture(), status: 'cancelled' };
+  const original = { id: '36x9', relatedcontact: '12x7', tracking_code: request.trackingCode, paymentsstatus: 'در انتظار پرداخت', cf_1764: 'نذر امام', amount_currency_value: 1200 };
+  const f = fixture({ requests: [request], contacts: [{ id: '12x7', mobile: '09100000000', cf_1756: 'بله' }], remote: [original] });
+  await f.service.reconcileRequests();
+  assert.equal(f.writes.length, 0);
+  assert.equal(original.paymentsstatus, 'در انتظار پرداخت');
 });

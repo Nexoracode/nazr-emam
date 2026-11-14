@@ -13,9 +13,11 @@ interface CrmPayment {
   paymentsstatus: string;
   amount_currency_value: string;
   cf_1764: string;
+  relatedcontact: string;
+  assigned_user_id: string;
 }
 
-const CRM_PAYMENT_FIELDS = 'id,tracking_code,paymentsstatus,amount_currency_value,cf_1764';
+const CRM_PAYMENT_FIELDS = 'id,tracking_code,paymentsstatus,amount_currency_value,cf_1764,relatedcontact,assigned_user_id';
 const PAID = 'پرداخت شده';
 const PENDING = 'در انتظار پرداخت';
 const CANCELLED = 'لغو شده';
@@ -288,7 +290,11 @@ export class CrmSyncService implements OnModuleInit, OnModuleDestroy {
         const amount = this.rialAmount(nazr.amount);
         const status = this.unpaidStatus(nazr);
         if (remote && remote.paymentsstatus === status && Number(remote.amount_currency_value) === amount) return;
-        const contactId = await this.upsertContact(nazr);
+        // Updating an existing unpaid request must retain its contact link.
+        // Ambiguous profile selection is only needed for a NEW association.
+        const contactId = remote
+          ? await this.existingRequestContact(nazr, remote)
+          : await this.upsertContact(nazr);
         const serviceId = await this.nazrServiceId();
 
         const fields = {
@@ -301,7 +307,7 @@ export class CrmSyncService implements OnModuleInit, OnModuleDestroy {
           ...(this.planIntent(nazr) ? { cf_1781: this.planIntent(nazr) } : {}),
           tracking_code: nazr.trackingCode,
           description: nazr.note ?? '',
-          assigned_user_id: this.crmConfig.config!.assignedUserId,
+          assigned_user_id: remote?.assigned_user_id ?? this.crmConfig.config!.assignedUserId,
         };
         if (remote) await this.client.update('Payments', { id: remote.id, ...fields });
         else await this.client.create('Payments', fields);
@@ -423,17 +429,7 @@ export class CrmSyncService implements OnModuleInit, OnModuleDestroy {
     const rows = await this.lookupContacts([{ ...nazr, donorMobile: mobile }]);
     if (rows.length >= 100) throw new ReviewRequired('تعداد مخاطبان برای انتخاب امن بیش از حد است');
     const contact = this.selectContact(nazr, rows);
-    if (contact) {
-      if (contact.cf_1756 !== 'بله') {
-        await this.client.update('Contacts', {
-          id: contact.id, lastname: contact.lastname,
-          mobile: contact.mobile,
-          assigned_user_id: contact.assigned_user_id,
-          cf_1756: 'بله',
-        });
-      }
-      return contact.id;
-    }
+    if (contact) return this.tagContact(contact);
 
     const created = await this.client.create<CrmIdResponse>('Contacts', {
       firstname: nazr.donorFirstName ?? '',
@@ -446,6 +442,28 @@ export class CrmSyncService implements OnModuleInit, OnModuleDestroy {
     });
     this.logger.log(`مخاطب CRM ساخته شد: ${created.id}`);
     return created.id;
+  }
+
+  private async existingRequestContact(nazr: ContactIdentity, remote: CrmPayment): Promise<string> {
+    if (!/^\d+x\d+$/.test(remote.relatedcontact)) throw new ReviewRequired('ارجاع مخاطب درخواست معتبر نیست');
+    const rows = await this.client.query<CrmContact>(
+      `SELECT id,mobile,firstname,lastname,cf_1756,assigned_user_id FROM Contacts WHERE id='${remote.relatedcontact}' LIMIT 1;`,
+    );
+    const contact = rows[0];
+    if (!contact || this.normalizedMobile(contact.mobile) !== nazr.donorMobile.trim()) {
+      throw new ReviewRequired('موبایل مخاطب درخواست موجود مغایرت دارد');
+    }
+    return this.tagContact(contact);
+  }
+
+  private async tagContact(contact: CrmContact): Promise<string> {
+    if (contact.cf_1756 !== 'بله') {
+      await this.client.update('Contacts', {
+        id: contact.id, lastname: contact.lastname, mobile: contact.mobile,
+        assigned_user_id: contact.assigned_user_id, cf_1756: 'بله',
+      });
+    }
+    return contact.id;
   }
 
   /** سرویس «نذر امام» (کد حسابداری 1111) را پیدا یا بساز. */
