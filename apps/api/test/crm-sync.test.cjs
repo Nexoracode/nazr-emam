@@ -139,6 +139,7 @@ function fixture({ requests = [], users = [], payments = [], contacts = [], remo
     update: async (module, fields) => {
       writes.push({ module, ...fields });
       const row = (module === 'Contacts' ? contacts : remote).find(r => r.id === fields.id);
+      if (module === 'Contacts') assert.equal(fields.mobile, row.mobile, 'CRM requires the original mobile on tag updates');
       Object.assign(row, fields);
       return row;
     },

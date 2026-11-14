@@ -427,6 +427,7 @@ export class CrmSyncService implements OnModuleInit, OnModuleDestroy {
       if (contact.cf_1756 !== 'بله') {
         await this.client.update('Contacts', {
           id: contact.id, lastname: contact.lastname,
+          mobile: contact.mobile,
           assigned_user_id: contact.assigned_user_id,
           cf_1756: 'بله',
         });
