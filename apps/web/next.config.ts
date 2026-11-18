@@ -12,6 +12,11 @@ const apiBase =
   'http://localhost:3001';
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // A 150 MiB gallery video also needs room for multipart headers. Next's
+    // default 10 MiB buffer truncates the upload before it reaches NestJS.
+    middlewareClientMaxBodySize: '160mb',
+  },
   async rewrites() {
     return [
       { source: '/api/:path*', destination: `${apiBase}/:path*` },
