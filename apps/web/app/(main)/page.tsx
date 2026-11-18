@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getPublicHomeData } from '../../lib/public-home';
 import type { ReactNode } from 'react';
 import InstallAppButton from '../../components/install-app-button';
 import {
@@ -122,7 +123,7 @@ function planVisualClass(slug: string): string {
 const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(n);
 
 export default async function Home() {
-  const nazrTypes = await getPublicNazrTypes();
+  const [nazrTypes, homeData] = await Promise.all([getPublicNazrTypes(), getPublicHomeData()]);
   const activePlans = nazrTypes.filter((t) => t.isActive).length;
 
   return (
@@ -159,13 +160,17 @@ export default async function Home() {
           </div>
 
           <div className="home-video-card home-video-embed" aria-label="ویدئوی معرفی نذر امام">
-            <iframe
-              src="https://www.aparat.com/video/video/embed/videohash/zpd0432/vt/frame"
-              title="ویدئوی معرفی نذر امام"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
+            {homeData.media.introVideo?.fileUrl ? (
+              <video className="home-video-player" controls playsInline preload="metadata" poster={homeData.media.introVideo.thumbnailUrl ?? undefined} src={homeData.media.introVideo.fileUrl} />
+            ) : (
+              <iframe
+                src="https://www.aparat.com/video/video/embed/videohash/zpd0432/vt/frame"
+                title="ویدئوی معرفی نذر امام"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            )}
           </div>
         </div>
       </section>
@@ -227,7 +232,7 @@ export default async function Home() {
           </div>
 
           <div className="home-gallery-list" aria-label="تصاویر گالری">
-            {homeGalleryImages.map((img) => (
+            {(homeData.media.galleryImages.length ? homeData.media.galleryImages.map((asset) => ({ src: asset.fileUrl, title: asset.title })) : homeGalleryImages).map((img) => (
               <figure className="home-gallery-item" key={img.src}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={img.src} alt={img.title} loading="lazy" />

@@ -44,7 +44,7 @@ test('gallery uploads pass through the real Next rewrite with admin protection i
     findOne: async ({ where }) => records.get(where.id),
     delete: async id => { records.delete(id); },
   };
-  const service = new AdminService(config, undefined, undefined, undefined, undefined, undefined, undefined, undefined, galleryRepo);
+  const service = new AdminService(config, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, galleryRepo);
   const provider = Object.fromEntries(['uploadGallery', 'createGallery', 'gallery', 'deleteGallery']
     .map(key => [key, service[key].bind(service)]));
   class TestModule {}

@@ -292,6 +292,73 @@ type UpdateNazrTypeRequest = Partial<CreateNazrTypeRequest>;
 - `intro` فقط برای ویدیوی معرفی کلی نذر امام در بالای صفحه اصلی است؛ `gallery` برای تصاویر و ویدیوهای گزارش اجرا استفاده می‌شود.
 - برای رسانه با `type: "video"` مقدار `thumbnailUrl` هنگام ثبت در مدیریت الزامی است.
 
+### `GET /public/home`
+
+داده‌های عمومی صفحه اصلی. فرانت صفحه اصلی باید برای آمار، طرح‌ها، FAQ، مزیت‌ها و رسانه‌ها از این endpoint استفاده کند و مقدارهای نمایشی را داخل صفحه hardcode نکند.
+
+- **Auth:** عمومی
+- **پاسخ:** `200 PublicHomeData`
+- آمار اثرگذاری از داده‌های واقعی سامانه محاسبه می‌شود.
+- وضعیت فعال/خاموش طرح‌ها از `NazrType.isActive` می‌آید.
+- `progressPercent` هر طرح از نسبت نذرهای تاییدشده/در حال اجرا/تکمیل‌شده به کل نذرهای همان طرح محاسبه می‌شود.
+
+```ts
+type PublicHomeWhyIcon =
+  | "shield"
+  | "compass"
+  | "legacy"
+  | "wallet"
+  | "support"
+  | "club";
+
+interface PublicHomeHero {
+  eyebrow: string;
+  titleLines: string[];
+  lead: string;
+  percentOptions: string[];
+}
+
+interface PublicHomeWhyCard {
+  title: string;
+  text: string;
+  icon: PublicHomeWhyIcon;
+  featured?: boolean;
+}
+
+interface PublicHomeStat {
+  value: string;
+  label: string;
+}
+
+interface PublicHomeFaqItem {
+  question: string;
+  answer: string;
+}
+
+interface PublicHomePlan extends NazrType {
+  requestCount: number;
+  paidAmount: Money;
+  progressPercent: number;
+}
+
+interface PublicHomeMedia {
+  introVideo: GalleryAsset | null;
+  galleryVideos: GalleryAsset[];
+  galleryImages: GalleryAsset[];
+}
+
+interface PublicHomeData {
+  hero: PublicHomeHero;
+  whyCards: PublicHomeWhyCard[];
+  stats: PublicHomeStat[];
+  faqs: PublicHomeFaqItem[];
+  plans: PublicHomePlan[];
+  media: PublicHomeMedia;
+  activePlans: number;
+  updatedAt: ISODate;
+}
+```
+
 ---
 
 # بخش ۴ — درخواست نذر
@@ -436,17 +503,6 @@ callback برگشت زرین‌پال. API پرداخت را verify می‌کن�
 - **Auth:** admin
 - **Query:** `page, pageSize, status?, method?, from?, to?`
 - **پاسخ:** `200 Paginated<Payment>`
-
-### `POST /payments/:id/approve`
-
-- **Auth:** admin
-- **پاسخ:** `200 Payment`
-
-### `POST /payments/:id/reject`
-
-- **Auth:** admin
-- **بدنه:** `{ reason: string }`
-- **پاسخ:** `200 Payment`
 
 ```ts
 interface CreatePaymentRequest {
@@ -628,7 +684,7 @@ interface CreateNotificationRequest {
 3. API کد رهگیری می‌سازد و `NazrRequest` برمی‌گرداند.
 4. کاربر پرداخت را با `POST /nazr-requests/:requestId/payments` ثبت می‌کند.
 5. اگر رسید دارد، `POST /nazr-requests/:requestId/payment-receipt` را می‌زند.
-6. admin پرداخت را در `GET /payments` می‌بیند و approve/reject می‌کند.
+6. admin وضعیت پرداخت آنلاین را به‌صورت فقط‌خواندنی در `GET /payments` می‌بیند؛ نتیجه نهایی فقط از درگاه پرداخت ثبت می‌شود.
 7. admin وضعیت درخواست را با `PATCH /nazr-requests/:id/status` جلو می‌برد.
 8. کاربر با `GET /nazr-requests/track/:trackingCode` وضعیت را می‌بیند.
 
@@ -935,12 +991,53 @@ interface InvitationCard {
 - `GET /admin/payments?page&pageSize&search&status&method&nazrTypeId` → `200 Paginated<AdminPayment>` (پرداخت + `nazrType`، `trackingCode`، `donorFullName` و `donorMobile`؛ فیلترِ اختیاریِ `method` و `nazrTypeId`)
 - `POST /admin/payments/:id/approve` → `200 Payment`
 - `POST /admin/payments/:id/reject` با `{ reason?: string }` → `200 Payment`
+- `GET /admin/eitaa-receipts?page&pageSize&search` → `200 Paginated<AdminEitaaReceipt>`
+- `POST /admin/eitaa-receipts` با `CreateAdminEitaaReceiptRequest` → `201 AdminEitaaReceipt`
+
+ثبت رسید ایتا یک عملیات مدیریتی و قطعی است. شماره همراه هویت مخاطب محسوب می‌شود؛ حساب موجود استفاده می‌شود و اگر حسابی وجود نداشته باشد، حساب پایه قابل ورود با OTP ساخته خواهد شد. ثبت موفق در یک عملیات، درخواست نذر را با وضعیت `confirmed`، پرداخت کارت‌به‌کارت را با وضعیت `paid` و رکورد اختصاصی ایتا را ایجاد می‌کند. `transactionReference` و `eitaaMessageUrl` اختیاری‌اند، اما هرکدام در صورت ارسال باید تکراری نباشند. تاریخ دریافت نمی‌تواند در آینده باشد.
+
+```ts
+interface CreateAdminEitaaReceiptRequest {
+  fullName: string;
+  mobile: string;
+  eitaNumber?: string | null;
+  nazrTypeId: ID;
+  amount: Money;
+  transactionReference?: string | null;
+  eitaaMessageUrl?: string | null;
+  receivedAt?: ISODate;
+  note?: string | null;
+}
+
+interface AdminEitaaReceipt {
+  id: ID;
+  userId: ID;
+  userFullName: string;
+  userMobile: string;
+  eitaNumber: string | null;
+  nazrRequestId: ID;
+  trackingCode: string;
+  nazrTypeId: ID;
+  nazrTypeTitle: string;
+  paymentId: ID;
+  amount: Money;
+  transactionReference: string | null;
+  eitaaMessageUrl: string | null;
+  receivedAt: ISODate;
+  note: string | null;
+  requestStatus: NazrRequestStatus;
+  paymentStatus: PaymentStatus;
+  recordedBy: string;
+  createdAt: ISODate;
+}
+```
 
 تأیید پرداخت، درخواست نذر را `confirmed` می‌کند. رد پرداخت، درخواست را `cancelled` می‌کند و دلیل در یادداشت مدیریتی ثبت می‌شود.
 
 ### پشتیبانی، اعلان و گالری
 
 - `GET /admin/tickets?page&pageSize` → `200 Paginated<Ticket>`
+- `GET /admin/tickets/:id` → `200 Ticket`
 - پاسخ و بستن تیکت از مسیرهای مشترک `POST /tickets/:id/reply` و `POST /tickets/:id/close` انجام می‌شود.
 - `GET /admin/notifications?page&pageSize` → `200 Paginated<AdminNotificationItem>`
 - `POST /admin/notifications` با `CreateNotificationRequest` → `201 AdminNotificationItem`
@@ -966,10 +1063,13 @@ interface GalleryUploadResponse {
 
 ### کال‌سنتر و پیگیری ماهانه
 
-- `GET /admin/call-tasks?page&pageSize&status` → `200 Paginated<CallTask>`
+- `GET /admin/call-operators` → `200 CallOperator[]`؛ فهرست حساب‌های مدیریتی قابل تخصیص
+- `GET /admin/call-tasks?page&pageSize&status&assignee` → `200 Paginated<CallTask>`؛ مقدار `assignee` شناسه اپراتور یا `unassigned` است.
 - `POST /admin/call-tasks` با `CreateCallTaskRequest` → `201 CallTask`
 - `POST /admin/call-tasks/generate` با `GenerateMonthlyCallTasksRequest` → `201 { created: number }`
 - `PATCH /admin/call-tasks/:id` با `UpdateCallTaskRequest` → `200 CallTask`
+
+تخصیص مسئول با `assignedToUserId` انجام می‌شود. مقدار `assignedTo` در پاسخ فقط نام نمایشی اپراتور است و نباید برای ذخیره رابطه استفاده شود.
 
 دوره با قالب `YYYY-MM` ارسال می‌شود. تولید ماهانه فقط برای کیف‌پول‌هایی انجام می‌شود که برداشت دوره‌ای فعال دارند و برای هر مخاطب در هر دوره فقط یک وظیفه ساخته می‌شود.
 

@@ -9,9 +9,12 @@ const apiUrl =
 
 export async function getPublicGalleryAssets(
   placement: GalleryAssetPlacement,
+  nazrTypeId?: string,
 ): Promise<GalleryAsset[]> {
   try {
-    const response = await fetch(`${apiUrl}/gallery?placement=${placement}`, {
+    const params = new URLSearchParams({ placement });
+    if (nazrTypeId) params.set('nazrTypeId', nazrTypeId);
+    const response = await fetch(`${apiUrl}/gallery?${params.toString()}`, {
       cache: 'no-store',
     });
     if (!response.ok) return [];

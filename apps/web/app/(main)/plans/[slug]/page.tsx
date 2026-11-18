@@ -1,6 +1,9 @@
+import type { GalleryAsset } from '@nazr-emam/shared';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { VideoGalleryPlayer } from '../../../../components/video-gallery-player';
+import { getPublicGalleryAssets } from '../../../../lib/public-gallery';
 import {
   getPlanContent,
   getPublicNazrTypes,
@@ -13,6 +16,15 @@ type PlanPageProps = {
 async function getPlan(slug: string) {
   const types = await getPublicNazrTypes();
   return types.find((type) => type.slug === slug) ?? null;
+}
+
+function PlanGalleryImage({ asset }: { asset: GalleryAsset }) {
+  return (
+    <figure className="plan-gallery-image">
+      <img alt={asset.title} loading="lazy" src={asset.fileUrl} />
+      <figcaption>{asset.title}</figcaption>
+    </figure>
+  );
 }
 
 export async function generateMetadata({ params }: PlanPageProps): Promise<Metadata> {
@@ -36,6 +48,13 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
   if (!plan) notFound();
 
   const content = getPlanContent(slug, plan);
+  const planGallery = await getPublicGalleryAssets('gallery', plan.id);
+  const galleryVideos = planGallery.filter(
+    (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
+  );
+  const galleryImages = planGallery
+    .filter((asset) => asset.type === 'image' && Boolean(asset.fileUrl))
+    .slice(0, 4);
   const registrationHref = `/nazr/new?nazrTypeId=${encodeURIComponent(plan.id)}`;
 
   return (
@@ -187,22 +206,30 @@ export default async function PlanLandingPage({ params }: PlanPageProps) {
             <div className="plan-section-heading plan-section-heading-center">
               <span className="home-eyebrow">گالری</span>
               <h2>{content.galleryTitle}</h2>
-              {!content.galleryImages?.length ? (
-                <p>گزارش‌های تصویری و ویدیویی اجرای همین طرح از بخش گالری مدیریت قابل تکمیل است.</p>
-              ) : null}
+              <p>
+                {planGallery.length > 0
+                  ? 'گزارش‌های تصویری و ویدیویی همین طرح را اینجا می‌بینی.'
+                  : 'گزارش‌های تصویری و ویدیویی اجرای همین طرح از بخش گالری مدیریت قابل تکمیل است.'}
+              </p>
             </div>
-            {content.galleryImages?.length ? (
+            {planGallery.length > 0 ? (
+              <div className="plan-gallery-layout">
+                <VideoGalleryPlayer
+                  className="plan-gallery-videos"
+                  emptyTitle="هنوز ویدئویی برای این طرح ثبت نشده است."
+                  videos={galleryVideos}
+                />
+                {galleryImages.length > 0 ? (
+                  <div className="plan-gallery-images">
+                    {galleryImages.map((asset) => (
+                      <PlanGalleryImage asset={asset} key={asset.id} />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : content.galleryImages?.length ? (
               <div className="plan-gallery-grid">
-                {content.galleryImages.map((src, index) => (
-                  <figure className="plan-gallery-item" key={src}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={src}
-                      alt={`${plan.title} — تصویر ${new Intl.NumberFormat('fa-IR').format(index + 1)}`}
-                      loading="lazy"
-                    />
-                  </figure>
-                ))}
+                {content.galleryImages.map((src, index) => <figure className="plan-gallery-item" key={src}><img src={src} alt={`${plan.title} — تصویر ${new Intl.NumberFormat('fa-IR').format(index + 1)}`} loading="lazy" /></figure>)}
               </div>
             ) : null}
           </div>

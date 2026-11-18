@@ -119,6 +119,12 @@ export interface AdminUsersQuery {
   stage?: CrmStage;
 }
 
+export interface CallOperator {
+  id: ID;
+  fullName: string;
+  mobile: string;
+}
+
 export interface CallTask {
   id: ID;
   userId: ID;
@@ -128,6 +134,7 @@ export interface CallTask {
   dueDate: ISODate;
   expectedAmount: Money | null;
   status: CallTaskStatus;
+  assignedToUserId: ID | null;
   assignedTo: string | null;
   note: string | null;
   outcome: string | null;
@@ -141,12 +148,16 @@ export interface CreateCallTaskRequest {
   period: string;
   dueDate: ISODate;
   expectedAmount?: Money | null;
+  assignedToUserId?: ID | null;
+  /** @deprecated Use assignedToUserId. */
   assignedTo?: string | null;
   note?: string | null;
 }
 
 export interface UpdateCallTaskRequest {
   status?: CallTaskStatus;
+  assignedToUserId?: ID | null;
+  /** @deprecated Use assignedToUserId. */
   assignedTo?: string | null;
   note?: string | null;
   outcome?: string | null;
@@ -184,6 +195,40 @@ export interface AdminNotificationItem {
   createdAt: ISODate;
 }
 
+export interface CreateAdminEitaaReceiptRequest {
+  fullName: string;
+  mobile: string;
+  eitaNumber?: string | null;
+  nazrTypeId: ID;
+  amount: Money;
+  transactionReference?: string | null;
+  eitaaMessageUrl?: string | null;
+  receivedAt?: ISODate;
+  note?: string | null;
+}
+
+export interface AdminEitaaReceipt {
+  id: ID;
+  userId: ID;
+  userFullName: string;
+  userMobile: string;
+  eitaNumber: string | null;
+  nazrRequestId: ID;
+  trackingCode: string;
+  nazrTypeId: ID;
+  nazrTypeTitle: string;
+  paymentId: ID;
+  amount: Money;
+  transactionReference: string | null;
+  eitaaMessageUrl: string | null;
+  receivedAt: ISODate;
+  note: string | null;
+  requestStatus: NazrRequestStatus;
+  paymentStatus: PaymentStatus;
+  recordedBy: string;
+  createdAt: ISODate;
+}
+
 export interface AdminDataCollections {
   users: Paginated<AdminUserListItem>;
   requests: Paginated<NazrRequest>;
@@ -192,6 +237,7 @@ export interface AdminDataCollections {
   callTasks: Paginated<CallTask>;
   gallery: GalleryAsset[];
   notifications: Paginated<AdminNotificationItem>;
+  eitaaReceipts: Paginated<AdminEitaaReceipt>;
 }
 
 export interface AdminNazrRequestQuery {
@@ -208,4 +254,10 @@ export interface AdminPaymentQuery {
   status?: PaymentStatus;
   method?: PaymentMethod;
   nazrTypeId?: ID;
+}
+
+export interface AdminEitaaReceiptsQuery {
+  page?: number;
+  pageSize?: number;
+  search?: string;
 }

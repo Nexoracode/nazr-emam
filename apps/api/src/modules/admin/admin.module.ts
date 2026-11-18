@@ -15,6 +15,7 @@ import { AdminService } from './admin.service';
 import { CallTaskEntity } from './entities/call-task.entity';
 import { CrmActivityEntity } from './entities/crm-activity.entity';
 import { CrmProfileEntity } from './entities/crm-profile.entity';
+import { EitaaReceiptEntity } from './entities/eitaa-receipt.entity';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CrmProfileEntity } from './entities/crm-profile.entity';
       CrmProfileEntity,
       CrmActivityEntity,
       CallTaskEntity,
+      EitaaReceiptEntity,
     ]),
   ],
   controllers: [AdminController],

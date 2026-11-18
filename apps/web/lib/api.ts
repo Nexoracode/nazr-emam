@@ -1,17 +1,20 @@
 import type {
   AdminDashboardSummary,
   AdminNazrTypeSummary,
+  AdminEitaaReceipt,
   AdminNotificationItem,
   AdminPayment,
   AdminUserDetails,
   AdminUserListItem,
   ApiError,
   AuthResponse,
+  CallOperator,
   CallTask,
   CallTaskStatus,
   ChangePasswordRequest,
   CreateCallTaskRequest,
   CreateCardPaymentRequest,
+  CreateAdminEitaaReceiptRequest,
   CreateCrmActivityRequest,
   CreateGalleryAssetRequest,
   CreateInvitationCardRequest,
@@ -31,6 +34,7 @@ import type {
   OtpRequestResponse,
   Paginated,
   Payment,
+  PaymentStatus,
   RegisterRequest,
   RequestOtpRequest,
   ResetPasswordRequest,
@@ -46,7 +50,6 @@ import type {
   CrmActivity,
   CrmProfile,
   NazrRequestStatus,
-  PaymentStatus,
   UpdateProfileRequest,
   UpdateUserProfileDetailsRequest,
   UpdateWalletSettingsRequest,
@@ -86,11 +89,23 @@ function isApiError(data: unknown): data is ApiError {
   );
 }
 
+async function fetchApi(path: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${apiUrl}${path}`, init);
+  } catch {
+    throw new ApiRequestError({
+      statusCode: 0,
+      code: 'NETWORK_ERROR',
+      message: 'ارتباط با سرور برقرار نشد. لطفاً چند لحظه دیگر دوباره تلاش کنید.',
+    });
+  }
+}
+
 async function post<TResponse, TBody>(
   path: string,
   body: TBody,
 ): Promise<TResponse> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetchApi(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -118,7 +133,7 @@ async function post<TResponse, TBody>(
 }
 
 async function get<TResponse>(path: string): Promise<TResponse> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetchApi(path, {
     method: 'GET',
     credentials: 'include',
   });
@@ -147,7 +162,7 @@ async function patch<TResponse, TBody>(
   path: string,
   body: TBody,
 ): Promise<TResponse> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetchApi(path, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -175,7 +190,7 @@ async function patch<TResponse, TBody>(
 }
 
 async function del(path: string): Promise<void> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetchApi(path, {
     method: 'DELETE',
     credentials: 'include',
   });
@@ -414,12 +429,24 @@ export function createAdminCardPayment(requestId: string, payload: CreateCardPay
   return post<AdminPayment, CreateCardPaymentRequest>(`/admin/nazr-requests/${requestId}/card-payment`, payload);
 }
 
+export function getAdminEitaaReceipts(page = 1, pageSize = 20, search = '') {
+  return get<Paginated<AdminEitaaReceipt>>(`/admin/eitaa-receipts?${adminQuery({ page, pageSize, search })}`);
+}
+
+export function createAdminEitaaReceipt(payload: CreateAdminEitaaReceiptRequest) {
+  return post<AdminEitaaReceipt, CreateAdminEitaaReceiptRequest>('/admin/eitaa-receipts', payload);
+}
+
 export function setAdminPaymentStatus(id: string, status: Extract<PaymentStatus, 'paid' | 'rejected'>, reason?: string) {
   return post<Payment, { reason?: string }>(`/admin/payments/${id}/${status === 'paid' ? 'approve' : 'reject'}`, { reason });
 }
 
 export function getAdminTickets(page = 1, pageSize = 30) {
   return get<Paginated<Ticket>>(`/admin/tickets?${adminQuery({ page, pageSize })}`);
+}
+
+export function getAdminTicket(id: string) {
+  return get<Ticket>(`/admin/tickets/${id}`);
 }
 
 export function getAdminNotifications(page = 1, pageSize = 30) {
@@ -437,7 +464,7 @@ export function getAdminGallery() {
 export async function uploadAdminGalleryFile(file: File, kind: GalleryAssetType) {
   const body = new FormData();
   body.append('file', file);
-  const response = await fetch(`${apiUrl}/admin/gallery/upload?kind=${kind}`, {
+  const response = await fetchApi(`/admin/gallery/upload?kind=${kind}`, {
     method: 'POST',
     credentials: 'include',
     body,
@@ -472,8 +499,12 @@ export function deleteAdminGallery(id: string) {
   return del(`/admin/gallery/${id}`);
 }
 
-export function getAdminCallTasks(page = 1, pageSize = 50, status: CallTaskStatus | '' = '') {
-  return get<Paginated<CallTask>>(`/admin/call-tasks?${adminQuery({ page, pageSize, status })}`);
+export function getAdminCallTasks(page = 1, pageSize = 50, status: CallTaskStatus | '' = '', assignee = '') {
+  return get<Paginated<CallTask>>(`/admin/call-tasks?${adminQuery({ page, pageSize, status, assignee })}`);
+}
+
+export function getAdminCallOperators() {
+  return get<CallOperator[]>('/admin/call-operators');
 }
 
 export function createAdminCallTask(payload: CreateCallTaskRequest) {

@@ -3,6 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   CallTaskStatus,
+  CreateAdminEitaaReceiptRequest,
   CreateCallTaskRequest,
   CreateCardPaymentRequest,
   CreateCrmActivityRequest,
@@ -99,19 +100,42 @@ export class AdminController {
     return this.service.updateRequestStatus(id, body.status, body.adminNote);
   }
 
-  @ApiOperation({ summary: 'لیست مدیریتی پرداخت‌ها' })
   @ApiOperation({ summary: 'ثبت دستی پرداخت کارت‌به‌کارت برای یک درخواست نذر' })
   @Post('nazr-requests/:id/card-payment')
   createCardPayment(@Param('id') id: string, @Body() body: CreateCardPaymentRequest) {
     return this.service.createCardPayment(id, body);
   }
 
+  @ApiOperation({ summary: 'لیست مدیریتی پرداخت‌ها' })
   @Get('payments')
   payments(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('search') search?: string, @Query('status') status?: PaymentStatus, @Query('method') method?: PaymentMethod, @Query('nazrTypeId') nazrTypeId?: string, @Query('minAmount') minAmount?: string, @Query('maxAmount') maxAmount?: string, @Query('from') from?: string, @Query('to') to?: string, @Query('sort') sort?: string) {
     return this.service.payments(Number(page) || 1, Number(pageSize) || 20, search, status, method, nazrTypeId, { minAmount: Number(minAmount) || 0, maxAmount: Number(maxAmount) || 0, from, to, sort });
   }
 
-  @ApiOperation({ summary: 'تایید پرداخت' })
+  @ApiOperation({ summary: 'لیست رسیدهای ثبت‌شده از ایتا' })
+  @Get('eitaa-receipts')
+  eitaaReceipts(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.service.eitaaReceipts(
+      Number(page) || 1,
+      Number(pageSize) || 20,
+      search,
+    );
+  }
+
+  @ApiOperation({ summary: 'ثبت و تأیید نذر از روی رسید ارسالی در ایتا' })
+  @Post('eitaa-receipts')
+  createEitaaReceipt(
+    @Body() body: CreateAdminEitaaReceiptRequest,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.service.createEitaaReceipt(body, request.user!);
+  }
+
+  @ApiOperation({ summary: 'تأیید پرداخت' })
   @Post('payments/:id/approve')
   approvePayment(@Param('id') id: string) {
     return this.service.setPaymentStatus(id, 'paid');
@@ -127,6 +151,12 @@ export class AdminController {
   @Get('tickets')
   tickets(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     return this.service.tickets(Number(page) || 1, Number(pageSize) || 20);
+  }
+
+  @ApiOperation({ summary: 'جزئیات یک تیکت پشتیبانی' })
+  @Get('tickets/:id')
+  ticket(@Param('id') id: string) {
+    return this.service.ticket(id);
   }
 
   @ApiOperation({ summary: 'لیست اعلان‌های ارسال‌شده' })
@@ -186,8 +216,14 @@ export class AdminController {
 
   @ApiOperation({ summary: 'لیست پیگیری‌های کال‌سنتر' })
   @Get('call-tasks')
-  callTasks(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('status') status?: CallTaskStatus) {
-    return this.service.callTasks(Number(page) || 1, Number(pageSize) || 30, status);
+  callTasks(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('status') status?: CallTaskStatus, @Query('assignee') assignee?: string) {
+    return this.service.callTasks(Number(page) || 1, Number(pageSize) || 30, status, assignee);
+  }
+
+  @ApiOperation({ summary: 'لیست اپراتورهای قابل تخصیص کال‌سنتر' })
+  @Get('call-operators')
+  callOperators() {
+    return this.service.callOperators();
   }
 
   @ApiOperation({ summary: 'ساخت پیگیری‌های ماهانه برای پرداخت‌های دوره‌ای' })
