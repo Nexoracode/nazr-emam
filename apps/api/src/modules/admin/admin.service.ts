@@ -295,10 +295,13 @@ export class AdminService implements OnModuleInit {
   ): void {
     switch (sort) {
       case 'amount_asc':
-        query.orderBy(this.amountExpression(alias), 'ASC');
-        break;
       case 'amount_desc':
-        query.orderBy(this.amountExpression(alias), 'DESC');
+        // Joined pagination wraps this query in SELECT DISTINCT. TypeORM must
+        // order by a selected alias, rather than parse JSON_EXTRACT as a join.
+        query
+          .addSelect(this.amountExpression(alias), 'admin_sort_amount')
+          .orderBy('admin_sort_amount', sort === 'amount_asc' ? 'ASC' : 'DESC')
+          .addOrderBy(`${alias}.id`, 'ASC');
         break;
       case 'date_asc':
         query.orderBy(`${alias}.created_at`, 'ASC');
