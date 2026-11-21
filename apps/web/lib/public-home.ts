@@ -20,7 +20,7 @@ export async function getPublicHomeData(): Promise<PublicHomeData> {
     getPublicGalleryAssets('intro'),
     getPublicGalleryAssets('gallery'),
   ]);
-  const galleryImages = galleryAssets.filter((asset) => asset.type === 'image').slice(0, 4);
+  const galleryImages = galleryAssets.filter((asset) => asset.type === 'image');
   const galleryVideos = galleryAssets.filter(
     (asset) => asset.type === 'video' && Boolean(asset.fileUrl),
   );

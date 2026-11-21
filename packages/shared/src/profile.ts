@@ -76,6 +76,10 @@ export interface GalleryAsset {
   title: string;
   type: GalleryAssetType;
   placement: GalleryAssetPlacement;
+  collectionTitle: string | null;
+  coverSelectedAt: ISODate | null;
+  /** False when the locally managed original file is missing. */
+  fileAvailable: boolean;
   fileUrl: string;
   thumbnailUrl: string | null;
   createdAt: ISODate;

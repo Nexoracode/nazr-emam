@@ -174,6 +174,8 @@ export interface CreateGalleryAssetRequest {
   title: string;
   type: GalleryAssetType;
   placement: GalleryAssetPlacement;
+  collectionTitle?: string | null;
+  selectAsCover?: boolean;
   fileUrl: string;
   thumbnailUrl?: string | null;
 }

@@ -11,6 +11,8 @@ const cookieParser = require('cookie-parser');
 const next = require('next');
 const ts = require('typescript');
 const { AdminController } = require('../dist/modules/admin/admin.controller');
+const { ProfileService } = require('../dist/modules/profile/profile.service');
+const { GalleryController } = require('../dist/modules/profile/gallery.controller');
 const { AdminService } = require('../dist/modules/admin/admin.service');
 const { AuthGuard } = require('../dist/modules/auth/guards/auth.guard');
 const { RolesGuard } = require('../dist/common/guards/roles.guard');
@@ -42,13 +44,19 @@ test('gallery uploads pass through the real Next rewrite with admin protection i
     },
     find: async () => [...records.values()],
     findOne: async ({ where }) => records.get(where.id),
+    exists: async ({ where }) => [...records.values()].some(row =>
+      [where].flat().some(condition => Object.entries(condition).every(([key, value]) => row[key] === value))),
     delete: async id => { records.delete(id); },
   };
   const service = new AdminService(config, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, galleryRepo);
-  const provider = Object.fromEntries(['uploadGallery', 'createGallery', 'gallery', 'deleteGallery']
+  const profile = new ProfileService(undefined, undefined, undefined, undefined, undefined, undefined, undefined, galleryRepo, undefined, config);
+  const provider = Object.fromEntries(['uploadGallery', 'createGallery', 'updateGallery', 'gallery', 'deleteGallery']
     .map(key => [key, service[key].bind(service)]));
   class TestModule {}
-  Module({ controllers: [AdminController], providers: [{ provide: AdminService, useValue: provider }] })(TestModule);
+  Module({ controllers: [AdminController, GalleryController], providers: [
+    { provide: AdminService, useValue: provider },
+    { provide: ProfileService, useValue: profile },
+  ] })(TestModule);
   const api = await NestFactory.create(TestModule, { logger: false });
   const auth = {
     getAccessTokenFromRequest: req => req.cookies?.accessToken,
@@ -114,6 +122,38 @@ test('gallery uploads pass through the real Next rewrite with admin protection i
     assert.equal((await (await request('/api/admin/gallery')).json()).length, 1);
     assert.equal((await request('/api/admin/gallery/' + asset.id, { method: 'DELETE' })).status, 204);
     assert.deepEqual(await fs.readdir(uploadDir), []);
+  });
+
+  await t.test('visitors can read an uploaded photo, and replacing a missing file restores the same album entry', async () => {
+    const photo = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aKSAAAAAASUVORK5CYII=', 'base64');
+    const put = async () => (await (await upload(photo, 'image', 'image/png')).json()).url;
+    const fileUrl = await put();
+    const created = await request('/api/admin/gallery', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'عکس', type: 'image', placement: 'gallery', collectionTitle: 'گزارش اردو', selectAsCover: true, fileUrl }),
+    });
+    assert.equal(created.status, 201);
+    const asset = await created.json();
+    const publicList = async () => (await request('/api/gallery?placement=gallery', {}, null)).json();
+    assert.equal((await publicList())[0].id, asset.id);
+    const imageResponse = await request(new URL(fileUrl).pathname, {}, null);
+    assert.equal(imageResponse.status, 200);
+    assert.deepEqual(Buffer.from(await imageResponse.arrayBuffer()), photo);
+
+    await fs.unlink(path.join(uploadDir, path.basename(fileUrl)));
+    assert.deepEqual(await publicList(), []);
+    assert.equal((await (await request('/api/admin/gallery')).json())[0].fileAvailable, false);
+
+    const fixed = await request('/api/admin/gallery/' + asset.id, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileUrl: await put() }),
+    });
+    assert.equal(fixed.status, 200);
+    const [visible] = await publicList();
+    assert.equal(visible.id, asset.id);
+    assert.equal(visible.collectionTitle, 'گزارش اردو');
+    assert.ok(visible.coverSelectedAt);
+    assert.equal(visible.fileAvailable, true);
+    assert.equal((await request('/api/admin/gallery/' + asset.id, { method: 'DELETE' })).status, 204);
   });
 
   await t.test('donors and unauthenticated visitors cannot upload or create gallery entries', async () => {

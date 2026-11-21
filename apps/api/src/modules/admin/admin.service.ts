@@ -1,3 +1,4 @@
+import { galleryAsset } from '../profile/gallery-media';
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -637,7 +638,7 @@ export class AdminService implements OnModuleInit {
 
   async gallery(): Promise<GalleryAsset[]> {
     const items = await this.galleryRepo.find({ order: { createdAt: 'DESC' } });
-    return items.map((item) => this.toGallery(item));
+    return Promise.all(items.map(item => galleryAsset(item, this.configService)));
   }
 
   async createGallery(payload: CreateGalleryAssetRequest): Promise<GalleryAsset> {
@@ -656,17 +657,20 @@ export class AdminService implements OnModuleInit {
             .filter((url): url is string => Boolean(url) && ![saved.fileUrl, saved.thumbnailUrl].includes(url))
             .map((url) => this.safeRemoveStoredFile(url)),
         );
-        return this.toGallery(saved);
+        return galleryAsset(saved, this.configService);
       }
     }
     const item = await this.galleryRepo.save(this.galleryRepo.create(body));
-    return this.toGallery(item);
+    return galleryAsset(item, this.configService);
   }
 
   async updateGallery(id: string, payload: UpdateGalleryAssetRequest): Promise<GalleryAsset> {
     const item = await this.galleryRepo.findOne({ where: { id } });
     if (!item) this.notFound('GALLERY_ASSET_NOT_FOUND', 'رسانه پیدا نشد');
-    const merged = this.validateGallery({ nazrTypeId: payload.nazrTypeId !== undefined ? payload.nazrTypeId : item!.nazrTypeId, title: payload.title ?? item!.title, type: payload.type ?? item!.type, placement: payload.placement ?? item!.placement, fileUrl: payload.fileUrl ?? item!.fileUrl, thumbnailUrl: payload.thumbnailUrl !== undefined ? payload.thumbnailUrl : item!.thumbnailUrl });
+    const merged = this.validateGallery({
+      ...item!,
+      ...payload,
+    });
     if (merged.placement === 'intro' && await this.galleryRepo.exists({ where: { placement: 'intro' } }) && item!.placement !== 'intro') {
       throw new ConflictException({
         statusCode: 409,
@@ -674,8 +678,13 @@ export class AdminService implements OnModuleInit {
         message: 'ویدیوی معرفی قبلاً ثبت شده است؛ معرفی جدید را از فرم آپلود جایگزین کنید',
       });
     }
+    const oldUrls = [item!.fileUrl, item!.thumbnailUrl];
     Object.assign(item!, merged);
-    return this.toGallery(await this.galleryRepo.save(item!));
+    const saved = await this.galleryRepo.save(item!);
+    for (const url of new Set(oldUrls)) {
+      if (url && url !== saved.fileUrl && url !== saved.thumbnailUrl) await this.safeRemoveStoredFile(url);
+    }
+    return galleryAsset(saved, this.configService);
   }
 
   async deleteGallery(id: string): Promise<void> {
@@ -865,10 +874,6 @@ export class AdminService implements OnModuleInit {
     return { id: item.id, userId: item.userId, guestMobile: item.guestMobile, subject: item.subject, status: item.status, nazrRequestId: item.nazrRequestId, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString(), messages: [...(item.messages ?? [])].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).map((message): TicketMessage => ({ id: message.id, body: message.body, authorType: message.authorType, createdAt: message.createdAt.toISOString() })) };
   }
 
-  private toGallery(item: GalleryAssetEntity): GalleryAsset {
-    return { id: item.id, nazrTypeId: item.nazrTypeId, title: item.title, type: item.type, placement: item.placement, fileUrl: item.fileUrl, thumbnailUrl: item.thumbnailUrl, createdAt: item.createdAt.toISOString() };
-  }
-
   private toCallTask(item: CallTaskEntity, operators: Map<string, UserEntity>): CallTask {
     const operator = item.assignedTo ? operators.get(item.assignedTo) : undefined;
     const legacyAssignedName = item.assignedTo && !/^[0-9a-f-]{36}$/i.test(item.assignedTo) ? item.assignedTo : null;
@@ -899,7 +904,25 @@ export class AdminService implements OnModuleInit {
     if (thumbnailUrl && !/^https?:\/\//i.test(thumbnailUrl)) this.validation({ thumbnailUrl: 'نشانی تصویر بندانگشتی معتبر نیست' });
     if (payload.type === 'video' && !thumbnailUrl) this.validation({ thumbnailUrl: 'تصویر بندانگشتی ویدئو الزامی است' });
     if (placement === 'intro' && payload.type !== 'video') this.validation({ type: 'رسانه معرفی باید ویدئو باشد' });
-    return { nazrTypeId: placement === 'intro' ? null : payload.nazrTypeId ?? null, title, type: payload.type, placement, fileUrl, thumbnailUrl };
+    if (payload.collectionTitle != null && typeof payload.collectionTitle !== 'string') {
+      this.validation({ collectionTitle: 'نام مجموعه معتبر نیست' });
+    }
+    const photo = placement === 'gallery' && payload.type === 'image';
+    const collectionTitle = photo ? payload.collectionTitle?.normalize('NFC').trim() || null : null;
+    if (collectionTitle && (collectionTitle.length > 80 || /[/\\?#\x00-\x1f]/u.test(collectionTitle) || /^\.{1,2}$/.test(collectionTitle))) {
+      this.validation({ collectionTitle: 'نام مجموعه باید حداکثر ۸۰ نویسه و بدون نویسه‌های مسیر باشد' });
+    }
+    if (payload.selectAsCover !== undefined && typeof payload.selectAsCover !== 'boolean') {
+      this.validation({ selectAsCover: 'انتخاب جلد معتبر نیست' });
+    }
+    const cover = photo && payload.selectAsCover === undefined
+      ? {}
+      : { coverSelectedAt: photo && payload.selectAsCover ? new Date() : null };
+    return {
+      collectionTitle, ...cover,
+      nazrTypeId: placement === 'intro' ? null : payload.nazrTypeId ?? null,
+      title, type: payload.type, placement, fileUrl, thumbnailUrl,
+    };
   }
 
   // getOrThrow فقط undefined را رد می‌کند نه رشته‌ی خالی؛ این helper نبود مقدار FTP را
@@ -918,7 +941,8 @@ export class AdminService implements OnModuleInit {
   // پاک‌سازی فایلِ پس از تغییر DB نباید کل درخواست را fail کند؛ خطا فقط log می‌شود.
   private async safeRemoveStoredFile(url: string): Promise<void> {
     try {
-      await this.removeStoredFile(url);
+      const referenced = await this.galleryRepo.exists({ where: [{ fileUrl: url }, { thumbnailUrl: url }] });
+      if (!referenced) await this.removeStoredFile(url);
     } catch (error) {
       this.logger.warn(`حذف فایل رسانه ناموفق بود (${url}): ${String(error)}`);
     }

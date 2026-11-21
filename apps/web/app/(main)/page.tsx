@@ -1,3 +1,4 @@
+import { buildCollections } from '../../lib/gallery-collections';
 import Link from 'next/link';
 import { getPublicHomeData } from '../../lib/public-home';
 import type { ReactNode } from 'react';
@@ -6,14 +7,6 @@ import {
   getPublicNazrTypes,
   planLandingContent,
 } from '../../lib/public-nazr-types';
-
-/* ۴ تصویر سکشن گالریِ صفحه اصلی: دو تا از هر طرح. */
-const homeGalleryImages = [
-  { src: '/plans/nazr-royesh/1.jpg', title: 'نذر رویش' },
-  { src: '/plans/nazr-royesh/2.jpg', title: 'نذر رویش' },
-  { src: '/plans/niaz-rooz/1.jpg', title: 'نیاز روز' },
-  { src: '/plans/niaz-rooz/2.jpg', title: 'نیاز روز' },
-];
 
 /* ── محتوای واقعی صفحه اصلی (برگرفته از سند طرح نذر امام) ── */
 
@@ -123,7 +116,10 @@ function planVisualClass(slug: string): string {
 const faNumber = (n: number) => new Intl.NumberFormat('fa-IR').format(n);
 
 export default async function Home() {
-  const [nazrTypes, homeData] = await Promise.all([getPublicNazrTypes(), getPublicHomeData()]);
+  const [nazrTypes, homeData] = await Promise.all([
+    getPublicNazrTypes(), getPublicHomeData(),
+  ]);
+  const collections = buildCollections(nazrTypes, homeData.media.galleryImages);
   const activePlans = nazrTypes.filter((t) => t.isActive).length;
 
   return (
@@ -225,20 +221,19 @@ export default async function Home() {
           <div className="home-section-heading home-gallery-heading">
             <span className="home-eyebrow">گالری</span>
             <h2>تا امروز چه کردیم؟</h2>
-            <p>روایتِ تصویری از اجرای طرح‌ها؛ تا مسیرِ مشارکت از ثبت تا اجرا برایت لمس‌پذیر باشد.</p>
-            <Link className="home-inline-link" href="/profile">
-              مشاهده‌ی همه‌ی گزارش‌ها ←
-            </Link>
           </div>
-
-          <div className="home-gallery-list" aria-label="تصاویر گالری">
-            {(homeData.media.galleryImages.length ? homeData.media.galleryImages.map((asset) => ({ src: asset.fileUrl, title: asset.title })) : homeGalleryImages).map((img) => (
-              <figure className="home-gallery-item" key={img.src}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.src} alt={img.title} loading="lazy" />
-                <figcaption>{img.title}</figcaption>
-              </figure>
+          <div className="album-cards" aria-label="مجموعه‌های عکس">
+            {collections.map(collection => (
+              <Link className="album-card" href={collection.href} key={collection.href}>
+                <img src={collection.cover.preview} alt="" loading="lazy" />
+                <div>
+                  {collection.title !== collection.planTitle && <small>{collection.planTitle}</small>}
+                  <h3>{collection.title}</h3>
+                  <span>{faNumber(collection.photos.length)} عکس ←</span>
+                </div>
+              </Link>
             ))}
+            {!collections.length && <p>هنوز مجموعه عکسی منتشر نشده است.</p>}
           </div>
         </div>
       </section>

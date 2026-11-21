@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { GalleryManager } from './gallery-manager';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Pencil, Power, Trash2 } from 'lucide-react';
@@ -19,7 +20,6 @@ import type {
   CrmActivityType,
   CrmStage,
   GalleryAsset,
-  GalleryAssetPlacement,
   NazrRequest,
   NazrRequestStatus,
   NazrType,
@@ -34,10 +34,8 @@ import {
   createAdminCardPayment,
   setAdminPaymentStatus,
   createAdminEitaaReceipt,
-  createAdminGallery,
   createAdminNazrType,
   createAdminNotification,
-  deleteAdminGallery,
   deleteAdminNazrType,
   generateAdminCallTasks,
   getAdminCallOperators,
@@ -60,7 +58,6 @@ import {
   updateAdminCrm,
   updateAdminNazrStatus,
   updateAdminNazrType,
-  uploadAdminGalleryFile,
 } from '../../lib/api';
 import type { AdminListExtras } from '../../lib/api';
 import {
@@ -119,6 +116,7 @@ function resolveAdminView(parts: string[]): ResolvedAdminView {
   if (resource === 'tickets') return { id: null, parent: 'tickets', screen: 'tickets', title: 'تیکت‌ها' };
   if (resource === 'notifications' && id === 'new') return { id: null, parent: 'notifications', screen: 'notificationForm', title: 'ارسال اعلان' };
   if (resource === 'notifications') return { id: null, parent: 'notifications', screen: 'notifications', title: 'اعلان‌ها' };
+  if (resource === 'gallery' && id && action === 'edit') return { id, parent: 'gallery', screen: 'galleryForm', title: 'ویرایش رسانه' };
   if (resource === 'gallery' && id === 'new') return { id: null, parent: 'gallery', screen: 'galleryForm', title: 'افزودن رسانه' };
   if (resource === 'gallery') return { id: null, parent: 'gallery', screen: 'gallery', title: 'گالری' };
   if (resource === 'calls' && id === 'new') return { id: null, parent: 'calls', screen: 'callsForm', title: 'ساخت صف تماس' };
@@ -511,7 +509,7 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
       }
       setDashboard(await getAdminDashboard());
       if (screen === 'requests') setRequests(await getAdminNazrRequests(1, ADMIN_PAGE_SIZE));
-      if (screen === 'nazrTypes' || screen === 'nazrTypeForm' || screen === 'eitaaForm' || screen === 'galleryForm' || screen === 'requests' || screen === 'payments') setNazrTypes(await getAdminNazrTypes());
+      if (screen === 'nazrTypes' || screen === 'nazrTypeForm' || screen === 'eitaaForm' || screen === 'galleryForm' || screen === 'gallery' || screen === 'requests' || screen === 'payments') setNazrTypes(await getAdminNazrTypes());
       if (screen === 'users') setUsers(await getAdminUsers(1, ADMIN_PAGE_SIZE));
       if (screen === 'userDetails' && resourceId) setSelectedUser(await getAdminUser(resourceId));
       if (screen === 'payments') setPayments(await getAdminPayments(1, ADMIN_PAGE_SIZE));
@@ -520,7 +518,7 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
       if (screen === 'ticketDetails' && resourceId) setSelectedTicket(await getAdminTicket(resourceId));
       if (screen === 'notifications') setNotifications(await getAdminNotifications(1, ADMIN_PAGE_SIZE));
       if (screen === 'notificationForm') setNotificationUsers((await getAdminUsers(1, 100)).items);
-      if (screen === 'gallery') setGallery(await getAdminGallery());
+      if (screen === 'gallery' || screen === 'galleryForm') setGallery(await getAdminGallery());
       if (screen === 'calls') {
         const [tasks, operators] = await Promise.all([
           getAdminCallTasks(1, ADMIN_PAGE_SIZE),
@@ -688,8 +686,8 @@ export function AdminPanel({ view = [] }: { view?: string[] }) {
         {screen === 'ticketDetails' && selectedTicket ? <TicketDetails ticket={selectedTicket} run={run} working={working} /> : null}
         {screen === 'notifications' ? <NotificationsList items={notifications} onPageChange={(page) => loadPage('notifications', page)} working={working} /> : null}
         {screen === 'notificationForm' ? <NotificationForm users={notificationUsers} run={run} working={working} /> : null}
-        {screen === 'gallery' ? <GallerySection items={gallery} mode="list" nazrTypes={nazrTypes} run={run} working={working} /> : null}
-        {screen === 'galleryForm' ? <GallerySection items={gallery} mode="form" nazrTypes={nazrTypes} run={run} working={working} /> : null}
+        {screen === 'gallery' ? <GalleryManager items={gallery} mode="list" nazrTypes={nazrTypes} run={run} working={working} /> : null}
+        {screen === 'galleryForm' ? <GalleryManager key={resourceId || "new"} editId={resourceId} items={gallery} mode="form" nazrTypes={nazrTypes} run={run} working={working} /> : null}
         {screen === 'calls' ? <CallsSection assignee={callAssignee} currentAdminId={adminId} items={callTasks} mode="list" onAssigneeChange={filterCallTasks} onPageChange={(page) => loadPage('calls', page)} operators={callOperators} run={run} working={working} /> : null}
         {screen === 'callsForm' ? <CallsSection assignee={callAssignee} currentAdminId={adminId} items={callTasks} mode="form" onAssigneeChange={filterCallTasks} onPageChange={(page) => loadPage('calls', page)} operators={callOperators} run={run} working={working} /> : null}
       </section>
@@ -1095,147 +1093,6 @@ function NotificationForm({ users, run, working }: { users: AdminUserListItem[];
   const router = useRouter();
   const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = new FormData(event.currentTarget); if (await run(() => createAdminNotification({ userId: String(data.get('userId')) || null, title: String(data.get('title')), body: String(data.get('body')), link: String(data.get('link')) || null }), 'اعلان ارسال شد')) router.push('/admin/notifications'); };
   return <section className="admin-panel admin-form-page"><div className="admin-panel-head"><div><h2>ارسال اعلان</h2><p>پیام عمومی یا اختصاصی برای مخاطب</p></div><Link className="admin-text-action" href="/admin/notifications">بازگشت به اعلان‌ها</Link></div><form className="admin-form-stack" onSubmit={submit}><label>مخاطب<select name="userId"><option value="">همه مخاطبان</option>{users.map((user) => <option key={user.id} value={user.id}>{user.fullName} · {user.mobile}</option>)}</select></label><label>عنوان<input name="title" required /></label><label>متن<textarea name="body" required /></label><label>لینک مرتبط<input dir="ltr" name="link" placeholder="/profile" /></label><div className="admin-plan-form-actions"><Link className="admin-secondary" href="/admin/notifications">انصراف</Link><button className="admin-primary" disabled={working}>ارسال اعلان</button></div></form></section>;
-}
-
-function GallerySection({ items, mode, nazrTypes, run, working }: { items: GalleryAsset[]; mode: 'list' | 'form'; nazrTypes: NazrType[]; run: Runner; working: boolean }) {
-  const router = useRouter();
-  const [placement, setPlacement] = useState<GalleryAssetPlacement>('gallery');
-  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
-  const [mediaFileName, setMediaFileName] = useState('');
-  const [thumbnailFileName, setThumbnailFileName] = useState('');
-  const introItems = items.filter((item) => item.placement === 'intro');
-  const galleryItems = items.filter((item) => item.placement === 'gallery');
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    const mediaFile = data.get('mediaFile');
-    const thumbnailFile = data.get('thumbnailFile');
-    if (!(mediaFile instanceof File) || !mediaFile.size) return;
-
-    const succeeded = await run(async () => {
-      const uploadedMedia = await uploadAdminGalleryFile(mediaFile, mediaType);
-      const uploadedThumbnail =
-        thumbnailFile instanceof File && thumbnailFile.size
-          ? await uploadAdminGalleryFile(thumbnailFile, 'image')
-          : null;
-      return createAdminGallery({
-        title: String(data.get('title')),
-        type: mediaType,
-        placement,
-        fileUrl: uploadedMedia.url,
-        thumbnailUrl: uploadedThumbnail?.url ?? null,
-        nazrTypeId: placement === 'gallery' ? String(data.get('nazrTypeId')) || null : null,
-      });
-    }, placement === 'intro' ? 'ویدیوی معرفی صفحه اصلی ثبت شد' : 'گزارش اجرا به گالری اضافه شد');
-
-    if (succeeded) {
-      router.push('/admin/gallery');
-    }
-  };
-
-  const mediaCards = (mediaItems: GalleryAsset[], emptyText: string) => (
-    <div className="admin-gallery-grid">
-      {mediaItems.map((item) => (
-        <article key={item.id}>
-          <div className="admin-gallery-preview">
-            {item.thumbnailUrl ? <img alt={item.title} src={item.thumbnailUrl} /> : item.type === 'image' ? <img alt={item.title} src={item.fileUrl} /> : <div className="admin-media-placeholder">ویدئو بدون تصویر</div>}
-            <span>{item.placement === 'intro' ? 'معرفی صفحه اصلی' : item.type === 'video' ? 'گزارش ویدیویی' : 'تصویر گالری'}</span>
-          </div>
-          <div className="admin-gallery-info">
-            <h3>{item.title}</h3>
-            <a href={item.fileUrl} rel="noreferrer" target="_blank">مشاهده فایل</a>
-            <button className="is-danger-text" onClick={() => void run(() => deleteAdminGallery(item.id), 'رسانه حذف شد')} type="button">حذف</button>
-          </div>
-        </article>
-      ))}
-      {!mediaItems.length ? <Empty text={emptyText} /> : null}
-    </div>
-  );
-
-  if (mode === 'list') {
-    return <div className="admin-stack"><section className="admin-panel"><div className="admin-panel-head"><div><h2>ویدیوی معرفی صفحه اصلی</h2><p>این کلیپ فقط بالای صفحه اصلی نمایش داده می‌شود و با گزارش اجراها مشترک نیست.</p></div><Link className="admin-primary" href="/admin/gallery/new">افزودن رسانه</Link></div>{mediaCards(introItems, 'هنوز ویدیوی معرفی صفحه اصلی ثبت نشده است.')}</section><section className="admin-panel"><div className="admin-panel-head"><div><h2>گزارش‌های اجرای طرح‌ها</h2><p>تصاویر و ویدیوهای گالری و گزارش‌های قابل دریافت</p></div></div>{mediaCards(galleryItems, 'هنوز گزارشی برای گالری ثبت نشده است.')}</section></div>;
-  }
-
-  return (
-      <section className="admin-panel admin-form-page">
-        <div className="admin-panel-head">
-          <div>
-            <h2>افزودن رسانه</h2>
-            <p>ابتدا مشخص کنید رسانه برای معرفی کلی صفحه اصلی است یا گزارش اجرای طرح‌ها.</p>
-          </div>
-          <Link className="admin-text-action" href="/admin/gallery">بازگشت به گالری</Link>
-        </div>
-        <form className="admin-form-grid admin-gallery-form" onSubmit={submit}>
-          <label>
-            محل نمایش
-            <select
-              name="placement"
-              onChange={(event) => {
-                const nextPlacement = event.target.value as GalleryAssetPlacement;
-                setPlacement(nextPlacement);
-                if (nextPlacement === 'intro') setMediaType('video');
-                setMediaFileName('');
-                setThumbnailFileName('');
-              }}
-              value={placement}
-            >
-              <option value="gallery">گزارش اجرا در گالری</option>
-              <option value="intro">ویدیوی معرفی بالای صفحه</option>
-            </select>
-          </label>
-          <input name="title" placeholder="عنوان رسانه" required />
-          <label>
-            نوع رسانه
-            <select
-              disabled={placement === 'intro'}
-              name="type"
-              onChange={(event) => {
-                setMediaType(event.target.value as 'image' | 'video');
-                setMediaFileName('');
-              }}
-              value={mediaType}
-            >
-              <option value="image">تصویر</option>
-              <option value="video">ویدئو</option>
-            </select>
-          </label>
-          <label>
-            طرح مرتبط
-            <select disabled={placement === 'intro'} name="nazrTypeId">
-              <option value="">بدون طرح مشخص</option>
-              {nazrTypes.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-            </select>
-          </label>
-          <label className="admin-upload-field">
-            <span>{mediaType === 'video' ? 'فایل ویدئو' : 'فایل تصویر'}</span>
-            <small>{mediaType === 'video' ? 'MP4، WebM یا MOV تا ۱۵۰ مگابایت' : 'JPEG، PNG، WebP، GIF یا AVIF تا ۱۰ مگابایت'}</small>
-            <input
-              accept={mediaType === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg,image/png,image/webp,image/gif,image/avif'}
-              key={mediaType}
-              name="mediaFile"
-              onChange={(event) => setMediaFileName(event.target.files?.[0]?.name ?? '')}
-              required
-              type="file"
-            />
-            <span className="admin-upload-control"><b>انتخاب فایل</b><em>{mediaFileName || 'فایلی انتخاب نشده'}</em></span>
-          </label>
-          <label className="admin-upload-field">
-            <span>تصویر بندانگشتی {mediaType === 'video' ? '' : '(اختیاری)'}</span>
-            <small>تصویری که پیش از پخش ویدئو نمایش داده می‌شود.</small>
-            <input
-              accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-              name="thumbnailFile"
-              onChange={(event) => setThumbnailFileName(event.target.files?.[0]?.name ?? '')}
-              required={mediaType === 'video'}
-              type="file"
-            />
-            <span className="admin-upload-control"><b>انتخاب تصویر</b><em>{thumbnailFileName || 'فایلی انتخاب نشده'}</em></span>
-          </label>
-          <div className="admin-plan-form-actions"><Link className="admin-secondary" href="/admin/gallery">انصراف</Link><button className="admin-primary" disabled={working}>{working ? 'در حال آپلود...' : placement === 'intro' ? 'ثبت ویدیوی معرفی' : 'افزودن به گالری اجراها'}</button></div>
-        </form>
-      </section>
-  );
 }
 
 function CallsSection({ assignee, currentAdminId, items, mode, onAssigneeChange, onPageChange, operators, run, working }: { assignee: string; currentAdminId: string; items: Paginated<CallTask>; mode: 'list' | 'form'; onAssigneeChange: (value: string) => Promise<void>; onPageChange: (page: number) => Promise<void>; operators: CallOperator[]; run: Runner; working: boolean }) {

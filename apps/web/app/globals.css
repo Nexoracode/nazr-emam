@@ -6139,3 +6139,46 @@ input {
     background-color: #d9b66f;
   }
 }
+
+.album-cards, .album-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: clamp(1rem, 3vw, 2rem);
+}
+.album-card, .album-photos button {
+  display: block;
+  overflow: hidden;
+  background: var(--h-surface, var(--surface));
+  color: inherit;
+  border: 1px solid var(--h-border);
+  border-radius: 1rem;
+  text-align: start;
+  text-decoration: none;
+}
+.album-card img, .album-photos img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+.album-card div, .album-photos button span { display: block; padding: 1rem; }
+.album-card h3 { margin: 0 0 .35rem; }
+.album-card span, .album-heading p { color: var(--h-green); }
+.album-card:hover, .album-photos button:hover { border-color: var(--h-green); }
+.album-heading { margin-block: 2rem; }
+.album-heading h1 { margin-block: .5rem; }
+.album-photos button { cursor: zoom-in; padding: 0; font: inherit; }
+.photo-dialog {
+  width: min(90vw, 64rem);
+  max-height: 92dvh;
+  margin: auto;
+  padding: 1rem;
+  background: var(--surface);
+  color: var(--foreground);
+  border: 0;
+  border-radius: 1rem;
+}
+.photo-dialog::backdrop { background: rgb(0 0 0 / 78%); }
+.photo-dialog header, .photo-dialog footer { display: flex; justify-content: space-between; align-items: center; gap: .6rem; }
+.photo-dialog img { width: 100%; height: min(62dvh, 42rem); object-fit: contain; margin-block: .8rem; }
+.photo-dialog button { color: inherit; background: transparent; border: 1px solid currentColor; border-radius: .6rem; padding: .45rem 1rem; cursor: pointer; }

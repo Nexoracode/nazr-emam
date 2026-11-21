@@ -1,7 +1,8 @@
+import { ConfigService } from '@nestjs/config';
+import { publicGallery } from '../profile/gallery-media';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type {
-  GalleryAsset,
   Money,
   PublicHomeData,
   PublicHomeFaqItem,
@@ -91,10 +92,11 @@ export class PublicHomeService {
     @InjectRepository(NazrTypeEntity) private readonly nazrTypesRepo: Repository<NazrTypeEntity>,
     @InjectRepository(PaymentEntity) private readonly paymentsRepo: Repository<PaymentEntity>,
     @InjectRepository(GalleryAssetEntity) private readonly galleryRepo: Repository<GalleryAssetEntity>,
+    private readonly mediaConfig: ConfigService,
   ) {}
 
   async getHome(): Promise<PublicHomeData> {
-    const [users, requests, paidPayments, nazrTypes, introMedia, galleryMedia] =
+    const [users, requests, paidPayments, nazrTypes, introRows, galleryRows] =
       await Promise.all([
         this.usersRepo.count({ where: { role: 'donor' } }),
         this.requestsRepo.find({ relations: { nazrType: true } }),
@@ -113,6 +115,10 @@ export class PublicHomeService {
         }),
       ]);
 
+    const [introMedia, galleryMedia] = await Promise.all([
+      publicGallery(introRows, this.mediaConfig),
+      publicGallery(galleryRows, this.mediaConfig),
+    ]);
     const activePlans = nazrTypes.filter((item) => item.isActive).length;
     const completedRequests = requests.filter((item) =>
       ['confirmed', 'in_progress', 'completed'].includes(item.status),
@@ -121,9 +127,7 @@ export class PublicHomeService {
     const galleryVideos = galleryMedia.filter(
       (item) => item.type === 'video' && Boolean(item.fileUrl),
     );
-    const galleryImages = galleryMedia
-      .filter((item) => item.type === 'image' && Boolean(item.fileUrl))
-      .slice(0, 4);
+    const galleryImages = galleryMedia.filter((item) => item.type === 'image');
 
     return {
       hero: {
@@ -170,9 +174,9 @@ export class PublicHomeService {
         };
       }),
       media: {
-        introVideo: introMedia[0] ? this.toGalleryAsset(introMedia[0]) : null,
-        galleryVideos: galleryVideos.map((item) => this.toGalleryAsset(item)),
-        galleryImages: galleryImages.map((item) => this.toGalleryAsset(item)),
+        introVideo: introMedia[0] ?? null,
+        galleryVideos,
+        galleryImages,
       },
       activePlans,
       updatedAt: new Date().toISOString(),
@@ -193,18 +197,5 @@ export class PublicHomeService {
   private formatMoney(value: Money): string {
     const amount = new Intl.NumberFormat('fa-IR').format(value.amount);
     return `${amount} تومان`;
-  }
-
-  private toGalleryAsset(item: GalleryAssetEntity): GalleryAsset {
-    return {
-      id: item.id,
-      nazrTypeId: item.nazrTypeId,
-      title: item.title,
-      type: item.type,
-      placement: item.placement,
-      fileUrl: item.fileUrl,
-      thumbnailUrl: item.thumbnailUrl,
-      createdAt: item.createdAt.toISOString(),
-    };
   }
 }

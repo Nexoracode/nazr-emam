@@ -1,3 +1,5 @@
+import { ConfigService } from '@nestjs/config';
+import { publicGallery } from './gallery-media';
 import {
   BadRequestException,
   ConflictException,
@@ -71,6 +73,7 @@ export class ProfileService {
     private readonly galleryRepo: Repository<GalleryAssetEntity>,
     @InjectRepository(InvitationCardEntity)
     private readonly invitationCardsRepo: Repository<InvitationCardEntity>,
+    private readonly mediaConfig: ConfigService,
   ) {}
 
   async getDetails(userId: string): Promise<UserProfileDetails> {
@@ -358,7 +361,7 @@ export class ProfileService {
       },
       order: { createdAt: 'DESC' },
     });
-    return assets.map((item) => this.toGalleryAssetDto(item));
+    return publicGallery(assets, this.mediaConfig);
   }
 
   async createInvitationCard(
@@ -480,19 +483,6 @@ export class ProfileService {
       description: transaction.description,
       transactionReference: transaction.transactionReference,
       createdAt: transaction.createdAt.toISOString(),
-    };
-  }
-
-  private toGalleryAssetDto(asset: GalleryAssetEntity): GalleryAsset {
-    return {
-      id: asset.id,
-      nazrTypeId: asset.nazrTypeId,
-      title: asset.title,
-      type: asset.type,
-      placement: asset.placement,
-      fileUrl: asset.fileUrl,
-      thumbnailUrl: asset.thumbnailUrl,
-      createdAt: asset.createdAt.toISOString(),
     };
   }
 

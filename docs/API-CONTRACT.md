@@ -888,6 +888,9 @@ interface GalleryAsset {
   title: string;
   type: GalleryAssetType;
   placement: GalleryAssetPlacement;
+  collectionTitle: string | null;
+  coverSelectedAt: ISODate | null;
+  fileAvailable: boolean;
   fileUrl: string;
   thumbnailUrl: string | null;
   createdAt: ISODate;
@@ -1059,7 +1062,10 @@ interface GalleryUploadResponse {
 - با `MEDIA_STORAGE=ftp` فایل‌ها در FTP ذخیره می‌شوند؛ مشخصات اتصال فقط از متغیرهای محیطی `FTP_*` و مسیر عمومی از `MEDIA_FTP_*` خوانده می‌شود.
 - در ساخت یا تبدیل رسانه به نوع `video`، ارسال `thumbnailUrl` معتبر الزامی است.
 - رسانه با `placement: "intro"` باید ویدئو باشد و فقط در جایگاه معرفی بالای صفحه اصلی نمایش داده می‌شود.
-- در هر لحظه فقط یک رسانه معرفی فعال است؛ ثبت معرفی جدید، معرفی قبلی را جایگزین می‌کند. رسانه‌های `gallery` فقط در گزارش اجرا و گالری کاربر نمایش داده می‌شوند.
+- معرفی جدید جایگزین معرفی قبلی می‌شود. مجموعه‌های عکس روی صفحهٔ اصلی و در مسیر عمومی `/gallery/...` در دسترس هستند.
+- در ساخت و ویرایش عکس، `collectionTitle?: string | null` نام مجموعه در همان طرح است (حداکثر ۸۰ نویسه). نام خالی یعنی مجموعهٔ پیش‌فرض طرح یا «گزارش‌های عمومی» برای عکس بدون طرح. `selectAsCover?: boolean` عکس را برای جلد علامت می‌زند یا علامتش را برمی‌دارد. جدیدترین انتخاب معتبر اولویت دارد.
+- خروجی `GalleryAsset` شامل `collectionTitle: string | null`، `coverSelectedAt: ISODate | null` و `fileAvailable: boolean` است. در مدیریت، رکورد فایل محلیِ مفقود با مقدار false برای جایگزینی باقی می‌ماند. خروجی عمومی، پروفایل و خانه فایل محلی مفقود را کنار می‌گذارند. فایل‌های خارجی بدون درخواست به میزبان خارجی برگردانده می‌شوند.
+- در ذخیره‌سازی محلی CapRover، قبل از تغییر کانتینر، فایل‌های موجود را پشتیبان بگیرید و مسیر `UPLOAD_DIR` (معمولاً `/app/uploads`) را به یک volume دائمی متصل کنید. بازگرداندن فایل قبلی به همان نام در این مسیر یا جایگزینی آن از مدیریت، عکس را دوباره منتشر می‌کند.
 
 ### کال‌سنتر و پیگیری ماهانه
 

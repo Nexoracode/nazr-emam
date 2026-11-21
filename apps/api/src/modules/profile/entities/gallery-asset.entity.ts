@@ -36,6 +36,12 @@ export class GalleryAssetEntity {
   @Column({ name: 'thumbnail_url', type: 'varchar', length: 500, nullable: true })
   thumbnailUrl!: string | null;
 
+  @Column({ name: 'collection_title', type: 'varchar', length: 80, nullable: true })
+  collectionTitle!: string | null;
+
+  @Column({ name: 'cover_selected_at', type: 'datetime', precision: 3, nullable: true })
+  coverSelectedAt!: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }
